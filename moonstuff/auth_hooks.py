@@ -6,7 +6,7 @@ from allianceauth.services.hooks import MenuItemHook, UrlHook
 
 @hooks.register('menu_item_hook')
 def register_menu():
-    return MenuItemHook(_('Moon Tools'), 'fa fa-moon fa-fw', 'moonstuff:moons_index',
+    return MenuItemHook(_('Moon Tools'), 'fa fa-moon-o fa-fw', 'moonstuff:moon_index',
                         navactive=['moonstuff:'])
 
 

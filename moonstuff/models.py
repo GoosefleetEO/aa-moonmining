@@ -20,6 +20,7 @@ def get_fallback_moon():
 
 class Refinery(models.Model):
     name = models.TextField(max_length=150)
+    structure_id = models.IntegerField()
     size = models.BooleanField()
     location = models.ForeignKey(Moon, on_delete=models.SET(get_fallback_moon))
 
@@ -29,3 +30,11 @@ class Refinery(models.Model):
             return "Large"
         else:
             return "Medium"
+
+
+class ExtractEvent(models.Model):
+    start_time = models.DateTimeField()
+    arrival_time = models.DateTimeField()
+    decay_time = models.DateTimeField()
+    structure = models.ForeignKey(Refinery, on_delete=models.CASCADE)
+    moon = models.ForeignKey(Moon, on_delete=models.CASCADE)

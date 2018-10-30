@@ -4,4 +4,6 @@ from . import views
 
 app_name = 'moonstuff'
 
-urlpatterns = []
+urlpatterns = [
+    url(r'^$', views.moon_index, name='moon_index')
+]
