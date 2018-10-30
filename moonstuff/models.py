@@ -8,12 +8,18 @@ class Resource(models.Model):
     ore_id = models.IntegerField()
     amount = models.DecimalField(max_digits=11, decimal_places=10)
 
+    def __str__(self):
+        return "{} - {}".format(self.ore, self.amount)
+
 
 class Moon(models.Model):
     name = models.CharField(max_length=80)
     system_id = models.IntegerField()
     moon_id = models.IntegerField()
     resources = models.ManyToManyField(Resource)
+
+    def __str__(self):
+        return self.name
 
 
 def get_fallback_moon():
@@ -34,6 +40,9 @@ class Refinery(models.Model):
         else:
             return "Medium"
 
+    def __str__(self):
+        return self.name
+
 
 class ExtractEvent(models.Model):
     start_time = models.DateTimeField()
@@ -45,3 +54,6 @@ class ExtractEvent(models.Model):
 
     class Meta:
         unique_together = (('arrival_time', 'moon'),)
+
+    def __str__(self):
+        return "{} - {}".format(self.moon.name, self.arrival_time)

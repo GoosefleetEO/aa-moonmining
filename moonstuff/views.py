@@ -1,4 +1,5 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from esi.decorators import token_required
 import os
@@ -35,7 +36,6 @@ def import_data(request, token):
         e = c.Industry.get_corporation_corporation_id_mining_extractions(corporation_id=corp_id).result()
         for event in e:
             # Gather structure information.
-            print(event)
             try:
                 moon = Moon.objects.get(moon_id=event['moon_id'])
             except models.ObjectDoesNotExist:
@@ -67,6 +67,7 @@ def import_data(request, token):
             extract = ExtractEvent.objects.get_or_create(start_time=start_time, decay_time=decay_time,
                                                          arrival_time=arrival_time, structure=ref, moon=moon,
                                                          corp=ref.owner)
+        messages.success(request, "Extraction events successfully added!")
     except Exception as e:
-        ctx['debug'] = e
-    return render(request, 'moonstuff/moon_index.html', ctx)
+        messages.error(request, "There was an error processing Extraction Events.\nError: %s" % e)
+    return redirect('moonstuff:moon_index')
