@@ -1,0 +1,45 @@
+{% extends 'allianceauth/base.html' %}
+{% load i18n %}
+{% block page_title %}{% trans 'Moon Info' %}{% endblock %}
+
+{% block content %}
+    <div class="col-lg-12">
+        <br>
+        {% include 'moonstuff/moonmenu.html' %}
+        <h2> {% trans "Moon Information" %} - {{ moon.name }} </h2>
+        <div class="row">
+            <div class="col-md-6  mr-md-1">
+                <h3> Moon Resource Information </h3>
+                {% if res|length_is:"0" %}
+                    <div class="alert alert-warning">
+                        <p> There are no resources recorded for {{ moon.name }}. {% if perms.moonstuff.add_moon %} Why not add a moon scan? {% endif %}</p>
+                    </div>
+                {% else %}
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <h3> Next Pulls </h3>
+                <table class="table" style="text-align: center">
+                    <thead>
+                        <th style="text-align: center"> Date(EVE/UTC)</th>
+                    </thead>
+                    <tbody>
+                        {% if pulls|length_is:"0" %}
+                            <tr>
+                                <td> No Pulls for this moon in the next month.</td>
+                            </tr>
+                        {% else %}
+                            {% for pull in pulls %}
+                                <tr>
+                                    <td>{{ pull.arrival_time }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+{% endblock %}

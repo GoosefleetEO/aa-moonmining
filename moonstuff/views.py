@@ -2,8 +2,9 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from esi.decorators import token_required
+from esi.clients import esi_client_factory
 import os
-import datetime
+from datetime import date, datetime, timedelta, timezone
 from allianceauth.eveonline.models import EveCorporationInfo
 from .models import *
 
@@ -15,6 +16,7 @@ get_universe_structures_structure_id
 get_universe_moons_moon_id
 get_corporation_corporation_id
 get_corporation_corporation_id_mining_extractions
+get_universe_types_type_id
 """
 
 
@@ -22,7 +24,43 @@ get_corporation_corporation_id_mining_extractions
 @login_required
 def moon_index(request):
     ctx = {}
+    # Upcoming Extractions
+    today = datetime.today().replace(tzinfo=timezone.utc)
+    end = today + timedelta(days=7)
+    ctx['exts'] = ExtractEvent.objects.filter(arrival_time__gte=today, arrival_time__lte=end)
+
     return render(request, 'moonstuff/moon_index.html', ctx)
+
+
+@login_required
+def moon_info(request, moonid):
+    ctx = {}
+    if len(moonid) == 0 or not moonid:
+        messages.warning(request, "You must specify a moon ID.")
+        return redirect('moonstuff:moon_index')
+
+    try:
+        ctx['moon'] = Moon.objects.get(moon_id=moonid)
+
+        resources = Resource.objects.filter(moon=ctx['moon'])
+        res = []
+        if len(resources) > 0:
+            for resource in resources:
+                c = esi_client_factory(spec_path=SWAGGER_SPEC_FILE)
+                url = "https://image.eveonline.com/Type/{}_64.png".format(resource.ore_id)
+                name = c.Universe.get_universe_type_type_id(type_id=resource.ore_id).result()['name']
+                res.append(name, url, resource.amount)
+        ctx['res'] = res
+
+        today = datetime.today().replace(tzinfo=timezone.utc)
+        end = today + timedelta(days=30)
+        ctx['pulls'] = ExtractEvent.objects.filter(moon=ctx['moon'], arrival_time__gte=today, arrival_time__lte=end)
+
+    except models.ObjectDoesNotExist:
+        messages.warning(request, "Moon {} does not exist in the database.")
+        return redirect('moonstuff:moon_index')
+
+    return render(request, 'moonstuff/moon_info.html', ctx)
 
 
 @token_required(scopes=['esi-industry.read_corporation_mining.v1', 'esi-universe.read_structures.v1'])
