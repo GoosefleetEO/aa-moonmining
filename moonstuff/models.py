@@ -41,3 +41,6 @@ class ExtractEvent(models.Model):
     structure = models.ForeignKey(Refinery, on_delete=models.CASCADE)
     moon = models.ForeignKey(Moon, on_delete=models.CASCADE)
     corp = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = (('arrival_time', 'moon'),)
