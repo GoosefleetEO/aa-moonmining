@@ -1,4 +1,5 @@
 from django.db import models
+from allianceauth.eveonline.models import EveCorporationInfo
 
 
 # Create your models here.
@@ -23,6 +24,7 @@ class Refinery(models.Model):
     structure_id = models.IntegerField()
     size = models.BooleanField()
     location = models.ForeignKey(Moon, on_delete=models.SET(get_fallback_moon))
+    owner = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE)
 
     @property
     def size_to_string(self):
@@ -38,3 +40,4 @@ class ExtractEvent(models.Model):
     decay_time = models.DateTimeField()
     structure = models.ForeignKey(Refinery, on_delete=models.CASCADE)
     moon = models.ForeignKey(Moon, on_delete=models.CASCADE)
+    corp = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE)
