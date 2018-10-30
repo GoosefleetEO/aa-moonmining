@@ -4,13 +4,14 @@ from allianceauth.eveonline.models import EveCorporationInfo
 
 # Create your models here.
 class Resource(models.Model):
-    ore = models.TextField(max_length=75)
+    ore = models.CharField(max_length=75)
     ore_id = models.IntegerField()
     amount = models.DecimalField(max_digits=11, decimal_places=10)
 
 
 class Moon(models.Model):
-    system_id = models.TextField(max_length=8)
+    name = models.CharField(max_length=80)
+    system_id = models.IntegerField()
     moon_id = models.IntegerField()
     resources = models.ManyToManyField(Resource)
 
@@ -20,8 +21,8 @@ def get_fallback_moon():
 
 
 class Refinery(models.Model):
-    name = models.TextField(max_length=150)
-    structure_id = models.IntegerField()
+    name = models.CharField(max_length=150)
+    structure_id = models.CharField(max_length=15)
     size = models.BooleanField()
     location = models.ForeignKey(Moon, on_delete=models.SET(get_fallback_moon))
     owner = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE)

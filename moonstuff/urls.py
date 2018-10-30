@@ -5,5 +5,6 @@ from . import views
 app_name = 'moonstuff'
 
 urlpatterns = [
-    url(r'^$', views.moon_index, name='moon_index')
+    url(r'^$', views.moon_index, name='moon_index'),
+    url(r'^import/$', views.import_data, name='import_data')
 ]
