@@ -35,22 +35,28 @@ def import_data(request, token):
         e = c.Industry.get_corporation_corporation_id_mining_extractions(corporation_id=corp_id).result()
         for event in e:
             # Gather structure information.
-            r = c.Universe.get_universe_structures_structure_id(structure_id=event['structure_id']).result()
-            refName = r['name']
-            owner = r['owner_id']
-            # TypeIDs: Athanor - 35835 | Tatara - 35836
-            size = True if r['type_id'] == "35836" else False
-            location = event['moon_id']
+            print(event)
+            try:
+                moon = Moon.objects.get(moon_id=event['moon_id'])
+            except models.ObjectDoesNotExist:
+                # Moon Info
+                m = c.Universe.get_universe_moons_moon_id(moon_id=event['moon_id']).result()
+                moon, created = Moon.objects.get_or_create(moon_id=event['moon_id'], system_id=m['system_id'], name=m['name'])
 
-            # Moon Info
-            m = c.Universe.get_universe_moons_moon_id(moon_id=location).result()
-            moon, created = Moon.objects.get_or_create(moon_id=location, system_id=m['system_id'], name=m['name'])
+            try:
+                ref = Refinery.objects.get(structure_id=event['structure_id'])
+            except models.ObjectDoesNotExist:
+                r = c.Universe.get_universe_structures_structure_id(structure_id=event['structure_id']).result()
+                refName = r['name']
+                owner = r['owner_id']
+                # TypeIDs: Athanor - 35835 | Tatara - 35836
+                size = True if r['type_id'] == "35836" else False
+                location = event['moon_id']
 
-            # Save info.
-            ref, created2 = Refinery.objects.get_or_create(location=moon, name=refName,
-                                                           structure_id=event['structure_id'],
-                                                           owner=EveCorporationInfo.objects.get(corporation_id=owner),
-                                                           size=size)
+                # Save info.
+                ref = Refinery(location=moon, name=refName, structure_id=event['structure_id'],
+                               owner=EveCorporationInfo.objects.get(corporation_id=owner), size=size).save()
+                ref = Refinery.objects.get(structure_id=event['structure_id'])
 
             # Times
             # Format: 2018-11-01T00:00:59Z
@@ -60,7 +66,7 @@ def import_data(request, token):
 
             extract = ExtractEvent.objects.get_or_create(start_time=start_time, decay_time=decay_time,
                                                          arrival_time=arrival_time, structure=ref, moon=moon,
-                                                         corp=EveCorporationInfo.objects.get(corporation_id=owner))
+                                                         corp=ref.owner)
     except Exception as e:
         ctx['debug'] = e
     return render(request, 'moonstuff/moon_index.html', ctx)
