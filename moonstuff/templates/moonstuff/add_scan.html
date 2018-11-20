@@ -1,0 +1,19 @@
+{% extends 'allianceauth/base.html' %}
+{% load i18n %}
+{% block page_title %}{% trans 'Moon Utilities' %}{% endblock %}
+
+{% block content %}
+    <div class="col-lg-12">
+        <br>
+        {% include 'moonstuff/moonmenu.html' %}
+        <h2> {% trans "Upcoming Extractions" %} </h2>
+        <p class="lead">All times displayed are EVE/UTC</p>
+        {% if exts|length_is:"0" %}
+            <div class="alert alert-warning" role="alert">
+                <p> There are no extractions happening in the next 7 days.</p>
+            </div>
+        {% else %}
+        {% endif %}
+    </div>
+
+{% endblock %}

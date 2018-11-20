@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
 from esi.decorators import token_required
 from esi.clients import esi_client_factory
@@ -57,10 +58,27 @@ def moon_info(request, moonid):
         ctx['pulls'] = ExtractEvent.objects.filter(moon=ctx['moon'], arrival_time__gte=today, arrival_time__lte=end)
 
     except models.ObjectDoesNotExist:
-        messages.warning(request, "Moon {} does not exist in the database.")
+        messages.warning(request, "Moon {} does not exist in the database.".format(moonid))
         return redirect('moonstuff:moon_index')
 
     return render(request, 'moonstuff/moon_info.html', ctx)
+
+
+@login_required()
+def moon_scan(request):
+    if request.method == 'POST':
+        pass
+    else:
+        return render(request, 'moonstuff/add_scan.html')
+
+
+@login_required()
+def moon_list(request, page=1):
+    moon = Moon.objects.order_by('system_id', 'name')
+    pages = Paginator(moon, 15)
+    moon = pages.page(page)
+    ctx = {'moons': moon}
+    return render(request, 'moonstuff/moon_list.html', ctx)
 
 
 @token_required(scopes=['esi-industry.read_corporation_mining.v1', 'esi-universe.read_structures.v1'])
