@@ -21,7 +21,7 @@ def process_resources(scan):
     """
     try:
         moon_name = scan[0][0]
-        system_id = scan[1][3]
+        system_id = scan[1][4]
         moon_id = scan[1][5]
         moon, _ = Moon.objects.get_or_create(name=moon_name, system_id=system_id, moon_id=moon_id)
         scan = scan[1:]
