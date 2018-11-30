@@ -8,6 +8,8 @@ import os
 from datetime import date, datetime, timedelta, timezone
 from allianceauth.eveonline.models import EveCorporationInfo
 from .models import *
+from .forms import MoonScanForm
+from .tasks import process_resources
 
 SWAGGER_SPEC_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'swagger.json')
 """
@@ -17,7 +19,6 @@ get_universe_structures_structure_id
 get_universe_moons_moon_id
 get_corporation_corporation_id
 get_corporation_corporation_id_mining_extractions
-get_universe_types_type_id
 """
 
 
@@ -47,10 +48,10 @@ def moon_info(request, moonid):
         res = []
         if len(resources) > 0:
             for resource in resources:
-                c = esi_client_factory(spec_path=SWAGGER_SPEC_FILE)
                 url = "https://image.eveonline.com/Type/{}_64.png".format(resource.ore_id)
-                name = c.Universe.get_universe_type_type_id(type_id=resource.ore_id).result()['name']
-                res.append(name, url, resource.amount)
+                name = resource.ore
+                amount = int(round(resource.amount * 100))
+                res.append([name, url, amount])
         ctx['res'] = res
 
         today = datetime.today().replace(tzinfo=timezone.utc)
@@ -66,8 +67,54 @@ def moon_info(request, moonid):
 
 @login_required()
 def moon_scan(request):
+    ctx = {}
     if request.method == 'POST':
-        pass
+        form = MoonScanForm(request.POST)
+        if form.is_valid():
+            # Process the scan(s)... we might use celery to do this due to the possible size.
+            scans = request.POST['scan']
+            lines = scans.split('\n')
+            lines_ = []
+            for line in lines:
+                line = line.strip('\r').split('\t')
+                lines_.append(line)
+            lines = lines_
+
+            # Find all groups of scans.
+            if len(lines[0]) is 0:
+                lines = lines[1:]
+            sublists = []
+            for line in lines:
+                # Find the lines that start a scan
+                if line[0] is '':
+                    pass
+                else:
+                    sublists.append(lines.index(line))
+
+            # Separate out individual scans
+            scans = []
+            for i in range(len(sublists)):
+                # The First List
+                if i == 0:
+                    if i+2>len(sublists):
+                        scans.append(lines[sublists[i]:])
+                    else:
+                        scans.append(lines[sublists[i]:sublists[i+1]])
+                else:
+                    if i+2>len(sublists):
+                        scans.append(lines[sublists[i]:])
+                    else:
+                        scans.append(lines[sublists[i]:sublists[i]])
+
+            for scan in scans:
+                process_resources.delay(scan)
+
+            messages.success(request, "Your scan has been submitted for processing, depending on size this "
+                                      "might take some time.\nYou can safely navigate away from this page.")
+            return render(request, 'moonstuff/add_scan.html', ctx)
+        else:
+            messages.error(request, "Oh No! Something went wrong with your moon scan submission.")
+            return redirect('moonstuff:moon_info')
     else:
         return render(request, 'moonstuff/add_scan.html')
 

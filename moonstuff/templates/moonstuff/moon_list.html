@@ -7,7 +7,7 @@
         <br>
         {% include 'moonstuff/moonmenu.html' %}
         <h2> {% trans "Moons" %} </h2>
-        <p class="lead">Only moons that have had extractions will be listed.</p>
+        <p class="lead">Only moons that have had extractions or have been scanned will be listed.</p>
         {% if moons.has_other_pages %}
             <nav>
                 <ul class="pagination">
@@ -39,6 +39,7 @@
                 {% for moon in moons %}
                     <tr>
                         <td>{{ moon.name }}</td>
+                        <td><a class="btn btn-primary btn-sm" href="{% url 'moonstuff:moon_info' moon.moon_id %}"><span class="fa fa-eye fa-fw"></span></a></td>
                     </tr>
                 {% endfor %}
             </tbody>

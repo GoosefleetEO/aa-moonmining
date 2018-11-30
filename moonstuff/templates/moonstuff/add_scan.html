@@ -6,14 +6,24 @@
     <div class="col-lg-12">
         <br>
         {% include 'moonstuff/moonmenu.html' %}
-        <h2> {% trans "Upcoming Extractions" %} </h2>
-        <p class="lead">All times displayed are EVE/UTC</p>
-        {% if exts|length_is:"0" %}
-            <div class="alert alert-warning" role="alert">
-                <p> There are no extractions happening in the next 7 days.</p>
+        <h2> {% trans "Moon Scan Input" %} </h2>
+        <p class="lead">Use the below form to input moonscans. You can input as many as you want.</p>
+
+        <div class="col-md-12">
+            <div class="row">
+                <form class="form-signin" role="form" action="" method="POST">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <textarea class="form-control" name="scan" rows="10" id="scan" required></textarea>
+                    </div>
+                    <br />
+                    <button class="btn btn-primary btn-block" type="submit" name="submit_scan" id="submit_scan">Submit Moon Scans</button>
+                </form>
             </div>
-        {% else %}
-        {% endif %}
+            {% if debug %}
+                {{ debug }}
+            {% endif %}
+        </div>
     </div>
 
 {% endblock %}

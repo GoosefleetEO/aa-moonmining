@@ -15,6 +15,24 @@
                         <p> There are no resources recorded for {{ moon.name }}. {% if perms.moonstuff.add_moon %} Why not add a moon scan? {% endif %}</p>
                     </div>
                 {% else %}
+                    {% for res in res %}
+                        <ul class="media-list">
+                            <li class="media">
+                                <div class="media-left">
+                                    <img class="media-object" src="{{ res.1 }}">
+                                </div>
+                                <div class="media-body">
+                                    <h4 class="media-heading">{{ res.0 }}</h4>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar progress-bar-danger progress-bar-striped" role="progressbar" aria-valuenow="{{ res.2 }}" aria-valuemin="0" aria-valuemax="100" style="width: {{ res.2 }}%; line-height: 20px;">
+                                            <span class="sr-only">{{ res.2 }}% {{ res.0 }}</span>
+                                            <h5 class="media-heading" style="padding-top: 2px">{{ res.2 }}%</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    {% endfor %}
                 {% endif %}
             </div>
             <div class="col-md-6">
