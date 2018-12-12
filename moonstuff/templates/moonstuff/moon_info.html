@@ -9,52 +9,64 @@
         <h2> {% trans "Moon Information" %} - {{ moon.name }} </h2>
         <div class="row">
             <div class="col-md-6  mr-md-1">
-                <h3> Moon Resource Information </h3>
-                {% if res|length_is:"0" %}
-                    <div class="alert alert-warning">
-                        <p> There are no resources recorded for {{ moon.name }}. {% if perms.moonstuff.add_moon %} Why not add a moon scan? {% endif %}</p>
+                <div class="panel panel-success">
+                    <div class="panel-heading text-center">
+                        <h3 class="panel-title"> Moon Resource Information </h3>
                     </div>
-                {% else %}
-                    {% for res in res %}
-                        <ul class="media-list">
-                            <li class="media">
-                                <div class="media-left">
-                                    <img class="media-object" src="{{ res.1 }}">
-                                </div>
-                                <div class="media-body">
-                                    <h4 class="media-heading">{{ res.0 }}</h4>
-                                    <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar progress-bar-danger progress-bar-striped" role="progressbar" aria-valuenow="{{ res.2 }}" aria-valuemin="0" aria-valuemax="100" style="width: {{ res.2 }}%; line-height: 20px;">
-                                            <span class="sr-only">{{ res.2 }}% {{ res.0 }}</span>
-                                            <h5 class="media-heading" style="padding-top: 2px">{{ res.2 }}%</h5>
-                                        </div>
-                                    </div>
-                                </div>
-                            </li>
-                        </ul>
-                    {% endfor %}
-                {% endif %}
-            </div>
-            <div class="col-md-6">
-                <h3> Next Pulls </h3>
-                <table class="table" style="text-align: center">
-                    <thead>
-                        <th style="text-align: center"> Date(EVE/UTC)</th>
-                    </thead>
-                    <tbody>
-                        {% if pulls|length_is:"0" %}
-                            <tr>
-                                <td> No Pulls for this moon in the next month.</td>
-                            </tr>
+                    <div class="panel-body">
+                        {% if res|length_is:"0" %}
+                            <div class="alert alert-warning">
+                                <p> There are no resources recorded for {{ moon.name }}. {% if perms.moonstuff.add_moon %} Why not add a moon scan? {% endif %}</p>
+                            </div>
                         {% else %}
-                            {% for pull in pulls %}
-                                <tr>
-                                    <td>{{ pull.arrival_time }}</td>
-                                </tr>
+                            {% for res in res %}
+                                <ul class="media-list">
+                                    <li class="media">
+                                        <div class="media-left">
+                                            <img class="media-object" src="{{ res.1 }}">
+                                        </div>
+                                        <div class="media-body">
+                                            <h4 class="media-heading">{{ res.0 }}</h4>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar progress-bar-danger progress-bar-striped" role="progressbar" aria-valuenow="{{ res.2 }}" aria-valuemin="0" aria-valuemax="100" style="width: {{ res.2 }}%; line-height: 20px;">
+                                                    <span class="sr-only">{{ res.2 }}% {{ res.0 }}</span>
+                                                    <h5 class="media-heading" style="padding-top: 2px">{{ res.2 }}%</h5>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
                             {% endfor %}
                         {% endif %}
-                    </tbody>
-                </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="panel panel-primary">
+                    <div class="panel-heading text-center">
+                        <h3 class="panel-title"> Next Pulls </h3>
+                    </div>
+                    <div class="panel-body">
+                        <table class="table" style="text-align: center">
+                            <thead>
+                                <th style="text-align: center"> Date(EVE/UTC)</th>
+                            </thead>
+                            <tbody>
+                                {% if pulls|length_is:"0" %}
+                                    <tr>
+                                        <td> No Pulls for this moon in the next month.</td>
+                                    </tr>
+                                {% else %}
+                                    {% for pull in pulls %}
+                                        <tr>
+                                            <td>{{ pull.arrival_time }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
 

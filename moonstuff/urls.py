@@ -10,5 +10,4 @@ urlpatterns = [
     url(r'^moon/(?P<moonid>[0-9]+)/$', views.moon_info, name='moon_info'),
     url(r'^moon/scan/$', views.moon_scan, name='moon_scan'),
     url(r'^list/$', views.moon_list, name='moon_list'),
-    url(r'^list/(?P<page>[0-9]+)/$', views.moon_list, name='moon_list'),
 ]

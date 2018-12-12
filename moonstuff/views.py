@@ -120,10 +120,8 @@ def moon_scan(request):
 
 
 @login_required()
-def moon_list(request, page=1):
+def moon_list(request):
     moon = Moon.objects.order_by('system_id', 'name')
-    pages = Paginator(moon, 15)
-    moon = pages.page(page)
     ctx = {'moons': moon}
     return render(request, 'moonstuff/moon_list.html', ctx)
 

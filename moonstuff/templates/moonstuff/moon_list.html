@@ -8,32 +8,10 @@
         {% include 'moonstuff/moonmenu.html' %}
         <h2> {% trans "Moons" %} </h2>
         <p class="lead">Only moons that have had extractions or have been scanned will be listed.</p>
-        {% if moons.has_other_pages %}
-            <nav>
-                <ul class="pagination">
-                    {% if moons.has_previous %}
-                        <li><a href="{% url 'moonstuff:moon_list' moons.previous_page_number %}">&laquo;</a></li>
-                    {% else %}
-                        <li class="disabled"><span>&laquo;</span></li>
-                    {% endif %}
-                    {% for i in moons.paginator.page_range %}
-                        {% if moons.number == i %}
-                            <li class="active"><span>{{ i }} <span class="sr-only">(Current)</span></span></li>
-                        {%  else %}
-                            <li><a href="{% url 'moonstuff:moon_list' i %}">{{ i }}</a></li>
-                        {% endif %}
-                    {% endfor %}
-                    {% if moons.has_next %}
-                        <li><a href="{% url 'moonstuff:moon_list' moons.next_page_number %}">&raquo;</a></li>
-                    {% else %}
-                        <li class="disabled"><span>&raquo;</span></li>
-                    {% endif %}
-                </ul>
-            </nav>
-        {% endif %}
-        <table class="table table-striped">
+        <table class="table table-striped" id="moon-list">
             <thead>
                 <th>Moon</th>
+                <th>Utilities</th>
             </thead>
             <tbody>
                 {% for moon in moons %}
@@ -44,29 +22,17 @@
                 {% endfor %}
             </tbody>
         </table>
-        {% if moons.has_other_pages %}
-        <nav>
-            <ul class="pagination">
-                {% if moons.has_previous %}
-                    <li><a href="{% url 'moonstuff:moon_list' moons.previous_page_number %}">&laquo;</a></li>
-                {% else %}
-                    <li class="disabled"><span>&laquo;</span></li>
-                {% endif %}
-                {% for i in moons.paginator.page_range %}
-                    {% if moons.number == i %}
-                        <li class="active"><span>{{ i }} <span class="sr-only">(Current)</span></span></li>
-                    {%  else %}
-                        <li><a href="{% url 'moonstuff:moon_list' i %}">{{ i }}</a></li>
-                    {% endif %}
-                {% endfor %}
-                {% if moons.has_next %}
-                    <li><a href="{% url 'moonstuff:moon_list' moons.next_page_number %}">&raquo;</a></li>
-                {% else %}
-                    <li class="disabled"><span>&raquo;</span></li>
-                {% endif %}
-            </ul>
-        </nav>
-        {% endif %}
     </div>
 
+{% endblock %}
+{% block extra_javascript %}
+    {% include 'bundles/datatables-js.html' %}
+{% endblock %}
+{% block extra_css %}
+    {% include 'bundles/datatables-css.html' %}
+{% endblock %}
+{% block extra_script %}
+    $(document).ready(function(){
+        $('#moon-list').DataTable();
+    });
 {% endblock %}
