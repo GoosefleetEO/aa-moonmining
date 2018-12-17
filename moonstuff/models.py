@@ -21,6 +21,11 @@ class Moon(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        permissions = (
+            ('view_moonstuff', 'Can access the moonstuff module.'),
+        )
+
 
 def get_fallback_moon():
     return Moon.objects.get_or_create(system_id=30000142, moon_id=40009087)

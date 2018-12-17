@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from esi.decorators import token_required
 from esi.clients import esi_client_factory
 import os
@@ -24,6 +24,7 @@ get_corporation_corporation_id_mining_extractions
 
 # Create your views here.
 @login_required
+@permission_required('moonstuff.view_moonstuff')
 def moon_index(request):
     ctx = {}
     # Upcoming Extractions
@@ -35,6 +36,7 @@ def moon_index(request):
 
 
 @login_required
+@permission_required('moonstuff.view_moonstuff')
 def moon_info(request, moonid):
     ctx = {}
     if len(moonid) == 0 or not moonid:
@@ -65,6 +67,7 @@ def moon_info(request, moonid):
     return render(request, 'moonstuff/moon_info.html', ctx)
 
 
+@permission_required(('moonstuff.view_moonstuff', 'moonstuff.add_resource'))
 @login_required()
 def moon_scan(request):
     ctx = {}
@@ -120,12 +123,14 @@ def moon_scan(request):
 
 
 @login_required()
+@permission_required('moonstuff.view_moonstuff')
 def moon_list(request):
     moon = Moon.objects.order_by('system_id', 'name')
     ctx = {'moons': moon}
     return render(request, 'moonstuff/moon_list.html', ctx)
 
 
+@permission_required(('moonstuff.add_extractevent', 'moonstuff.view_moonstuff'))
 @token_required(scopes=['esi-industry.read_corporation_mining.v1', 'esi-universe.read_structures.v1'])
 @login_required
 def import_data(request, token):

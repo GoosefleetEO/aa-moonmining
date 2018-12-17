@@ -16,9 +16,13 @@
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
         <ul class="nav navbar-nav">
             <li class="{% navactive request 'moonstuff:moon_list' %}"><a href="{% url 'moonstuff:moon_list' %}">List Moons</a> </li>
+            {% if perms.moonstuff.add_resource %}
             <li class="{% navactive request 'moonstuff:moon_scan' %}"> <a href="{% url 'moonstuff:moon_scan' %}">Add Moon Scan</a></li>
+            {% endif %}
         </ul>
+        {% if perms.moonstuff.add_extractevent %}
         <a class="btn btn-success navbar-btn" style="float: right" href="{% url 'moonstuff:import_data' %}"><span class="fa fa-refresh fa-fw"></span></a>
+        {% endif %}
     </div>
 </div>
 </nav>
