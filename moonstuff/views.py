@@ -31,6 +31,7 @@ def moon_index(request):
     today = datetime.today().replace(tzinfo=timezone.utc)
     end = today + timedelta(days=7)
     ctx['exts'] = ExtractEvent.objects.filter(arrival_time__gte=today, arrival_time__lte=end)
+    ctx['r_exts'] = ExtractEvent.objects.filter(arrival_time__lt=today).order_by('-arrival_time')[:10]
 
     return render(request, 'moonstuff/moon_index.html', ctx)
 
@@ -59,6 +60,7 @@ def moon_info(request, moonid):
         today = datetime.today().replace(tzinfo=timezone.utc)
         end = today + timedelta(days=30)
         ctx['pulls'] = ExtractEvent.objects.filter(moon=ctx['moon'], arrival_time__gte=today, arrival_time__lte=end)
+        ctx['ppulls'] = ExtractEvent.objects.filter(moon=ctx['moon'], arrival_time__lt=today)
 
     except models.ObjectDoesNotExist:
         messages.warning(request, "Moon {} does not exist in the database.".format(moonid))

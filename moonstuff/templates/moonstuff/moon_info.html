@@ -68,8 +68,46 @@
                     </div>
                 </div>
             </div>
+            <div class="col-md-6 {% if res|length_is:"0" %}col-md-offset-6{% endif %}">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading text-center">
+                            <h3 class="panel-title"> Past Pulls</h3>
+                        </div>
+                        <div class="panel-body">
+                            <table class="table text-center" id="past-events">
+                                <thead>
+                                    <th> Date (EVE/UTC) </th>
+                                </thead>
+                                <tbody>
+                                    {% if ppulls|length_is:"0" %}
+                                        <tr>
+                                            <td> No Past Pulls recorded for this moon.</td>
+                                        </tr>
+                                    {% else %}
+                                        {% for pull in ppulls %}
+                                            <tr>
+                                                <td>{{ pull.arrival_time }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
         </div>
 
     </div>
 
+{% endblock %}
+{% block extra_javascript %}
+    {% include 'bundles/datatables-js.html' %}
+{% endblock %}
+{% block extra_css %}
+    {% include 'bundles/datatables-css.html' %}
+{% endblock %}
+{% block extra_script %}
+    $(document).ready(function(){
+        $('#past-events').DataTable();
+    });
 {% endblock %}
