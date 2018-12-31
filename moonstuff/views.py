@@ -1,12 +1,9 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required, permission_required
 from esi.decorators import token_required
-from esi.clients import esi_client_factory
 import os
 from datetime import date, datetime, timedelta, timezone
-from allianceauth.eveonline.models import EveCorporationInfo
 from .models import *
 from .forms import MoonScanForm
 from .tasks import process_resources
