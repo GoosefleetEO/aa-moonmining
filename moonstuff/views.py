@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
+from django.db import utils
 from esi.decorators import token_required
 import os
 from datetime import date, datetime, timedelta, timezone
@@ -168,10 +169,12 @@ def import_data(request, token):
             arrival_time = event['chunk_arrival_time']
             start_time = event['extraction_start_time']
             decay_time = event['natural_decay_time']
-
-            extract = ExtractEvent.objects.get_or_create(start_time=start_time, decay_time=decay_time,
-                                                         arrival_time=arrival_time, structure=ref, moon=moon,
-                                                         corp=ref.owner)
+            try:
+                extract = ExtractEvent.objects.get_or_create(start_time=start_time, decay_time=decay_time,
+                                                             arrival_time=arrival_time, structure=ref, moon=moon,
+                                                             corp=ref.owner)
+            except utils.IntegrityError:
+                continue
         messages.success(request, "Extraction events successfully added!")
     except Exception as e:
         messages.error(request, "There was an error processing Extraction Events.\nError: %s" % e)
