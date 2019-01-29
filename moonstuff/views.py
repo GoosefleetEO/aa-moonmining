@@ -84,7 +84,7 @@ def moon_scan(request):
             lines = lines_
 
             # Find all groups of scans.
-            if len(lines[0]) is 0:
+            if len(lines[0]) == 0 or lines[0][0] == 'Moon':
                 lines = lines[1:]
             sublists = []
             for line in lines:
@@ -99,15 +99,15 @@ def moon_scan(request):
             for i in range(len(sublists)):
                 # The First List
                 if i == 0:
-                    if i+2>len(sublists):
+                    if i+2 > len(sublists):
                         scans.append(lines[sublists[i]:])
                     else:
                         scans.append(lines[sublists[i]:sublists[i+1]])
                 else:
-                    if i+2>len(sublists):
+                    if i+2 > len(sublists):
                         scans.append(lines[sublists[i]:])
                     else:
-                        scans.append(lines[sublists[i]:sublists[i]])
+                        scans.append(lines[sublists[i]:sublists[i+1]])
 
             for scan in scans:
                 process_resources.delay(scan)
