@@ -22,8 +22,13 @@ post_universe_names
 
 def _get_tokens(scopes):
     try:
-        return Token.objects.all().require_scopes(scopes)
-    except:
+        tokens = []
+        characters = MoonDataCharacter.objects.all()
+        for character in characters:
+            tokens.append(Token.objects.filter(character_id=character.character.character_id).require_scopes(scopes)[0])
+        return tokens
+    except Exception as e:
+        print(e)
         return False
 
 
@@ -67,22 +72,24 @@ def check_notifications(token):
 
     # Get notifications
     notifications = c.Character.get_characters_character_id_notifications(character_id=token.character_id).result()
+    char = MoonDataCharacter.objects.get(character__character_id=token.character_id)
     moon_pops = []
 
     moon_ids = Moon.objects.all().values_list('moon_id', flat=True)
+    print(moon_ids)
 
     for noti in notifications:
-        if noti['type'] == "MoonminingExtractionStarted":
+        if ("MoonminingExtraction" in noti['type']) and ("Cancelled" not in noti['type']):
             # Parse the notification
             text = noti['text']
             parsed_text = yaml.load(text)
 
             total_ore = 0
             # Get total volume, so we can calculate percentages
-            for k, v in parsed_text['oreVolumeByType']:
+            for k, v in parsed_text['oreVolumeByType'].items():
                 total_ore += int(v)
             # Replace volume with percent in oreVolumeByType
-            for k, v in parsed_text['oreVolumeByType']:
+            for k, v in parsed_text['oreVolumeByType'].items():
                 percentage = int(v) / total_ore
                 parsed_text['oreVolumeByType'][k] = percentage
 
@@ -90,6 +97,7 @@ def check_notifications(token):
 
     # Process notifications
     for pop in moon_pops:
+        print(pop['moonID'])
         if pop['moonID'] in moon_ids:
             moon = Moon.objects.get(moon_id=pop['moonID'])
             # Get ore names
@@ -100,8 +108,9 @@ def check_notifications(token):
             names = c.Universe.post_universe_names(ids=types).result()
             for name in names:
                 types[name['id']] = name['name']
+            print(types)
             # Create the resources.
-            for k, v in pop['oreVolumeByType']:
+            for k, v in pop['oreVolumeByType'].items():
                 resource, _ = Resource.objects.get_or_create(name=types[k], amount=v, ore_id=k)
                 moon.resources.add(resource.pk)
                 
@@ -116,12 +125,17 @@ def import_data():
     ]
 
     tokens = _get_tokens(req_scopes)
+    print(tokens)
 
     for token in tokens:
         c = token.get_esi_client()
         try:
             char = c.Character.get_characters_character_id(character_id=token.character_id).result()
             corp_id = char['corporation_id']
+            try:
+                corp = EveCorporationInfo.objects.get(corporation_id=corp_id)
+            except:
+                corp = EveCorporationInfo.objects.create_corporation(corp_id=corp_id)
             e = c.Industry.get_corporation_corporation_id_mining_extractions(corporation_id=corp_id).result()
             for event in e:
                 # Gather structure information.
@@ -164,4 +178,4 @@ def import_data():
             logger.error("Error importing data extraction data from %s" % token.character_id)
             logger.error(e)
 
-        check_notifications.delay(token)
+        check_notifications(token)

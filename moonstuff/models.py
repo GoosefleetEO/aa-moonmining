@@ -1,5 +1,5 @@
 from django.db import models
-from allianceauth.eveonline.models import EveCorporationInfo
+from allianceauth.eveonline.models import EveCorporationInfo, EveCharacter
 
 
 # Create your models here.
@@ -62,3 +62,8 @@ class ExtractEvent(models.Model):
 
     def __str__(self):
         return "{} - {}".format(self.moon.name, self.arrival_time)
+
+
+class MoonDataCharacter(models.Model):
+    character = models.OneToOneField(EveCharacter, on_delete=models.CASCADE)
+    latest_notification = models.BigIntegerField(null=True, default=0)

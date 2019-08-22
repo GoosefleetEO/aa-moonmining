@@ -131,8 +131,12 @@ def moon_list(request):
 
 
 @permission_required(('moonstuff.add_extractevent', 'moonstuff.view_moonstuff'))
-@token_required(scopes=['esi-industry.read_corporation_mining.v1', 'esi-universe.read_structures.v1'])
+@token_required(scopes=['esi-industry.read_corporation_mining.v1', 'esi-universe.read_structures.v1',
+                        'esi-characters.read_notifications.v1'])
 @login_required
 def add_token(request, token):
     messages.success(request, "Token added!")
+    char = EveCharacter.objects.get(character_id=token.character_id)
+    char = MoonDataCharacter(character=char)
+    char.save()
     return redirect('moonstuff:moon_index')
