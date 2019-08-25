@@ -104,14 +104,14 @@ def check_notifications(token):
             types = []
             for k in pop['oreVolumeByType']:
                 types.append(int(k))
-            types = {}
             names = c.Universe.post_universe_names(ids=types).result()
+            types = {}
             for name in names:
                 types[name['id']] = name['name']
             print(types)
             # Create the resources.
             for k, v in pop['oreVolumeByType'].items():
-                resource, _ = Resource.objects.get_or_create(name=types[k], amount=v, ore_id=k)
+                resource, _ = Resource.objects.get_or_create(ore=types[k], amount=v, ore_id=k)
                 moon.resources.add(resource.pk)
                 
 
