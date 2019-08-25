@@ -21,12 +21,22 @@ INSTALLED_APPS+=[
 
 Then run migrations and restart your supervisor processes.
 
+### Task Schedule
+Add the following to the end of your `local.py`:
+```python
+CELERYBEAT_SCHEDULE['run_moonstuff_data_import'] = {
+    'task': 'moonstuff.tasks.import_data',
+    'schedule': crontab(minute='30'),
+}
+```
+
+Alternatively, you can go to the django admin page and add the task at `[your auth url]/admin/django_celery_beat/periodictask/` 
+
 ## Permissions
 
 The permissions for this plugin are rather straight forward.
 
 * `moonstuff.view_moonstuff` - This is access permission, users without this permission will be unable to access the plugin.
 * `moonstuff.add_resource` - This permission allows users to upload moon scan data.
-* `moonstuff.add_extractionevent` - This permission is allows users to update the list of upcomming extractions. 
-
-#### Note: There is currently no logic to check for extraction events automatically. 
+* `moonstuff.add_extractionevent` - This permission is allows users to add their tokens to be pulled from when checking for new extraction events. 
+ 
