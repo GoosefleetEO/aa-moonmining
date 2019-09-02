@@ -3,7 +3,6 @@ from setuptools import setup, find_packages
 from moonstuff import __version__
 
 install_requires = [
-    'django>=2.0,<2.1',
     'django-bootstrap-form',
     'allianceauth>=2.0.5',
 ]
