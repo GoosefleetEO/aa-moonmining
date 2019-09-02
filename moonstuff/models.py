@@ -11,6 +11,9 @@ class Resource(models.Model):
     def __str__(self):
         return "{} - {}".format(self.ore, self.amount)
 
+    class Meta:
+        unique_together = (('amount', 'ore_id'),)
+
 
 class Moon(models.Model):
     name = models.CharField(max_length=80)

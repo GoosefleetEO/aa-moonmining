@@ -97,7 +97,6 @@ def check_notifications(token):
 
     # Process notifications
     for pop in moon_pops:
-        print(pop['moonID'])
         if pop['moonID'] in moon_ids:
             moon = Moon.objects.get(moon_id=pop['moonID'])
             # Get ore names
@@ -108,9 +107,10 @@ def check_notifications(token):
             types = {}
             for name in names:
                 types[name['id']] = name['name']
-            print(types)
             # Create the resources.
             for k, v in pop['oreVolumeByType'].items():
+                # Truncate amount to ensure duplicates are caught correctly
+                v = float('%.10f' % v)
                 resource, _ = Resource.objects.get_or_create(ore=types[k], amount=v, ore_id=k)
                 moon.resources.add(resource.pk)
                 
