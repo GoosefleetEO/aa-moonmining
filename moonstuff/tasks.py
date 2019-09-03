@@ -51,6 +51,7 @@ def process_resources(scan):
         system_id = scan[1][4]
         moon_id = scan[1][6]
         moon, _ = Moon.objects.get_or_create(name=moon_name, system_id=system_id, moon_id=moon_id)
+        moon.resources.clear()
         scan = scan[1:]
         for res in scan:
             # Trim off the empty index at the front
@@ -99,6 +100,7 @@ def check_notifications(token):
     for pop in moon_pops:
         if pop['moonID'] in moon_ids:
             moon = Moon.objects.get(moon_id=pop['moonID'])
+            moon.resources.clear()
             # Get ore names
             types = []
             for k in pop['oreVolumeByType']:
