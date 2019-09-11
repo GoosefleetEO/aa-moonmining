@@ -16,7 +16,13 @@ class Resource(models.Model):
 
 class Moon(models.Model):
     name = models.CharField(max_length=80)
-    system = models.ForeignKey('evesde.EveSolarSystem', to_field="solar_system_id", on_delete=models.DO_NOTHING)
+    system = models.ForeignKey(
+        'evesde.EveSolarSystem', 
+        to_field="solar_system_id", 
+        on_delete=models.DO_NOTHING,        
+        null=True, 
+        default=None
+    )
     moon_id = models.IntegerField()
     resources = models.ManyToManyField(Resource)
 
