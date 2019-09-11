@@ -1,7 +1,6 @@
 from django.db import models
 from allianceauth.eveonline.models import EveCorporationInfo, EveCharacter
 
-
 # Create your models here.
 class Resource(models.Model):
     ore = models.CharField(max_length=75)
@@ -17,7 +16,7 @@ class Resource(models.Model):
 
 class Moon(models.Model):
     name = models.CharField(max_length=80)
-    system_id = models.IntegerField()
+    system = models.ForeignKey('evesde.EveSolarSystem', to_field="solar_system_id", on_delete=models.DO_NOTHING)
     moon_id = models.IntegerField()
     resources = models.ManyToManyField(Resource)
 

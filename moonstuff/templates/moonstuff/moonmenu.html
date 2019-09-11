@@ -15,13 +15,15 @@
     </div>
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
         <ul class="nav navbar-nav">
-            <li class="{% navactive request 'moonstuff:moon_list' %}"><a href="{% url 'moonstuff:moon_list' %}">List Moons</a> </li>
+            <li class="{% navactive request 'moonstuff:moon_index' %}"><a href="{% url 'moonstuff:moon_index' %}">Extractions</a> </li>
+            <li class="{% navactive request 'moonstuff:moon_list' %}"><a href="{% url 'moonstuff:moon_list' %}">Our Moons</a> </li>
+            <li class="{% navactive request 'moonstuff:moon-list-alll' %}"><a href="{% url 'moonstuff:moon-list-all' %}">All Moons</a> </li>
             {% if perms.moonstuff.add_resource %}
             <li class="{% navactive request 'moonstuff:moon_scan' %}"> <a href="{% url 'moonstuff:moon_scan' %}">Add Moon Scan</a></li>
             {% endif %}
         </ul>
         {% if perms.moonstuff.add_extractevent %}
-        <a class="btn btn-success navbar-btn" style="float: right" href="{% url 'moonstuff:add_token' %}"><span class="fa fa-plus fa-fw"></span></a>
+        <a class="btn btn-success navbar-btn" style="float: right" href="{% url 'moonstuff:add_token' %}">Add Refinery</a>
         {% endif %}
     </div>
 </div>

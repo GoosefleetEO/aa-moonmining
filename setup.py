@@ -5,6 +5,7 @@ from moonstuff import __version__
 install_requires = [
     'django-bootstrap-form',
     'allianceauth>=2.0.5',
+    'allianceauth-evesde'
 ]
 
 testing_extras = [

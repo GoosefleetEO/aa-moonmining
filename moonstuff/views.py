@@ -1,8 +1,13 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
+from django.forms.models import model_to_dict
+from django.http import JsonResponse
+from django.urls import reverse
+from django.views.decorators.cache import cache_page
 from esi.decorators import token_required
 import os
+import urllib
 from datetime import date, datetime, timedelta, timezone
 from .models import *
 from .forms import MoonScanForm
@@ -124,10 +129,45 @@ def moon_scan(request):
 
 @login_required()
 @permission_required('moonstuff.view_moonstuff')
-def moon_list(request):
-    moon = Moon.objects.order_by('system_id', 'name')
-    ctx = {'moons': moon}
-    return render(request, 'moonstuff/moon_list.html', ctx)
+def moon_list(request):    
+    # render the page only, data is retrieved through ajax from moon_list_data
+    ajax_url = reverse('moonstuff:moon-list-data', args=['our_moons'])
+    return render(request, 'moonstuff/moon_list.html', {'ajax_url': ajax_url})
+
+
+@login_required()
+@permission_required('moonstuff.view_moonstuff')
+def moon_list_all(request):    
+    # render the page only, data is retrieved through ajax from moon_list_data
+    ajax_url = reverse('moonstuff:moon-list-data', args=['all_moons'])
+    return render(request, 'moonstuff/moon_list.html', {'ajax_url': ajax_url})
+
+
+#@cache_page(60 * 15)
+@login_required()
+@permission_required('moonstuff.view_moonstuff')
+def moon_list_data(request, type):
+    data = list()
+    if type == 'our_moons':
+        moon_query = [r.location for r in Refinery.objects.select_related('location')]           
+    else:
+        moon_query = Moon.objects.select_related('system__region')
+    for moon_obj in moon_query:
+        moon_details_url = reverse('moonstuff:moon_info', args=[moon_obj.moon_id])
+        solar_system_name = moon_obj.system.solar_system_name
+        solar_system_link = '<a href="https://evemaps.dotlan.net/system/{}" target="_blank">{}</a>'.format(
+            urllib.parse.quote_plus(solar_system_name),
+            solar_system_name
+        ) 
+        moon = {
+            'moon_name': moon_obj.name,
+            'solar_system_name': solar_system_name,
+            'solar_system_link': solar_system_link,
+            'region_name': moon_obj.system.region.region_name,            
+            'details': '<a class="btn btn-primary btn-sm" href="{}"><span class="fa fa-eye fa-fw"></span></a>'.format(moon_details_url),
+        }        
+        data.append(moon)    
+    return JsonResponse(data, safe=False)
 
 
 @permission_required(('moonstuff.add_extractevent', 'moonstuff.view_moonstuff'))
