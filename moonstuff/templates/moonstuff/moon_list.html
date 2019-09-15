@@ -20,6 +20,7 @@
                     <th>Moon</th>
                     <th>System</th>
                     <th>Region</th>
+                    <th>Value</th>
                     <th>Details</th>
                 </thead>
                 <tbody>                   
@@ -61,6 +62,7 @@
                 { data: 'moon_name' },
                 { data: 'solar_system_link' },
                 { data: 'region_name' },
+                { data: 'value' },
                 { data: 'details' },
 
                 { data: 'solar_system_name' },                
@@ -71,14 +73,14 @@
             order: [ [0, "asc"] ],
 
             columnDefs: [														
-                { "orderable": false, "targets": [ 3 ] },
-                { "visible": false, "targets": [ 4 ] },
+                { "orderable": false, "targets": [ 4 ] },
+                { "visible": false, "targets": [ 5 ] },
             ],
       
             filterDropDown: {										
                 columns: [																
                     { 
-                        idx: 4,
+                        idx: 5,
                         title: "System"
                     },
                     { 

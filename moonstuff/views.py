@@ -5,7 +5,9 @@ from django.forms.models import model_to_dict
 from django.http import JsonResponse
 from django.urls import reverse
 from django.views.decorators.cache import cache_page
+from django.db.models import prefetch_related_objects
 from esi.decorators import token_required
+from esi.clients import esi_client_factory
 import os
 import urllib
 from datetime import date, datetime, timedelta, timezone
@@ -147,11 +149,15 @@ def moon_list_all(request):
 @login_required()
 @permission_required('moonstuff.view_moonstuff')
 def moon_list_data(request, type):
+    # get market prices
+    client = esi_client_factory()
+    # market_prices = client.Market.get_markets_prices()
     data = list()
     if type == 'our_moons':
         moon_query = [r.location for r in Refinery.objects.select_related('location')]           
     else:
         moon_query = Moon.objects.select_related('system__region')
+    prefetch_related_objects(moon_query, 'resources')
     for moon_obj in moon_query:
         moon_details_url = reverse('moonstuff:moon_info', args=[moon_obj.moon_id])
         solar_system_name = moon_obj.system.solar_system_name
@@ -159,11 +165,16 @@ def moon_list_data(request, type):
             urllib.parse.quote_plus(solar_system_name),
             solar_system_name
         ) 
+        value = 0        
+        for resource in moon_obj.resources.all():
+            value += resource.amount
+        
         moon = {
             'moon_name': moon_obj.name,
             'solar_system_name': solar_system_name,
             'solar_system_link': solar_system_link,
-            'region_name': moon_obj.system.region.region_name,            
+            'region_name': moon_obj.system.region.region_name,
+            'value': value,
             'details': '<a class="btn btn-primary btn-sm" href="{}"><span class="fa fa-eye fa-fw"></span></a>'.format(moon_details_url),
         }        
         data.append(moon)    

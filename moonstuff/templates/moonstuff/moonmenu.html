@@ -17,7 +17,9 @@
         <ul class="nav navbar-nav">
             <li class="{% navactive request 'moonstuff:moon_index' %}"><a href="{% url 'moonstuff:moon_index' %}">Extractions</a> </li>
             <li class="{% navactive request 'moonstuff:moon_list' %}"><a href="{% url 'moonstuff:moon_list' %}">Our Moons</a> </li>
+            {% if perms.moonstuff.view_all_moons %}
             <li class="{% navactive request 'moonstuff:moon-list-alll' %}"><a href="{% url 'moonstuff:moon-list-all' %}">All Moons</a> </li>
+            {% endif %}
             {% if perms.moonstuff.add_resource %}
             <li class="{% navactive request 'moonstuff:moon_scan' %}"> <a href="{% url 'moonstuff:moon_scan' %}">Add Moon Scan</a></li>
             {% endif %}
