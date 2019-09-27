@@ -1,3 +1,4 @@
+import logging
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
@@ -14,6 +15,10 @@ from datetime import date, datetime, timedelta, timezone
 from .models import *
 from .forms import MoonScanForm
 from .tasks import process_resources, import_data
+from evesde.models import EveTypeMaterial
+from .config import get_config
+
+logger = logging.getLogger(__name__)
 
 SWAGGER_SPEC_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'swagger.json')
 """
@@ -26,6 +31,7 @@ get_corporation_corporation_id
 get_corporation_corporation_id_mining_extractions
 """
 
+config = get_config()
 
 # Create your views here.
 @login_required
@@ -50,22 +56,45 @@ def moon_info(request, moonid):
         return redirect('moonstuff:moon_index')
 
     try:
-        ctx['moon'] = Moon.objects.get(moon_id=moonid)
+        ctx['moon'] = moon = Moon.objects.get(moon_id=moonid)
+        ctx['moon_income'] = moon.calc_income_estimate(
+            config['total_volume_per_month'], 
+            config['reprocessing_yield']
+        ) / 1000000000
 
-        resources = Resource.objects.filter(moon=ctx['moon'])
-        res = []
-        if len(resources) > 0:
-            for resource in resources:
-                url = "https://image.eveonline.com/Type/{}_64.png".format(resource.ore_id)
-                name = resource.ore
-                amount = int(round(resource.amount * 100))
-                res.append([name, url, amount])
-        ctx['res'] = res
+        products = MoonProduct.objects.filter(moon=moon)
+        product_rows = []
+        if len(products) > 0:
+            for product in products:
+                image_url = "https://image.eveonline.com/Type/{}_64.png".format(
+                    product.type_id
+                )
+                name = product.type.type_name
+                amount = int(round(product.amount * 100))
+                income = moon.calc_income_estimate(
+                    config['total_volume_per_month'], 
+                    config['reprocessing_yield'],
+                    product
+                ) / 1000000000
+                product_rows.append({
+                    'name': name, 
+                    'image_url': image_url, 
+                    'amount': amount, 
+                    'income': income
+                })
+        ctx['product_rows'] = product_rows
 
         today = datetime.today().replace(tzinfo=timezone.utc)
         end = today + timedelta(days=30)
-        ctx['pulls'] = ExtractEvent.objects.filter(moon=ctx['moon'], arrival_time__gte=today, arrival_time__lte=end)
-        ctx['ppulls'] = ExtractEvent.objects.filter(moon=ctx['moon'], arrival_time__lt=today)
+        ctx['pulls'] = ExtractEvent.objects.filter(
+            moon=moon, 
+            arrival_time__gte=today, 
+            arrival_time__lte=end
+        )
+        ctx['ppulls'] = ExtractEvent.objects.filter(
+            moon=moon, 
+            arrival_time__lt=today
+        )
 
     except models.ObjectDoesNotExist:
         messages.warning(request, "Moon {} does not exist in the database.".format(moonid))
@@ -141,43 +170,48 @@ def moon_list(request):
 @permission_required('moonstuff.view_moonstuff')
 def moon_list_all(request):    
     # render the page only, data is retrieved through ajax from moon_list_data
-    ajax_url = reverse('moonstuff:moon-list-data', args=['all_moons'])
-    return render(request, 'moonstuff/moon_list.html', {'ajax_url': ajax_url})
+    context = {
+        'ajax_url': reverse('moonstuff:moon-list-data', args=['all_moons']),
+        'reprocessing_yield': config['reprocessing_yield'] * 100,
+        'total_volume_per_month': '{:,.1f}'.format(
+            config['total_volume_per_month'] / 1000000
+        )
+    }                
+    return render(request, 'moonstuff/moon_list.html', context)
 
 
-#@cache_page(60 * 15)
+@cache_page(60 * 15)
 @login_required()
 @permission_required('moonstuff.view_moonstuff')
-def moon_list_data(request, type):
-    # get market prices
-    client = esi_client_factory()
-    # market_prices = client.Market.get_markets_prices()
-    data = list()
-    if type == 'our_moons':
-        moon_query = [r.location for r in Refinery.objects.select_related('location')]           
+def moon_list_data(request, category):
+    
+    data = list()    
+    if category == 'our_moons':
+        moon_query = [
+            r.location 
+            for r in Refinery.objects.select_related('location')
+        ] 
     else:
-        moon_query = Moon.objects.select_related('system__region')
-    prefetch_related_objects(moon_query, 'resources')
-    for moon_obj in moon_query:
-        moon_details_url = reverse('moonstuff:moon_info', args=[moon_obj.moon_id])
-        solar_system_name = moon_obj.system.solar_system_name
+        moon_query = Moon.objects.select_related(
+            'system__region', 'moon__evename'
+        )    
+    for moon in moon_query:
+        moon_details_url = reverse('moonstuff:moon_info', args=[moon.moon_id])
+        solar_system_name = moon.system.solar_system_name
         solar_system_link = '<a href="https://evemaps.dotlan.net/system/{}" target="_blank">{}</a>'.format(
             urllib.parse.quote_plus(solar_system_name),
             solar_system_name
         ) 
-        value = 0        
-        for resource in moon_obj.resources.all():
-            value += resource.amount
-        
-        moon = {
-            'moon_name': moon_obj.name,
+
+        moon_data = {
+            'moon_name': str(moon.moon.evename),
             'solar_system_name': solar_system_name,
             'solar_system_link': solar_system_link,
-            'region_name': moon_obj.system.region.region_name,
-            'value': value,
-            'details': '<a class="btn btn-primary btn-sm" href="{}"><span class="fa fa-eye fa-fw"></span></a>'.format(moon_details_url),
+            'region_name': moon.system.region.region_name,
+            'income': '{:.1f}'.format(moon.income / 1000000000),
+            'details': '<a class="btn btn-primary btn-sm" href="{}"><span class="fa fa-eye fa-fw"></span></a>'.format(moon_details_url)
         }        
-        data.append(moon)    
+        data.append(moon_data)    
     return JsonResponse(data, safe=False)
 
 

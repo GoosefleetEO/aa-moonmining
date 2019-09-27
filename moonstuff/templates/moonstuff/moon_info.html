@@ -6,33 +6,42 @@
     <div class="col-lg-12">
         <br>
         {% include 'moonstuff/moonmenu.html' %}
-        <h2> {% trans "Moon Information" %} - {{ moon.name }} </h2>
+        <h2> {% trans "Moon Information" %} - {{ moon.moon.evename }} - {{ moon_income | floatformat }} B </h2>
         <div class="row">
             <div class="col-md-6  mr-md-1">
                 <div class="panel panel-success">
                     <div class="panel-heading text-center">
-                        <h3 class="panel-title"> Moon Resource Information </h3>
+                        <h3 class="panel-title">Moon Product</h3>
                     </div>
                     <div class="panel-body">
-                        {% if res|length_is:"0" %}
+                        {% if product_rows|length_is:"0" %}
                             <div class="alert alert-warning">
-                                <p> There are no resources recorded for {{ moon.name }}. {% if perms.moonstuff.add_moon %} Why not add a moon scan? {% endif %}</p>
+                                <p> There are no resources recorded for {{ moon.moon.evename }}. {% if perms.moonstuff.add_moon %} Why not add a moon scan? {% endif %}</p>
                             </div>
                         {% else %}
-                            {% for res in res %}
+                            {% for product_row in product_rows %}
                                 <ul class="media-list">
                                     <li class="media">
                                         <div class="media-left">
-                                            <img class="media-object" src="{{ res.1 }}">
+                                            <img class="media-object" src="{{ product_row.image_url }}">
                                         </div>
                                         <div class="media-body">
-                                            <h4 class="media-heading">{{ res.0 }}</h4>
-                                            <div class="progress" style="height: 20px;">
-                                                <div class="progress-bar progress-bar-danger progress-bar-striped" role="progressbar" aria-valuenow="{{ res.2 }}" aria-valuemin="0" aria-valuemax="100" style="width: {{ res.2 }}%; line-height: 20px;">
-                                                    <span class="sr-only">{{ res.2 }}% {{ res.0 }}</span>
-                                                    <h5 class="media-heading" style="padding-top: 2px">{{ res.2 }}%</h5>
-                                                </div>
-                                            </div>
+                                            <table class="table" style="table-layout: auto">
+                                                <tr>
+                                                    <td>
+                                                        <h4 class="media-heading">{{ product_row.name }}</h4>
+                                                        <div class="progress" style="height: 20px; width: 100%">
+                                                            <div class="progress-bar progress-bar-danger progress-bar-striped" role="progressbar" aria-valuenow="{{ product_row.amount }}" aria-valuemin="0" aria-valuemax="100" style="width: {{ product_row.amount }}%; line-height: 20px;">
+                                                                <span class="sr-only">{{ product_row.amount }}% {{ product_row.name }}</span>
+                                                                <h5 class="media-heading" style="padding-top: 2px">{{ product_row.amount }}%</h5>
+                                                            </div>                                                
+                                                        </div>
+                                                    </td>
+                                                    <td style="vertical-align: middle; text-align: right; width=40px">
+                                                        {{ product_row.income | floatformat }} B
+                                                    </td>
+                                                </tr>
+                                            </table>
                                         </div>
                                     </li>
                                 </ul>
@@ -47,7 +56,7 @@
                         <h3 class="panel-title"> Next Pulls </h3>
                     </div>
                     <div class="panel-body">
-                        <table class="table" style="text-align: center">
+                        <table class="table" style="text-align: center;">
                             <thead>
                                 <th style="text-align: center"> Date(EVE/UTC)</th>
                             </thead>
@@ -68,7 +77,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 {% if res|length_is:"0" %}col-md-offset-6{% endif %}">
+            <div class="col-md-6 {% if product_rows|length_is:"0" %}col-md-offset-6{% endif %}">
                     <div class="panel panel-primary">
                         <div class="panel-heading text-center">
                             <h3 class="panel-title"> Past Pulls</h3>

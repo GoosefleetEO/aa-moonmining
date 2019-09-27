@@ -8,8 +8,7 @@
         <br>
         {% include 'moonstuff/moonmenu.html' %}
         <h2> {% trans "Moons" %} </h2>
-        <p class="lead">Only moons that have had extractions or have been scanned will be listed.</p>
-        
+                
         <div id="loader">
 			<img class="center-block" src="{% static "moonstuff/Spinner-1s-200px.svg" %}" alt="Spinner"/>
 		</div>
@@ -20,7 +19,7 @@
                     <th>Moon</th>
                     <th>System</th>
                     <th>Region</th>
-                    <th>Value</th>
+                    <th>Monthly income est. in B ISK</th>
                     <th>Details</th>
                 </thead>
                 <tbody>                   
@@ -28,6 +27,12 @@
             </table>
         </div>
     </div>
+    <p class="text-muted">
+        Income estimates are calculated using reprocessed ores, 
+        current average market prices, 
+        a reprocessing yield of {{ reprocessing_yield|floatformat }}%
+        and an assumed monthly ore volume of {{ total_volume_per_month }} million m3
+    </p>
 
 
 {% endblock %}
@@ -62,7 +67,7 @@
                 { data: 'moon_name' },
                 { data: 'solar_system_link' },
                 { data: 'region_name' },
-                { data: 'value' },
+                { data: 'income' },
                 { data: 'details' },
 
                 { data: 'solar_system_name' },                

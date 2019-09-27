@@ -2,11 +2,25 @@ from .models import *
 from celery import shared_task
 import logging
 from esi.models import Token
+from esi.clients import esi_client_factory
 import os
-from django.db import utils
+from django.db import utils, transaction
 import yaml
+from .config import get_config
 
 logger = logging.getLogger(__name__)
+
+# add custom tag to logger with name of this app
+class LoggerAdapter(logging.LoggerAdapter):
+    def __init__(self, logger, prefix):
+        super(LoggerAdapter, self).__init__(logger, {})
+        self.prefix = prefix
+
+    def process(self, msg, kwargs):
+        return '[%s] %s' % (self.prefix, msg), kwargs
+
+logger = logging.getLogger(__name__)
+logger = LoggerAdapter(logger, __package__)
 
 """
 Swagger Operations:
@@ -19,6 +33,7 @@ get_corporation_corporation_id_mining_extractions
 post_universe_names
 """
 
+config = get_config()
 
 def _get_tokens(scopes):
     try:
@@ -59,7 +74,7 @@ def process_resources(scan):
 
             # While extremely unlikely, it is possible that 2 moons might have the same percentage
             # of an ore in them, so we will account for this.
-            resource, _ = Resource.objects.get_or_create(ore=res[0], amount=res[1], ore_id=res[2])
+            resource, _ = MoonProduct.objects.get_or_create(ore=res[0], amount=res[1], ore_id=res[2])
             moon.resources.add(resource.pk)
     except Exception as e:
         logger.error("An Error occurred while processing the following moon scan. {}".format(scan))
@@ -113,7 +128,7 @@ def check_notifications(token):
             for k, v in pop['oreVolumeByType'].items():
                 # Truncate amount to ensure duplicates are caught correctly
                 v = float('%.10f' % v)
-                resource, _ = Resource.objects.get_or_create(ore=types[k], amount=v, ore_id=k)
+                resource, _ = MoonProduct.objects.get_or_create(ore=types[k], amount=v, type_id=k)
                 moon.resources.add(resource.pk)
                 
 
@@ -181,3 +196,40 @@ def import_data():
             logger.error(e)
 
         check_notifications(token)
+
+@shared_task
+def update_market_prices():
+    """Updated the local copy of the market prices from ESI"""
+    logger.info('Updating market prices')
+    try:
+        client = esi_client_factory()    
+        
+        with transaction.atomic():
+            MarketPrice.objects.all().delete()
+            for row in client.Market.get_markets_prices().result():
+                MarketPrice.objects.create(
+                    type_id=row['type_id'],
+                    average_price=row['average_price'] if 'average_price' in row else None,
+                    adjusted_price=row['adjusted_price'] if 'adjusted_price' in row else None,
+                )
+
+    except Exception as ex:
+        logger.error('An unexpected error occurred: {}'.format(ex))
+
+
+@shared_task
+def update_moon_income():
+    """update the income for all moons"""
+
+    logger.info(
+        'Started re-calculating moon income for {:,} moons'.format(
+            Moon.objects.count()
+    ))
+    with transaction.atomic():
+        for moon in Moon.objects.all():
+            moon.income = moon.calc_income_estimate(
+                config['total_volume_per_month'], 
+                config['reprocessing_yield']
+            )
+            moon.save()
+    logger.info('Completed re-calculating moon income')

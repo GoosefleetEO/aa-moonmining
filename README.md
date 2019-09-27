@@ -3,6 +3,14 @@
 Moonstuff is a plugin for [AllianceAuth](https://gitlab.com/allianceauth/allianceauth) to allow alliances to better manage moons and their
 extraction schedules.
 
+**IMPORTANT**
+
+This is a heavy modified fork of the original moonstuff app from colcrunch. It's not migration compatible with the original due to major model changes. 
+
+Requires [allianceauth-evesde](https://gitlab.com/ErikKalkoken/allianceauth-evesde) to be installed to work.
+
+WIP !!
+
 ## Installation
 
 Install the project from git to your allianceauth venv.
