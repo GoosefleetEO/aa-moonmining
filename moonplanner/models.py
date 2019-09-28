@@ -38,15 +38,17 @@ class Moon(models.Model):
         """
         income = 0        
         if moon_product is None:
-            moon_products = self.moonproduct_set.select_related('type')
+            moon_products = self.moonproduct_set.select_related('ore_type')
         else:
             moon_products = [moon_product]
         for product in moon_products:
-            volume_per_unit = product.type.volume
+            volume_per_unit = product.ore_type.volume
             volume = total_volume * product.amount
             units = volume / volume_per_unit      
             r_units = units / 100
-            for t in EveTypeMaterial.objects.filter(type=product.type).select_related('material_type__marketprice'):
+            for t in EveTypeMaterial.objects.filter(
+                        type=product.ore_type
+                    ).select_related('material_type__marketprice'):
                 income += (t.material_type.marketprice.average_price
                     * t.quantity
                     * r_units
@@ -56,7 +58,7 @@ class Moon(models.Model):
 
     class Meta:
         permissions = (
-            ('view_moonplanner', 'Can access the moonplanner module.'),
+            ('access_moonplanner', 'Can access the moonplanner app.'),
             ('view_all_moons', 'Can see all moons'),
         )
 
@@ -66,7 +68,7 @@ class MoonProduct(models.Model):
         Moon,        
         on_delete=models.CASCADE
     )
-    type = models.ForeignKey(
+    ore_type = models.ForeignKey(
         EveType,         
         on_delete=models.DO_NOTHING,
         null=True, 
@@ -75,10 +77,10 @@ class MoonProduct(models.Model):
     amount = models.FloatField()
 
     def __str__(self):
-        return "{} - {}".format(self.type.type_name, self.amount)
+        return "{} - {}".format(self.ore_type.type_name, self.amount)
 
     class Meta:
-        unique_together = (('moon', 'type'),)
+        unique_together = (('moon', 'ore_type'),)
         indexes = [
             models.Index(fields=['moon']),
         ]

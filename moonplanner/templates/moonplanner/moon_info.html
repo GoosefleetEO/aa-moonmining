@@ -6,17 +6,29 @@
     <div class="col-lg-12">
         <br>
         {% include 'moonplanner/moonmenu.html' %}
-        <h2> {% trans "Moon Information" %} - {{ moon.moon.evename }} - {{ moon_income | floatformat }} B </h2>
+        <h2> {% trans "Moon Details" %}</h2>
         <div class="row">
             <div class="col-md-6  mr-md-1">
-                <div class="panel panel-success">
+                <div class="panel panel-primary">
                     <div class="panel-heading text-center">
-                        <h3 class="panel-title">Moon Product</h3>
+                        <h3 class="panel-title">Moon</h3>
+                    </div>
+                    <div class="panel-body">
+                    <p>{{ moon.moon.evename }} </p>
+                    <p>{{ moon_income | floatformat }} B</p>
+                    </div>
+                </div>
+                <div class="panel panel-primary">
+                    <div class="panel-heading text-center">
+                        <h3 class="panel-title">Product</h3>
                     </div>
                     <div class="panel-body">
                         {% if product_rows|length_is:"0" %}
                             <div class="alert alert-warning">
-                                <p> There are no resources recorded for {{ moon.moon.evename }}. {% if perms.moonplanner.add_moon %} Why not add a moon scan? {% endif %}</p>
+                                <p>
+                                    There are no resources recorded for {{ moon.moon.evename }}. 
+                                    {% if perms.moonplanner.add_moon %} Why not add a moon scan? {% endif %}
+                                </p>
                             </div>
                         {% else %}
                             {% for product_row in product_rows %}
@@ -31,13 +43,24 @@
                                                     <td>
                                                         <h4 class="media-heading">{{ product_row.name }}</h4>
                                                         <div class="progress" style="height: 20px; width: 100%">
-                                                            <div class="progress-bar progress-bar-danger progress-bar-striped" role="progressbar" aria-valuenow="{{ product_row.amount }}" aria-valuemin="0" aria-valuemax="100" style="width: {{ product_row.amount }}%; line-height: 20px;">
-                                                                <span class="sr-only">{{ product_row.amount }}% {{ product_row.name }}</span>
-                                                                <h5 class="media-heading" style="padding-top: 2px">{{ product_row.amount }}%</h5>
+                                                            <div 
+                                                                class="progress-bar progress-bar-danger progress-bar-striped" 
+                                                                role="progressbar" 
+                                                                aria-valuenow="{{ product_row.amount }}" 
+                                                                aria-valuemin="0" 
+                                                                aria-valuemax="100" 
+                                                                style="width: {{ product_row.amount }}%; line-height: 20px;"
+                                                            >
+                                                                <span class="sr-only">
+                                                                    {{ product_row.amount }}% {{ product_row.name }}
+                                                                </span>
+                                                                <h5 class="media-heading" style="padding-top: 2px">
+                                                                    {{ product_row.amount }}%
+                                                                    </h5>
                                                             </div>                                                
                                                         </div>
                                                     </td>
-                                                    <td style="vertical-align: middle; text-align: right; width=40px">
+                                                    <td style="vertical-align: middle; text-align: right; width: 60px">
                                                         {{ product_row.income | floatformat }} B
                                                     </td>
                                                 </tr>

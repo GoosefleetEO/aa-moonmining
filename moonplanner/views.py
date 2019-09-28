@@ -67,9 +67,9 @@ def moon_info(request, moonid):
         if len(products) > 0:
             for product in products:
                 image_url = "https://image.eveonline.com/Type/{}_64.png".format(
-                    product.type_id
+                    product.ore_type_id
                 )
-                name = product.type.type_name
+                name = product.ore_type.type_name
                 amount = int(round(product.amount * 100))
                 income = moon.calc_income_estimate(
                     config['total_volume_per_month'], 
