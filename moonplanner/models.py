@@ -34,6 +34,9 @@ class Moon(models.Model):
             total_volume: total excepted ore volume for this moon
             reprocessing_yield: expected average yield for ore reprocessing
             moon_product(optional): restrict estimation to given moon product
+
+        Returns:
+            income estimate for moon or None if prices are missing
         
         """
         income = 0        
@@ -41,24 +44,28 @@ class Moon(models.Model):
             moon_products = self.moonproduct_set.select_related('ore_type')
         else:
             moon_products = [moon_product]
-        for product in moon_products:
-            volume_per_unit = product.ore_type.volume
-            volume = total_volume * product.amount
-            units = volume / volume_per_unit      
-            r_units = units / 100
-            for t in EveTypeMaterial.objects.filter(
-                        type=product.ore_type
-                    ).select_related('material_type__marketprice'):
-                income += (t.material_type.marketprice.average_price
-                    * t.quantity
-                    * r_units
-                    * reprocessing_yield)
+        try:
+            for product in moon_products:
+                volume_per_unit = product.ore_type.volume
+                volume = total_volume * product.amount
+                units = volume / volume_per_unit      
+                r_units = units / 100            
+                for t in EveTypeMaterial.objects.filter(
+                            type=product.ore_type
+                        ).select_related('material_type__marketprice'):
+                
+                    income += (t.material_type.marketprice.average_price
+                        * t.quantity
+                        * r_units
+                        * reprocessing_yield)
+        except models.ObjectDoesNotExist:
+            income = None
 
         return income
 
     class Meta:
         permissions = (
-            ('access_moonplanner', 'Can access the moonplanner app.'),
+            ('access_moonplanner', 'Can access the moonplanner app'),
             ('view_all_moons', 'Can see all moons'),
         )
 

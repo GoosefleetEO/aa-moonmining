@@ -12,7 +12,7 @@ class MoonMenu(MenuItemHook):
                               navactive=['moonplanner:'])
 
     def render(self, request):
-        if request.user.has_perm('moonplanner.view_moonplanner'):
+        if request.user.has_perm('moonplanner.access_moonplanner'):
             return MenuItemHook.render(self, request)
         return ''
 

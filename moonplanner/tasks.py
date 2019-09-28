@@ -55,7 +55,7 @@ def process_resources(scan):
     Example Scan:
                   [
                     ['Moon Name', '', '', '', '', '', ''],
-                    ['','Resource Name','Decimal Percentage','Resource Type ID','Solar System ID','Planet ID','Moon ID'],
+                    ['','Ore Name','Decimal Percentage','Ore Type ID','Solar System ID','Planet ID','Moon ID'],
                     ['...'],
                   ]
     :param scan: list

@@ -3,5 +3,5 @@ from django.apps import AppConfig
 
 class MoonPlanerConfig(AppConfig):
     name = 'moonplanner'
-    label = 'moonplaner'
+    label = 'moonplanner'
     verbose_name = 'Moon Planner'

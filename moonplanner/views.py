@@ -35,7 +35,7 @@ config = get_config()
 
 # Create your views here.
 @login_required
-@permission_required('moonplanner.view_moonplanner')
+@permission_required('moonplanner.access_moonplanner')
 def moon_index(request):
     ctx = {}
     # Upcoming Extractions
@@ -48,7 +48,7 @@ def moon_index(request):
 
 
 @login_required
-@permission_required('moonplanner.view_moonplanner')
+@permission_required('moonplanner.access_moonplanner')
 def moon_info(request, moonid):
     ctx = {}
     if len(moonid) == 0 or not moonid:
@@ -57,10 +57,11 @@ def moon_info(request, moonid):
 
     try:
         ctx['moon'] = moon = Moon.objects.get(moon_id=moonid)
-        ctx['moon_income'] = moon.calc_income_estimate(
+        income = moon.calc_income_estimate(
             config['total_volume_per_month'], 
             config['reprocessing_yield']
-        ) / 1000000000
+        )
+        ctx['moon_income'] = None if income is None else income / 1000000000
 
         products = MoonProduct.objects.filter(moon=moon)
         product_rows = []
@@ -68,19 +69,23 @@ def moon_info(request, moonid):
             for product in products:
                 image_url = "https://image.eveonline.com/Type/{}_64.png".format(
                     product.ore_type_id
-                )
-                name = product.ore_type.type_name
+                )                
                 amount = int(round(product.amount * 100))
                 income = moon.calc_income_estimate(
                     config['total_volume_per_month'], 
                     config['reprocessing_yield'],
                     product
-                ) / 1000000000
+                )
+                ore_type_url = "https://www.kalkoken.org/apps/eveitems/?typeId={}".format(
+                    product.ore_type_id
+                )
                 product_rows.append({
-                    'name': name, 
+                    'ore_type_name': product.ore_type.type_name,
+                    'ore_type_url': ore_type_url,
+                    'ore_group_name': product.ore_type.group.group_name,
                     'image_url': image_url, 
                     'amount': amount, 
-                    'income': income
+                    'income': None if income is None else income / 1000000000
                 })
         ctx['product_rows'] = product_rows
 
@@ -103,7 +108,7 @@ def moon_info(request, moonid):
     return render(request, 'moonplanner/moon_info.html', ctx)
 
 
-@permission_required(('moonplanner.view_moonplanner', 'moonplanner.add_resource'))
+@permission_required(('moonplanner.access_moonplanner', 'moonplanner.add_resource'))
 @login_required()
 def moon_scan(request):
     ctx = {}
@@ -159,18 +164,22 @@ def moon_scan(request):
 
 
 @login_required()
-@permission_required('moonplanner.view_moonplanner')
+@permission_required('moonplanner.access_moonplanner')
 def moon_list(request):    
     # render the page only, data is retrieved through ajax from moon_list_data
-    ajax_url = reverse('moonplanner:moon-list-data', args=['our_moons'])
-    return render(request, 'moonplanner/moon_list.html', {'ajax_url': ajax_url})
+    context = {
+        'title': 'Our Moons',
+        'ajax_url': reverse('moonplanner:moon-list-data', args=['our_moons'])
+    }    
+    return render(request, 'moonplanner/moon_list.html', context)
 
 
 @login_required()
-@permission_required('moonplanner.view_moonplanner')
+@permission_required('moonplanner.access_moonplanner')
 def moon_list_all(request):    
     # render the page only, data is retrieved through ajax from moon_list_data
     context = {
+        'title': 'All Moons',
         'ajax_url': reverse('moonplanner:moon-list-data', args=['all_moons']),
         'reprocessing_yield': config['reprocessing_yield'] * 100,
         'total_volume_per_month': '{:,.1f}'.format(
@@ -182,7 +191,7 @@ def moon_list_all(request):
 
 #@cache_page(60 * 15)
 @login_required()
-@permission_required('moonplanner.view_moonplanner')
+@permission_required('moonplanner.access_moonplanner')
 def moon_list_data(request, category):
     
     data = list()    
@@ -194,7 +203,7 @@ def moon_list_data(request, category):
     else:
         moon_query = Moon.objects.select_related(
             'system__region', 'moon__evename'
-        )    
+        )[:50]   
     for moon in moon_query:
         moon_details_url = reverse('moonplanner:moon_info', args=[moon.moon_id])
         solar_system_name = moon.system.solar_system_name
@@ -214,13 +223,16 @@ def moon_list_data(request, category):
             'solar_system_link': solar_system_link,
             'region_name': moon.system.region.region_name,
             'income': income,
-            'details': '<a class="btn btn-primary btn-sm" href="{}"><span class="fa fa-eye fa-fw"></span></a>'.format(moon_details_url)
+            'details': ('<a class="btn btn-primary btn-sm" href="{}" data-toggle="tooltip" data-placement="top" title="Show details in current window">'.format(moon_details_url)
+                + '<span class="fa fa-eye fa-fw"></span></a>'
+                + '&nbsp;&nbsp;<a class="btn btn-default btn-sm" href="{}" target="_blank" data-toggle="tooltip" data-placement="top" title="Open details in new window">'.format(moon_details_url)
+                + '<span class="fa fa-window-restore fa-fw"></span></a>')
         }        
         data.append(moon_data)    
     return JsonResponse(data, safe=False)
 
 
-@permission_required(('moonplanner.add_extractevent', 'moonplanner.view_moonplanner'))
+@permission_required(('moonplanner.add_extractevent', 'moonplanner.access_moonplanner'))
 @token_required(scopes=['esi-industry.read_corporation_mining.v1', 'esi-universe.read_structures.v1',
                         'esi-characters.read_notifications.v1'])
 @login_required
