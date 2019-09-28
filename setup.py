@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 from setuptools import setup, find_packages
-from moonstuff import __version__
+from moonplanner import __version__
 
 install_requires = [
-    'django-bootstrap-form',
-    'allianceauth>=2.0.5',
+    'django-bootstrap-form',    
     'allianceauth-evesde'
 ]
 
@@ -13,7 +12,7 @@ testing_extras = [
 ]
 
 setup(
-    name='aa-moonstuff',
+    name='aa-moonplanner',
     version=__version__,
     author='Col Crunch',
     author_email='it-team@serin.space',
@@ -26,7 +25,7 @@ setup(
     python_requires='~=3.4',
     license='GPLv3',
     packages=find_packages(),
-    url='https://gitlab.com/colcrunch/aa-moonstuff',
+    url='https://gitlab.com/colcrunch/aa-moonplanner',
     zip_safe=False,
     include_package_data=True,
 )

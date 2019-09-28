@@ -6,11 +6,11 @@
 {% block content %}
     <div class="col-lg-12">
         <br>
-        {% include 'moonstuff/moonmenu.html' %}
+        {% include 'moonplanner/moonmenu.html' %}
         <h2> {% trans "Moons" %} </h2>
                 
         <div id="loader">
-			<img class="center-block" src="{% static "moonstuff/Spinner-1s-200px.svg" %}" alt="Spinner"/>
+			<img class="center-block" src="{% static "moonplanner/Spinner-1s-200px.svg" %}" alt="Spinner"/>
 		</div>
         
         <div id="moon_table" style="display: none !important;">
@@ -41,14 +41,14 @@
     <!--load JS for filterDropDown plugin -->
     <script 
         type="text/javascript" 
-        src="{% static "moonstuff/filterDropDown.min.js" %}">
+        src="{% static "moonplanner/filterDropDown.min.js" %}">
     </script>
 {% endblock %}
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}
 
     <link 
-        href="{% static "moonstuff/moonstuff.css" %}" 
+        href="{% static "moonplanner/moonplanner.css" %}" 
         type="text/css" 
         rel="stylesheet"
     >

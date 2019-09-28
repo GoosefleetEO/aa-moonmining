@@ -6,13 +6,13 @@ from allianceauth.services.hooks import MenuItemHook, UrlHook
 
 class MoonMenu(MenuItemHook):
     def __init__(self):
-        MenuItemHook.__init__(self, 'Moon Tools',
+        MenuItemHook.__init__(self, 'Moon Planner',
                               'fa fa-moon-o fa-fw',
-                              'moonstuff:moon_index',
-                              navactive=['moonstuff:'])
+                              'moonplanner:moon_index',
+                              navactive=['moonplanner:'])
 
     def render(self, request):
-        if request.user.has_perm('moonstuff.view_moonstuff'):
+        if request.user.has_perm('moonplanner.view_moonplanner'):
             return MenuItemHook.render(self, request)
         return ''
 
@@ -24,4 +24,4 @@ def register_menu():
 
 @hooks.register('url_hook')
 def register_url():
-    return UrlHook(urls, 'moonstuff', r'^moons/')
+    return UrlHook(urls, 'moonplanner', r'^moonplanner/')

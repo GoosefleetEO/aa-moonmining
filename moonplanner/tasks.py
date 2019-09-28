@@ -197,11 +197,14 @@ def import_data():
 
         check_notifications(token)
 
+
 @shared_task
-def update_market_prices():
-    """Updated the local copy of the market prices from ESI"""
-    logger.info('Updating market prices')
+def update_moon_income():
+    """update the income for all moons"""
+
     try:
+        logger.info('Updating market prices from ESI')
+        
         client = esi_client_factory()    
         
         with transaction.atomic():
@@ -213,23 +216,18 @@ def update_market_prices():
                     adjusted_price=row['adjusted_price'] if 'adjusted_price' in row else None,
                 )
 
+        logger.info(
+            'Started re-calculating moon income for {:,} moons'.format(
+                Moon.objects.count()
+        ))
+        with transaction.atomic():
+            for moon in Moon.objects.all():
+                moon.income = moon.calc_income_estimate(
+                    config['total_volume_per_month'], 
+                    config['reprocessing_yield']
+                )
+                moon.save()
+        logger.info('Completed re-calculating moon income')
+
     except Exception as ex:
         logger.error('An unexpected error occurred: {}'.format(ex))
-
-
-@shared_task
-def update_moon_income():
-    """update the income for all moons"""
-
-    logger.info(
-        'Started re-calculating moon income for {:,} moons'.format(
-            Moon.objects.count()
-    ))
-    with transaction.atomic():
-        for moon in Moon.objects.all():
-            moon.income = moon.calc_income_estimate(
-                config['total_volume_per_month'], 
-                config['reprocessing_yield']
-            )
-            moon.save()
-    logger.info('Completed re-calculating moon income')

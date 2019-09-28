@@ -5,7 +5,7 @@ extraction schedules.
 
 **IMPORTANT**
 
-This is a heavy modified fork of the original moonstuff app from colcrunch. It's not migration compatible with the original due to major model changes. 
+This is a heavy modified fork of the original moonplanner app from colcrunch. It's not migration compatible with the original due to major model changes. 
 
 Requires [allianceauth-evesde](https://gitlab.com/ErikKalkoken/allianceauth-evesde) to be installed to work.
 
@@ -17,13 +17,13 @@ Install the project from git to your allianceauth venv.
 
 ```bash
 source /path/to/auth/venv/activate
-pip install git+https://gitlab.com/colcrunch/aa-moonstuff
+pip install git+https://gitlab.com/colcrunch/aa-moonplanner
 ```
 
 The add it to your `INSTALLED-APPS` in `local.py`.
 ```python
 INSTALLED_APPS+=[
-        'moonstuff',
+        'moonplanner',
     ]
 ```
 
@@ -32,8 +32,8 @@ Then run migrations and restart your supervisor processes.
 ### Task Schedule
 Add the following to the end of your `local.py`:
 ```python
-CELERYBEAT_SCHEDULE['run_moonstuff_data_import'] = {
-    'task': 'moonstuff.tasks.import_data',
+CELERYBEAT_SCHEDULE['run_moonplanner_data_import'] = {
+    'task': 'moonplanner.tasks.import_data',
     'schedule': crontab(minute='30'),
 }
 ```
@@ -44,7 +44,7 @@ Alternatively, you can go to the django admin page and add the task at `[your au
 
 The permissions for this plugin are rather straight forward.
 
-* `moonstuff.view_moonstuff` - This is access permission, users without this permission will be unable to access the plugin.
-* `moonstuff.add_resource` - This permission allows users to upload moon scan data.
-* `moonstuff.add_extractionevent` - This permission is allows users to add their tokens to be pulled from when checking for new extraction events. 
+* `moonplanner.view_moonplanner` - This is access permission, users without this permission will be unable to access the plugin.
+* `moonplanner.add_resource` - This permission allows users to upload moon scan data.
+* `moonplanner.add_extractionevent` - This permission is allows users to add their tokens to be pulled from when checking for new extraction events. 
  

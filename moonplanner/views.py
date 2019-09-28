@@ -35,7 +35,7 @@ config = get_config()
 
 # Create your views here.
 @login_required
-@permission_required('moonstuff.view_moonstuff')
+@permission_required('moonplanner.view_moonplanner')
 def moon_index(request):
     ctx = {}
     # Upcoming Extractions
@@ -44,16 +44,16 @@ def moon_index(request):
     ctx['exts'] = ExtractEvent.objects.filter(arrival_time__gte=today, arrival_time__lte=end)
     ctx['r_exts'] = ExtractEvent.objects.filter(arrival_time__lt=today).order_by('-arrival_time')[:10]
 
-    return render(request, 'moonstuff/moon_index.html', ctx)
+    return render(request, 'moonplanner/moon_index.html', ctx)
 
 
 @login_required
-@permission_required('moonstuff.view_moonstuff')
+@permission_required('moonplanner.view_moonplanner')
 def moon_info(request, moonid):
     ctx = {}
     if len(moonid) == 0 or not moonid:
         messages.warning(request, "You must specify a moon ID.")
-        return redirect('moonstuff:moon_index')
+        return redirect('moonplanner:moon_index')
 
     try:
         ctx['moon'] = moon = Moon.objects.get(moon_id=moonid)
@@ -98,12 +98,12 @@ def moon_info(request, moonid):
 
     except models.ObjectDoesNotExist:
         messages.warning(request, "Moon {} does not exist in the database.".format(moonid))
-        return redirect('moonstuff:moon_index')
+        return redirect('moonplanner:moon_index')
 
-    return render(request, 'moonstuff/moon_info.html', ctx)
+    return render(request, 'moonplanner/moon_info.html', ctx)
 
 
-@permission_required(('moonstuff.view_moonstuff', 'moonstuff.add_resource'))
+@permission_required(('moonplanner.view_moonplanner', 'moonplanner.add_resource'))
 @login_required()
 def moon_scan(request):
     ctx = {}
@@ -150,39 +150,39 @@ def moon_scan(request):
 
             messages.success(request, "Your scan has been submitted for processing, depending on size this "
                                       "might take some time.\nYou can safely navigate away from this page.")
-            return render(request, 'moonstuff/add_scan.html', ctx)
+            return render(request, 'moonplanner/add_scan.html', ctx)
         else:
             messages.error(request, "Oh No! Something went wrong with your moon scan submission.")
-            return redirect('moonstuff:moon_info')
+            return redirect('moonplanner:moon_info')
     else:
-        return render(request, 'moonstuff/add_scan.html')
+        return render(request, 'moonplanner/add_scan.html')
 
 
 @login_required()
-@permission_required('moonstuff.view_moonstuff')
+@permission_required('moonplanner.view_moonplanner')
 def moon_list(request):    
     # render the page only, data is retrieved through ajax from moon_list_data
-    ajax_url = reverse('moonstuff:moon-list-data', args=['our_moons'])
-    return render(request, 'moonstuff/moon_list.html', {'ajax_url': ajax_url})
+    ajax_url = reverse('moonplanner:moon-list-data', args=['our_moons'])
+    return render(request, 'moonplanner/moon_list.html', {'ajax_url': ajax_url})
 
 
 @login_required()
-@permission_required('moonstuff.view_moonstuff')
+@permission_required('moonplanner.view_moonplanner')
 def moon_list_all(request):    
     # render the page only, data is retrieved through ajax from moon_list_data
     context = {
-        'ajax_url': reverse('moonstuff:moon-list-data', args=['all_moons']),
+        'ajax_url': reverse('moonplanner:moon-list-data', args=['all_moons']),
         'reprocessing_yield': config['reprocessing_yield'] * 100,
         'total_volume_per_month': '{:,.1f}'.format(
             config['total_volume_per_month'] / 1000000
         )
     }                
-    return render(request, 'moonstuff/moon_list.html', context)
+    return render(request, 'moonplanner/moon_list.html', context)
 
 
-@cache_page(60 * 15)
+#@cache_page(60 * 15)
 @login_required()
-@permission_required('moonstuff.view_moonstuff')
+@permission_required('moonplanner.view_moonplanner')
 def moon_list_data(request, category):
     
     data = list()    
@@ -196,26 +196,31 @@ def moon_list_data(request, category):
             'system__region', 'moon__evename'
         )    
     for moon in moon_query:
-        moon_details_url = reverse('moonstuff:moon_info', args=[moon.moon_id])
+        moon_details_url = reverse('moonplanner:moon_info', args=[moon.moon_id])
         solar_system_name = moon.system.solar_system_name
         solar_system_link = '<a href="https://evemaps.dotlan.net/system/{}" target="_blank">{}</a>'.format(
             urllib.parse.quote_plus(solar_system_name),
             solar_system_name
         ) 
 
+        if moon.income is not None:
+            income = '{:.1f}'.format(moon.income / 1000000000)
+        else:
+            income = '(no data)'
+
         moon_data = {
             'moon_name': str(moon.moon.evename),
             'solar_system_name': solar_system_name,
             'solar_system_link': solar_system_link,
             'region_name': moon.system.region.region_name,
-            'income': '{:.1f}'.format(moon.income / 1000000000),
+            'income': income,
             'details': '<a class="btn btn-primary btn-sm" href="{}"><span class="fa fa-eye fa-fw"></span></a>'.format(moon_details_url)
         }        
         data.append(moon_data)    
     return JsonResponse(data, safe=False)
 
 
-@permission_required(('moonstuff.add_extractevent', 'moonstuff.view_moonstuff'))
+@permission_required(('moonplanner.add_extractevent', 'moonplanner.view_moonplanner'))
 @token_required(scopes=['esi-industry.read_corporation_mining.v1', 'esi-universe.read_structures.v1',
                         'esi-characters.read_notifications.v1'])
 @login_required
@@ -224,4 +229,4 @@ def add_token(request, token):
     char = EveCharacter.objects.get(character_id=token.character_id)
     char = MoonDataCharacter(character=char)
     char.save()
-    return redirect('moonstuff:moon_index')
+    return redirect('moonplanner:moon_index')

@@ -56,7 +56,7 @@ class Moon(models.Model):
 
     class Meta:
         permissions = (
-            ('view_moonstuff', 'Can access the moonstuff module.'),
+            ('view_moonplanner', 'Can access the moonplanner module.'),
             ('view_all_moons', 'Can see all moons'),
         )
 
