@@ -3,8 +3,9 @@ from setuptools import setup, find_packages
 from moonplanner import __version__
 
 install_requires = [
-    'django-bootstrap-form',    
-    'allianceauth-evesde'
+    'django-bootstrap-form',
+    'django-navhelper',
+    'allianceauth-evesde',
 ]
 
 testing_extras = [

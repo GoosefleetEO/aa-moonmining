@@ -18,7 +18,7 @@
             <li class="{% navactive request 'moonplanner:moon_index' %}"><a href="{% url 'moonplanner:moon_index' %}">Extractions</a> </li>
             <li class="{% navactive request 'moonplanner:moon_list' %}"><a href="{% url 'moonplanner:moon_list' %}">Our Moons</a> </li>
             {% if perms.moonplanner.view_all_moons %}
-            <li class="{% navactive request 'moonplanner:moon-list-alll' %}"><a href="{% url 'moonplanner:moon-list-all' %}">All Moons</a> </li>
+            <li class="{% navactive request 'moonplanner:moon_list_all' %}"><a href="{% url 'moonplanner:moon_list_all' %}">All Moons</a> </li>
             {% endif %}
             {% if perms.moonplanner.add_resource %}
             <li class="{% navactive request 'moonplanner:moon_scan' %}"> <a href="{% url 'moonplanner:moon_scan' %}">Add Moon Scan</a></li>

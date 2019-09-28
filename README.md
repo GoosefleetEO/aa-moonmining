@@ -66,7 +66,7 @@ Alternatively, you can go to the django admin page and add the task at `[your au
 
 The permissions for this plugin are rather straight forward.
 
-* `moonplanner.view_moonplanner` - This is access permission, users without this permission will be unable to access the plugin.
+* `moonplanner.access_moonplanner` - This is access permission, users without this permission will be unable to access the plugin.
 * `moonplanner.add_resource` - This permission allows users to upload moon scan data.
 * `moonplanner.add_extractionevent` - This permission is allows users to add their tokens to be pulled from when checking for new extraction events. 
  

@@ -169,7 +169,7 @@ def moon_list(request):
     # render the page only, data is retrieved through ajax from moon_list_data
     context = {
         'title': 'Our Moons',
-        'ajax_url': reverse('moonplanner:moon-list-data', args=['our_moons'])
+        'ajax_url': reverse('moonplanner:moon_list_data', args=['our_moons'])
     }    
     return render(request, 'moonplanner/moon_list.html', context)
 
@@ -180,7 +180,7 @@ def moon_list_all(request):
     # render the page only, data is retrieved through ajax from moon_list_data
     context = {
         'title': 'All Moons',
-        'ajax_url': reverse('moonplanner:moon-list-data', args=['all_moons']),
+        'ajax_url': reverse('moonplanner:moon_list_data', args=['all_moons']),
         'reprocessing_yield': config['reprocessing_yield'] * 100,
         'total_volume_per_month': '{:,.1f}'.format(
             config['total_volume_per_month'] / 1000000
