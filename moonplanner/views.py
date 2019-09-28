@@ -189,7 +189,7 @@ def moon_list_all(request):
     return render(request, 'moonplanner/moon_list.html', context)
 
 
-#@cache_page(60 * 15)
+@cache_page(60 * 5)
 @login_required()
 @permission_required('moonplanner.access_moonplanner')
 def moon_list_data(request, category):
@@ -203,7 +203,7 @@ def moon_list_data(request, category):
     else:
         moon_query = Moon.objects.select_related(
             'system__region', 'moon__evename'
-        )[:50]   
+        )
     for moon in moon_query:
         moon_details_url = reverse('moonplanner:moon_info', args=[moon.moon_id])
         solar_system_name = moon.system.solar_system_name

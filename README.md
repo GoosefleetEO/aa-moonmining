@@ -1,15 +1,37 @@
-# Moonstuff
+# Moonplanner
 
-Moonstuff is a plugin for [AllianceAuth](https://gitlab.com/allianceauth/allianceauth) to allow alliances to better manage moons and their
+Moonplanner is a plugin for [AllianceAuth](https://gitlab.com/allianceauth/allianceauth) to allow alliances to better manage moons and their
 extraction schedules.
 
 **IMPORTANT**
 
-This is a heavy modified fork of the original moonplanner app from colcrunch. It's not migration compatible with the original due to major model changes. 
+- This is a heavy modified fork of the original "moonstuff" app from colcrunch. It's not migration compatible with the original due to major changes in the data model. Data migration from moonstuff is possible, but would require a custom data migration script.
 
-Requires [allianceauth-evesde](https://gitlab.com/ErikKalkoken/allianceauth-evesde) to be installed to work.
+- This app requires [allianceauth-evesde](https://gitlab.com/ErikKalkoken/allianceauth-evesde) to be installed to work.
 
 WIP !!
+
+## Features
+
+Features inherited from moonstuf:
+
+- Manage moon extractions
+
+- Add moons via surveys
+
+- Browse list of scanned moons
+
+- Detail view of moons
+
+Additional features:
+
+- Filter by solar system and region in moon list
+
+- Show estimated monthly income for moons and ores
+
+- Optimized to handle thousands of moons with good performance
+
+- Open multiple moon details at the same time
 
 ## Installation
 
