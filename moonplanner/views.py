@@ -1,3 +1,6 @@
+import os
+import urllib
+from datetime import date, datetime, timedelta, timezone
 import logging
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -9,13 +12,10 @@ from django.views.decorators.cache import cache_page
 from django.db.models import prefetch_related_objects
 from esi.decorators import token_required
 from esi.clients import esi_client_factory
-import os
-import urllib
-from datetime import date, datetime, timedelta, timezone
+from evesde.models import EveTypeMaterial
 from .models import *
 from .forms import MoonScanForm
-from .tasks import process_resources, import_data
-from evesde.models import EveTypeMaterial
+from .tasks import process_survey_input, import_data
 from .config import get_config
 
 logger = logging.getLogger(__name__)
@@ -108,56 +108,28 @@ def moon_info(request, moonid):
     return render(request, 'moonplanner/moon_info.html', ctx)
 
 
-@permission_required(('moonplanner.access_moonplanner', 'moonplanner.add_resource'))
+@permission_required((
+    'moonplanner.access_moonplanner', 
+    'moonplanner.add_resource'
+))
 @login_required()
 def moon_scan(request):
-    ctx = {}
     if request.method == 'POST':
         form = MoonScanForm(request.POST)
-        if form.is_valid():
-            # Process the scan(s)... we might use celery to do this due to the possible size.
+        if form.is_valid():            
             scans = request.POST['scan']
-            lines = scans.split('\n')
-            lines_ = []
-            for line in lines:
-                line = line.strip('\r').split('\t')
-                lines_.append(line)
-            lines = lines_
+            process_survey_input.delay(scans, request.user.pk)
 
-            # Find all groups of scans.
-            if len(lines[0]) == 0 or lines[0][0] == 'Moon':
-                lines = lines[1:]
-            sublists = []
-            for line in lines:
-                # Find the lines that start a scan
-                if line[0] is '':
-                    pass
-                else:
-                    sublists.append(lines.index(line))
-
-            # Separate out individual scans
-            scans = []
-            for i in range(len(sublists)):
-                # The First List
-                if i == 0:
-                    if i+2 > len(sublists):
-                        scans.append(lines[sublists[i]:])
-                    else:
-                        scans.append(lines[sublists[i]:sublists[i+1]])
-                else:
-                    if i+2 > len(sublists):
-                        scans.append(lines[sublists[i]:])
-                    else:
-                        scans.append(lines[sublists[i]:sublists[i+1]])
-
-            for scan in scans:
-                process_resources.delay(scan)
-
-            messages.success(request, "Your scan has been submitted for processing, depending on size this "
-                                      "might take some time.\nYou can safely navigate away from this page.")
-            return render(request, 'moonplanner/add_scan.html', ctx)
+            messages.success(
+                request, 
+                'Your scan has been submitted for processing. You will' 
+                + 'receive a notification once processing is complete.')
+            return render(request, 'moonplanner/add_scan.html')
         else:
-            messages.error(request, "Oh No! Something went wrong with your moon scan submission.")
+            messages.error(
+                request, 
+                'Oh No! Something went wrong with your moon scan submission.'
+            )
             return redirect('moonplanner:moon_info')
     else:
         return render(request, 'moonplanner/add_scan.html')
@@ -189,7 +161,7 @@ def moon_list_all(request):
     return render(request, 'moonplanner/moon_list.html', context)
 
 
-@cache_page(60 * 5)
+#@cache_page(60 * 5)
 @login_required()
 @permission_required('moonplanner.access_moonplanner')
 def moon_list_data(request, category):
@@ -203,7 +175,7 @@ def moon_list_data(request, category):
     else:
         moon_query = Moon.objects.select_related(
             'system__region', 'moon__evename'
-        )
+        ).filter(system__region__region_id=10000030)
     for moon in moon_query:
         moon_details_url = reverse('moonplanner:moon_info', args=[moon.moon_id])
         solar_system_name = moon.system.solar_system_name

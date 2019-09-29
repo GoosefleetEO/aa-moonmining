@@ -1,11 +1,13 @@
-from .models import *
-from celery import shared_task
+import os
 import logging
+import yaml
+from celery import shared_task
+from django.db import utils, transaction
+from django.contrib.auth.models import User
 from esi.models import Token
 from esi.clients import esi_client_factory
-import os
-from django.db import utils, transaction
-import yaml
+from allianceauth.notifications import notify
+from .models import *
 from .config import get_config
 
 logger = logging.getLogger(__name__)
@@ -48,39 +50,117 @@ def _get_tokens(scopes):
 
 
 @shared_task
-def process_resources(scan):
+def process_survey_input(scans, user_id = None):
+    """process raw moon survey input from user
+    
+    Args:
+        scans: raw text input from user containing moon survey data
+        user_id: (optional) id of user who submitted the data
     """
-    This function processes a moonscan and saves the resources.
 
-    Example Scan:
-                  [
-                    ['Moon Name', '', '', '', '', '', ''],
-                    ['','Ore Name','Decimal Percentage','Ore Type ID','Solar System ID','Planet ID','Moon ID'],
-                    ['...'],
-                  ]
-    :param scan: list
-    :return: None
-    """
-    try:
-        moon_name = scan[0][0]
-        system_id = scan[1][4]
-        moon_id = scan[1][6]
-        moon, _ = Moon.objects.get_or_create(name=moon_name, system_id=system_id, moon_id=moon_id)
-        moon.resources.clear()
-        scan = scan[1:]
-        for res in scan:
-            # Trim off the empty index at the front
-            res = res[1:]
+    lines = scans.split('\n')
+    lines_ = []
+    for line in lines:
+        line = line.strip('\r').split('\t')
+        lines_.append(line)
+    lines = lines_
 
-            # While extremely unlikely, it is possible that 2 moons might have the same percentage
-            # of an ore in them, so we will account for this.
-            resource, _ = MoonProduct.objects.get_or_create(ore=res[0], amount=res[1], ore_id=res[2])
-            moon.resources.add(resource.pk)
-    except Exception as e:
-        logger.error("An Error occurred while processing the following moon scan. {}".format(scan))
-        logger.error(e)
-    return
+    # Find all groups of scans.
+    if len(lines[0]) == 0 or lines[0][0] == 'Moon':
+        lines = lines[1:]
+    sublists = []
+    for line in lines:
+        # Find the lines that start a scan
+        if line[0] is '':
+            pass
+        else:
+            sublists.append(lines.index(line))
 
+    # Separate out individual scans
+    scans = []
+    for i in range(len(sublists)):
+        # The First List
+        if i == 0:
+            if i+2 > len(sublists):
+                scans.append(lines[sublists[i]:])
+            else:
+                scans.append(lines[sublists[i]:sublists[i+1]])
+        else:
+            if i+2 > len(sublists):
+                scans.append(lines[sublists[i]:])
+            else:
+                scans.append(lines[sublists[i]:sublists[i+1]])
+    
+    process_results = list()    
+    for scan in scans:
+        try:
+            with transaction.atomic():
+                moon_name = scan[0][0]
+                system_id = scan[1][4]
+                moon_id = scan[1][6]
+                moon, _ = Moon.objects.get_or_create(
+                    moon_id=moon_id,
+                    defaults={
+                        'system_id':system_id,
+                        'income': None
+                    }
+                )
+                moon.moonproduct_set.all().delete()
+                scan = scan[1:]
+                for product_data in scan:
+                    # Trim off the empty index at the front
+                    product_data = product_data[1:]            
+                    MoonProduct.objects.create(
+                        moon=moon,
+                        amount=product_data[1],
+                        ore_type_id=product_data[2]
+                    )
+        except Exception as e:
+            logger.info(
+                'An issue occurred while processing the following '
+                + 'moon scan. {}'.format(scan)
+            )
+            logger.info(e)
+            error_id = type(e).__name__
+            success = False
+            raise e
+        else:
+            success = True
+            error_id = None
+        
+        process_results.append({
+            'moon_name': moon_name,
+            'success': success,
+            'error_id': error_id
+        }) 
+        
+    #send result notification to user
+    success = True
+    message = 'We have completed processing your moon survey input:\n\n'
+    n = 0
+    for result in process_results:
+        n = n + 1
+        name = result['moon_name']
+        if result['success']:            
+            status = 'OK'
+            error_id = ''
+        else:            
+            status = 'FAILED'
+            success = False
+            error_id = '- {}'.format(result['error_id'])
+        message += '#{}: {}: {} {}\n'. format(n, name, status, error_id)        
+
+    if user_id:    
+        notify(
+            user=User.objects.get(pk=user_id),
+            title='Moon survey input processing results: {}'.format(
+                'OK' if success else 'FAILED'
+            ),
+            message=message,
+            level='success' if success else 'danger'
+        )
+
+    return success
 
 @shared_task
 def check_notifications(token):
