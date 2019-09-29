@@ -15,7 +15,7 @@ class Moon(models.Model):
         null=True, 
         default=None
     )
-    income = models.FloatField(
+    income = models.BigIntegerField(
         null=True, 
         default=None
     )    
@@ -66,7 +66,8 @@ class Moon(models.Model):
     class Meta:
         permissions = (
             ('access_moonplanner', 'Can access the moonplanner app'),
-            ('view_all_moons', 'Can see all moons'),
+            ('research_moons', 'Can research all moons in the database'),
+            ('upload_moon_scan', 'Can upload moon scans'),
         )
 
 

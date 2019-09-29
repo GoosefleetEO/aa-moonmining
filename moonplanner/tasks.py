@@ -115,6 +115,12 @@ def process_survey_input(scans, user_id = None):
                         amount=product_data[1],
                         ore_type_id=product_data[2]
                     )
+                moon.income = moon.calc_income_estimate(
+                    config['total_volume_per_month'], 
+                    config['reprocessing_yield']
+                )
+                moon.save()
+                logger.info('Added moon scan for {}'.format(moon.moon.evename))
         except Exception as e:
             logger.info(
                 'An issue occurred while processing the following '

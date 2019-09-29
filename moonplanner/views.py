@@ -110,7 +110,7 @@ def moon_info(request, moonid):
 
 @permission_required((
     'moonplanner.access_moonplanner', 
-    'moonplanner.add_resource'
+    'moonplanner.upload_moon_scan'
 ))
 @login_required()
 def moon_scan(request):

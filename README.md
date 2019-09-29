@@ -1,13 +1,12 @@
 # Moonplanner
 
-Moonplanner is a plugin for [AllianceAuth](https://gitlab.com/allianceauth/allianceauth) to allow alliances to better manage moons and their
-extraction schedules.
+Moonplanner is a plugin for [AllianceAuth](https://gitlab.com/allianceauth/allianceauth) to allow alliances to manage moon extractions and to build and research a moon database.
 
 **IMPORTANT**
 
-- This is a heavy modified fork of the original "moonstuff" app from colcrunch. It's not migration compatible with the original due to major changes in the data model. Data migration from moonstuff is possible, but would require a custom data migration script.
+- This is a heavy modified fork of the original [moonstuff](https://gitlab.com/colcrunch/aa-moonstuff) by [colcrunch](https://gitlab.com/colcrunch). It's not migration compatible with the original due to major changes in the data model. ( Data migration from **moonstuff** would be possible with a custom data migration script.)
 
-- This app requires [allianceauth-evesde](https://gitlab.com/ErikKalkoken/allianceauth-evesde) to be installed to work.
+- This app requires [allianceauth-evesde](https://gitlab.com/ErikKalkoken/allianceauth-evesde) to be installed and fully updated to work.
 
 WIP !!
 
@@ -31,7 +30,7 @@ Additional features:
 
 - Optimized to handle thousands of moons with good performance
 
-- Open multiple moon details at the same time
+- Open multiple moon detail pages at the same time
 
 ## Installation
 
@@ -39,20 +38,19 @@ Install the project from git to your allianceauth venv.
 
 ```bash
 source /path/to/auth/venv/activate
-pip install git+https://gitlab.com/colcrunch/aa-moonplanner
+pip install git+https://gitlab.com/ErikKalkoken/aa-moonplanner.git
 ```
 
-The add it to your `INSTALLED-APPS` in `local.py`.
+Theb add it to your `INSTALLED-APPS` in `local.py`.
+
 ```python
 INSTALLED_APPS+=[
         'moonplanner',
     ]
 ```
 
-Then run migrations and restart your supervisor processes.
-
-### Task Schedule
 Add the following to the end of your `local.py`:
+
 ```python
 CELERYBEAT_SCHEDULE['run_moonplanner_data_import'] = {
     'task': 'moonplanner.tasks.import_data',
@@ -60,13 +58,15 @@ CELERYBEAT_SCHEDULE['run_moonplanner_data_import'] = {
 }
 ```
 
-Alternatively, you can go to the django admin page and add the task at `[your auth url]/admin/django_celery_beat/periodictask/` 
+Finally run migrations and restart your supervisor processes.
 
 ## Permissions
 
-The permissions for this plugin are rather straight forward.
+Here is an overview of all permissions
 
-* `moonplanner.access_moonplanner` - This is access permission, users without this permission will be unable to access the plugin.
-* `moonplanner.add_resource` - This permission allows users to upload moon scan data.
-* `moonplanner.add_extractionevent` - This permission is allows users to add their tokens to be pulled from when checking for new extraction events. 
- 
+Name  | Description
+-- | --
+`moonplanner.access_moonplanner` | This is access permission, users without this permission will be unable to access the plugin.
+`moonplanner.upload_moon_scan` | This permission allows users to upload moon scan data.
+`moonplanner.research_moons` | User gets access to all moons in the database
+`moonplanner.add_extractionevent` | This permission is allows users to add their tokens to be pulled from when checking for new extraction events.
