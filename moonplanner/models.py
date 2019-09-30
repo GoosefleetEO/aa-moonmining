@@ -156,7 +156,7 @@ class Extraction(models.Model):
         return "{} - {}".format(self.refinery, self.arrival_time)
 
 
-class ExtrationProduct(models.Model):
+class ExtractionProduct(models.Model):
     extraction = models.ForeignKey(Extraction, on_delete=models.CASCADE)
     ore_type = models.ForeignKey(
         EveType,         

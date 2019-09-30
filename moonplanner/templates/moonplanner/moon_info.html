@@ -113,29 +113,36 @@
             </div>
             <div class="col-md-6">
                 
-                <div class="panel panel-primary" style="height:200px">
+                <div class="panel panel-primary">
                     <div class="panel-heading text-center">
-                        <h3 class="panel-title"> Next Pulls </h3>
+                        <h3 class="panel-title">Next Pull</h3>
                     </div>
-                    <div class="panel-body">
-                        <table class="table" style="text-align: center;">
-                            <thead>
-                                <th style="text-align: center"> Date(EVE/UTC)</th>
-                            </thead>
-                            <tbody>
-                                {% if pulls|length_is:"0" %}
-                                    <tr>
-                                        <td> No Pulls for this moon in the next month.</td>
-                                    </tr>
-                                {% else %}
-                                    {% for pull in pulls %}
-                                        <tr>
-                                            <td>{{ pull.arrival_time }}</td>
-                                        </tr>
-                                    {% endfor %}
-                                {% endif %}
-                            </tbody>
-                        </table>
+                    <div class="panel-body">                            
+                        {% if next_pull == None %}                            
+                            <p> No pull scheduled</p> 
+                        {% else %}                            
+                            <p>
+                                <strong>Scheduled:</strong> 
+                                {{ next_pull.arrival_time }}
+                            </p>
+                            <table class="table">
+                            <tr>
+                                <th></th>
+                                <th>Ore</th>
+                                <th>Volume</th>
+                                <th>Est. Value</th>
+                            </tr>
+                            {% for product in next_pull.products %}
+                                <tr>
+                                    <td><img src="{{ product.image_url}}"/></td>
+                                    <td>{{ product.ore_type_name}}</td>
+                                    <td>{{ product.volume}}</td>
+                                    <td>{{ product.value}}</td>
+                                </tr>            
+                            {% endfor %}                             
+                            </table>
+                        {% endif %}                            
+                
                     </div>
                 </div>
 

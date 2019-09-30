@@ -91,20 +91,39 @@ def moon_info(request, moonid):
                 })
         ctx['product_rows'] = product_rows
 
-        today = datetime.today().replace(tzinfo=timezone.utc)
-        end = today + timedelta(days=30)
+        today = datetime.today().replace(tzinfo=timezone.utc)        
         if hasattr(moon, 'refinery'):
-            ctx['pulls'] = Extraction.objects.filter(
+            next_pull = Extraction.objects.filter(
                 refinery=moon.refinery, 
-                arrival_time__gte=today, 
-                arrival_time__lte=end
-            )
+                arrival_time__gte=today
+            ).first()
+            next_pull_product_rows = list()
+            for product in next_pull.extractionproduct_set.all():
+                image_url = "https://image.eveonline.com/Type/{}_32.png".format(
+                    product.ore_type_id
+                )                                
+                value = None
+                ore_type_url = "https://www.kalkoken.org/apps/eveitems/?typeId={}".format(
+                    product.ore_type_id
+                )
+                next_pull_product_rows.append({
+                    'ore_type_name': product.ore_type.type_name,
+                    'ore_type_url': ore_type_url,
+                    'ore_group_name': product.ore_type.group.group_name,
+                    'image_url': image_url, 
+                    'volume': '{:,.0f}'.format(product.volume),
+                    'value': None if value is None else value / 1000000000
+                })
+            ctx['next_pull'] = {
+                'arrival_time': next_pull.arrival_time,
+                'products': next_pull_product_rows
+            }
             ctx['ppulls'] = Extraction.objects.filter(
                 refinery=moon.refinery,
                 arrival_time__lt=today
             )
         else:
-            ctx['pulls'] = None
+            ctx['next_pull'] = None
             ctx['ppulls'] = None
 
     except models.ObjectDoesNotExist:
