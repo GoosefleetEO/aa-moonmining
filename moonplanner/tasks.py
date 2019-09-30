@@ -10,6 +10,8 @@ from esi.models import Token
 from allianceauth.notifications import notify
 from .models import *
 from .config import get_config
+import datetime
+import pytz
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +51,12 @@ MAX_DISTANCE_TO_MOON_METERS = 3000000
 def makeLoggerTag(tag: str):
     """creates a function to add logger tags"""
     return lambda text : '{}: {}'.format(tag, text)
+
+def ldapTime2datetime(ldap_time: int) -> datetime:
+    """converts ldap time to datatime"""    
+    return pytz.utc.localize(datetime.datetime.utcfromtimestamp(
+        (ldap_time / 10000000) - 11644473600
+    ))    
 
 """
 def _get_tokens(scopes):
@@ -359,6 +367,7 @@ def update_refineries(mining_corp_pk, user_pk = None):
             if x['type_id'] in refinery_type_ids
         ]
 
+        logger.info(addTag('Updating refineries'))
         # for each refinery
         user_report = list()
         for refinery in refinery_structures:
@@ -403,6 +412,40 @@ def update_refineries(mining_corp_pk, user_pk = None):
                     'moon_name': moon.name(),
                     'refinery_name': structure_info['name']
                 })        
+
+        # fetch notifications
+        logger.info(addTag('Fetching notifications'))
+        notifications = client.Character.get_characters_character_id_notifications(
+            character_id=mining_corp.character.character_id
+        ).result()
+        
+        logger.info(addTag('Checking for extraction events'))
+        # add extractions for refineries if any are found
+        for notification in notifications:                        
+            if notification['type'] == 'MoonminingExtractionStarted':
+                parsed_text = yaml.safe_load(notification['text'])
+                logger.info(parsed_text)
+                
+                refinery = Refinery.objects.get(
+                    structure_id=parsed_text['structureID']
+                )
+                extraction, created = Extraction.objects.get_or_create(
+                    refinery=refinery,
+                    arrival_time=ldapTime2datetime(parsed_text['readyTime']),
+                    defaults={
+                        'decay_time':ldapTime2datetime(parsed_text['autoTime'])
+                    }                    
+                )
+                
+                for ore_type_id, ore_volume in parsed_text['oreVolumeByType'].items():
+                    ExtrationProduct.objects.get_or_create(
+                        extraction = extraction,
+                        ore_type_id = ore_type_id,
+                        defaults={
+                            'volume': ore_volume
+                        }
+                    )
+                
         
     except Exception as ex:
         logger.error(addTag('An unexpected error occurred: {}'. format(ex)))

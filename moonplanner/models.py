@@ -164,7 +164,7 @@ class ExtrationProduct(models.Model):
         null=True, 
         default=None
     )
-    amount = models.FloatField()
+    volume = models.FloatField()
 
     class Meta:
         unique_together = (('extraction', 'ore_type'),)
