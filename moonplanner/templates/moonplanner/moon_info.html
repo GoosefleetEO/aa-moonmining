@@ -1,12 +1,12 @@
 {% extends 'allianceauth/base.html' %}
 {% load i18n %}
-{% block page_title %}{{ moon.moon.evename }}{% endblock %}
+{% block page_title %}{{ moon_name }}{% endblock %}
 
 {% block content %}
     <div class="col-lg-12">
         <br>
         {% include 'moonplanner/moonmenu.html' %}
-        <h2>{{ moon.moon.evename }}</h2>
+        <h2>{{ moon_name }}</h2>
         <div class="row">
             <div class="col-md-6  mr-md-1">
                 
@@ -21,7 +21,7 @@
                                 <p><strong>Solar System</strong></p>
                             </div>
                             <div class="col-md-9">
-                                <p>{{ moon.system.solar_system_name }}</p>
+                                <p>{{ moon.solar_system.solar_system_name }}</p>
                             </div>
                         </div>
 
@@ -30,7 +30,7 @@
                                 <p><strong>Security</strong></p>             
                             </div>
                             <div class="col-md-9">
-                                <p>{{ moon.system.security | floatformat }}</p>
+                                <p>{{ moon.solar_system.security | floatformat }}</p>
                             </div>
                         </div>                         
 
@@ -39,7 +39,7 @@
                                 <p><strong>Region</strong></p>             
                             </div>
                             <div class="col-md-9">
-                                <p>{{ moon.system.region.region_name }}</p>
+                                <p>{{ moon.solar_system.region.region_name }}</p>
                             </div>
                         </div>
                         
@@ -62,7 +62,7 @@
                         {% if product_rows|length_is:"0" %}
                             <div class="alert alert-warning">
                                 <p>
-                                    There are no resources recorded for {{ moon.moon.evename }}. 
+                                    There are no resources recorded for {{ moon_name }}. 
                                     {% if perms.moonplanner.add_moon %} Why not add a moon scan? {% endif %}
                                 </p>
                             </div>
@@ -75,7 +75,11 @@
                                     </div>
 
                                     <div class="col-md-8">
-                                        <p><a href="{{ product_row.ore_type_url}}" target="_blank">{{ product_row.ore_type_name }}</a> ({{ product_row.ore_group_name }})</p>
+                                        <p><a href="{{ product_row.ore_type_url}}" target="_blank">
+                                                {{ product_row.ore_type_name }}
+                                            </a> 
+                                            ({{ product_row.ore_group_name }})
+                                        </p>
                                         <div class="progress" style="height: 20px; width: 100%">
                                             <div 
                                                 class="progress-bar progress-bar-danger progress-bar-striped" 

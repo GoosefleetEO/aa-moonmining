@@ -15,7 +15,7 @@ from esi.clients import esi_client_factory
 from evesde.models import EveTypeMaterial
 from .models import *
 from .forms import MoonScanForm
-from .tasks import process_survey_input, import_data
+from .tasks import process_survey_input, update_refineries
 from .config import get_config
 
 logger = logging.getLogger(__name__)
@@ -41,8 +41,8 @@ def moon_index(request):
     # Upcoming Extractions
     today = datetime.today().replace(tzinfo=timezone.utc)
     end = today + timedelta(days=7)
-    ctx['exts'] = ExtractEvent.objects.filter(arrival_time__gte=today, arrival_time__lte=end)
-    ctx['r_exts'] = ExtractEvent.objects.filter(arrival_time__lt=today).order_by('-arrival_time')[:10]
+    ctx['exts'] = Extraction.objects.filter(arrival_time__gte=today, arrival_time__lte=end)
+    ctx['r_exts'] = Extraction.objects.filter(arrival_time__lt=today).order_by('-arrival_time')[:10]
 
     return render(request, 'moonplanner/moon_index.html', ctx)
 
@@ -56,7 +56,9 @@ def moon_info(request, moonid):
         return redirect('moonplanner:moon_index')
 
     try:
-        ctx['moon'] = moon = Moon.objects.get(moon_id=moonid)
+        moon = Moon.objects.get(moon_id=moonid)
+        ctx['moon'] = moon
+        ctx['moon_name'] = moon.name()
         income = moon.calc_income_estimate(
             config['total_volume_per_month'], 
             config['reprocessing_yield']
@@ -91,15 +93,19 @@ def moon_info(request, moonid):
 
         today = datetime.today().replace(tzinfo=timezone.utc)
         end = today + timedelta(days=30)
-        ctx['pulls'] = ExtractEvent.objects.filter(
-            moon=moon, 
-            arrival_time__gte=today, 
-            arrival_time__lte=end
-        )
-        ctx['ppulls'] = ExtractEvent.objects.filter(
-            moon=moon, 
-            arrival_time__lt=today
-        )
+        if hasattr(moon, 'refinery'):
+            ctx['pulls'] = Extraction.objects.filter(
+                refinery=moon.refinery, 
+                arrival_time__gte=today, 
+                arrival_time__lte=end
+            )
+            ctx['ppulls'] = Extraction.objects.filter(
+                refinery=moon.refinery,
+                arrival_time__lt=today
+            )
+        else:
+            ctx['pulls'] = None
+            ctx['ppulls'] = None
 
     except models.ObjectDoesNotExist:
         messages.warning(request, "Moon {} does not exist in the database.".format(moonid))
@@ -141,7 +147,11 @@ def moon_list(request):
     # render the page only, data is retrieved through ajax from moon_list_data
     context = {
         'title': 'Our Moons',
-        'ajax_url': reverse('moonplanner:moon_list_data', args=['our_moons'])
+        'ajax_url': reverse('moonplanner:moon_list_data', args=['our_moons']),
+        'reprocessing_yield': config['reprocessing_yield'] * 100,
+        'total_volume_per_month': '{:,.1f}'.format(
+            config['total_volume_per_month'] / 1000000
+        )
     }    
     return render(request, 'moonplanner/moon_list.html', context)
 
@@ -161,25 +171,25 @@ def moon_list_all(request):
     return render(request, 'moonplanner/moon_list.html', context)
 
 
-@cache_page(60 * 5)
+#@cache_page(60 * 5)
 @login_required()
 @permission_required('moonplanner.access_moonplanner')
 def moon_list_data(request, category):
-    
+    """returns moon list in JSON for DataTables AJAX"""    
     data = list()    
     if category == 'our_moons':
         moon_query = [
-            r.location 
-            for r in Refinery.objects.select_related('location')
-        ] 
+            r.moon 
+            for r in Refinery.objects.select_related('moon')
+        ]         
     else:
         moon_query = Moon.objects.select_related(
-            'system__region', 'moon__evename'
+            'solar_system__region', 'moon__eveitemdenormalized', 'refinery'
         )
     for moon in moon_query:
         moon_details_url = reverse('moonplanner:moon_info', args=[moon.moon_id])
-        solar_system_name = moon.system.solar_system_name
-        solar_system_link = '<a href="https://evemaps.dotlan.net/system/{}" target="_blank">{}</a>'.format(
+        solar_system_name = moon.solar_system.solar_system_name
+        solar_system_link = '<a href="https://evemaps.dotlan.net/solar_system/{}" target="_blank">{}</a>'.format(
             urllib.parse.quote_plus(solar_system_name),
             solar_system_name
         ) 
@@ -188,13 +198,22 @@ def moon_list_data(request, category):
             income = '{:.1f}'.format(moon.income / 1000000000)
         else:
             income = '(no data)'
+                
+        has_refinery = hasattr(moon, 'refinery')
+        name = moon.name()
+        if has_refinery:
+            name += ' <img src="{}"/>'.format(
+                moon.refinery.corporation.corporation.logo_url()
+            )
 
         moon_data = {
-            'moon_name': str(moon.moon.evename),
+            'moon_name': name,
             'solar_system_name': solar_system_name,
             'solar_system_link': solar_system_link,
-            'region_name': moon.system.region.region_name,
+            'region_name': moon.solar_system.region.region_name,
             'income': income,
+            'has_refinery': has_refinery,
+            'has_refinery_str': 'yes' if has_refinery else 'no',
             'details': ('<a class="btn btn-primary btn-sm" href="{}" data-toggle="tooltip" data-placement="top" title="Show details in current window">'.format(moon_details_url)
                 + '<span class="fa fa-eye fa-fw"></span></a>'
                 + '&nbsp;&nbsp;<a class="btn btn-default btn-sm" href="{}" target="_blank" data-toggle="tooltip" data-placement="top" title="Open details in new window">'.format(moon_details_url)
@@ -204,13 +223,36 @@ def moon_list_data(request, category):
     return JsonResponse(data, safe=False)
 
 
-@permission_required(('moonplanner.add_extractevent', 'moonplanner.access_moonplanner'))
-@token_required(scopes=['esi-industry.read_corporation_mining.v1', 'esi-universe.read_structures.v1',
-                        'esi-characters.read_notifications.v1'])
+@permission_required((
+    'moonplanner.add_extractevent', 
+    'moonplanner.access_moonplanner'
+))
+@token_required(scopes=MiningCorporation.get_esi_scopes())
 @login_required
-def add_token(request, token):
-    messages.success(request, "Token added!")
-    char = EveCharacter.objects.get(character_id=token.character_id)
-    char = MoonDataCharacter(character=char)
-    char.save()
+def add_mining_corporation(request, token):
+    character = EveCharacter.objects.get(character_id=token.character_id)    
+    try:
+        corporation = EveCorporationInfo.objects.get(
+            corporation_id=character.corporation_id
+        )
+    except EveCorporationInfo.DoesNotExist:
+        corporation = EveCorporationInfo.objects.create_corporation(
+            corp_id=character.corporation_id
+        )
+        corporation.save()
+    
+    mining_corporation, _ = MiningCorporation.objects.get_or_create(
+        corporation=corporation,
+        defaults={
+            'character': character
+        }
+    )    
+    update_refineries.delay(mining_corporation.pk, request.user.pk)
+    messages.success(
+        request, 
+        'Update of refineres started for {}. '.format(
+            corporation
+        ) 
+        + 'You will receive a notifications with results shortly.'
+    )
     return redirect('moonplanner:moon_index')

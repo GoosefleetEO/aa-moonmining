@@ -24,7 +24,7 @@ Features inherited from moonstuf:
 
 Additional features:
 
-- Filter by solar system and region in moon list
+- Filter by solar solar_system and region in moon list
 
 - Show estimated monthly income for moons and ores
 
@@ -33,6 +33,12 @@ Additional features:
 - Open multiple moon detail pages at the same time
 
 ## Installation
+
+Make sure these ESI scopes are part of your EVE app:
+
+- esi-industry.read_corporation_mining.v1
+- esi-universe.read_structures.v1
+- esi-characters.read_notifications.v1
 
 Install the project from git to your allianceauth venv.
 

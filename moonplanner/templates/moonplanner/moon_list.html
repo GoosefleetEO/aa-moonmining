@@ -70,7 +70,8 @@
                 { data: 'income' },
                 { data: 'details' },
 
-                { data: 'solar_system_name' },                
+                { data: 'solar_system_name' },
+                { data: 'has_refinery_str' },
             ],
 
             lengthMenu: [[8, 15, 25, 50, -1], [8, 15, 25, 50, "All"]],
@@ -79,22 +80,35 @@
 
             columnDefs: [														
                 { "orderable": false, "targets": [ 4 ] },
-                { "visible": false, "targets": [ 5 ] },
+                { "visible": false, "targets": [ 5, 6 ] },
             ],
       
             filterDropDown: {										
-                columns: [																
+                columns: [																                    
+                    { 
+                        idx: 2
+                    },
                     { 
                         idx: 5,
                         title: "System"
-                    },
+                    }
+                    ,
                     { 
-                        idx: 2
+                        idx: 6,
+                        title: "Refinery"
                     }
                 ],
                 bootstrap: true,
                 autoSize: false
             },
+
+            createdRow: function( row, data, dataIndex ) 
+            {
+                if (data['has_refinery'])
+                {
+                    $(row).addClass('success');
+                }               
+            }
             
         });
 

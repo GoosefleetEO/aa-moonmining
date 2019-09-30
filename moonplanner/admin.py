@@ -3,9 +3,9 @@ from .models import *
 
 
 # Register your models here.
-@admin.register(ExtractEvent)
-class ExtractEventAdmin(admin.ModelAdmin):
-    list_display = ('moon', 'arrival_time')
+@admin.register(Extraction)
+class ExtractionAdmin(admin.ModelAdmin):
+    list_display = ('refinery', 'arrival_time')
     ordering = ('arrival_time',)
 
     search_fields = ('moon__name',)
@@ -13,3 +13,4 @@ class ExtractEventAdmin(admin.ModelAdmin):
 
 admin.site.register(Moon)
 admin.site.register(Refinery)
+admin.site.register(MiningCorporation)

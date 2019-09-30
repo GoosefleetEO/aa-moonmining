@@ -9,7 +9,7 @@ class Moon(models.Model):
         on_delete=models.CASCADE,
         primary_key=True
     )
-    system = models.ForeignKey(
+    solar_system = models.ForeignKey(
         EveSolarSystem,         
         on_delete=models.DO_NOTHING,        
         null=True, 
@@ -20,9 +20,13 @@ class Moon(models.Model):
         default=None
     )    
     
-    def __str__(self):
-        return str(self.moon.evename)
+    def name(self):
+        return str(self.moon.eveitemdenormalized.item_name)
 
+    def __str__(self):
+        return self.name()
+
+    
     def calc_income_estimate(
         self, 
         total_volume, 
@@ -94,35 +98,79 @@ class MoonProduct(models.Model):
         ]
 
 
-class Refinery(models.Model):
-    name = models.CharField(max_length=150)
-    structure_id = models.BigIntegerField()
-    type = models.ForeignKey(EveType, on_delete=models.CASCADE)
-    location = models.ForeignKey(Moon, on_delete=models.CASCADE)
-    owner = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE)
+class MiningCorporation(models.Model):
+    corporation = models.OneToOneField(
+        EveCorporationInfo, 
+        on_delete=models.CASCADE, 
+        primary_key=True
+    )
+    character = models.OneToOneField(
+        EveCharacter, 
+        on_delete=models.DO_NOTHING, 
+        default=None, 
+        null=True
+    )
+    # latest_notification = models.BigIntegerField(null=True, default=0)
 
+    def __str__(self):
+        return self.corporation.corporation_name
+
+    @classmethod
+    def get_esi_scopes(cls):
+        return [
+            'esi-industry.read_corporation_mining.v1', 
+            'esi-universe.read_structures.v1',
+            'esi-characters.read_notifications.v1',
+            'esi-corporations.read_structures.v1'
+        ]
+
+
+class Refinery(models.Model):
+    structure_id = models.BigIntegerField(primary_key=True)
+    moon = models.OneToOneField(
+        Moon, 
+        on_delete=models.SET_DEFAULT,
+        default=None, 
+        null=True
+    )
+    name = models.CharField(max_length=150)    
+    corporation = models.ForeignKey(
+        MiningCorporation, 
+        on_delete=models.CASCADE
+    )
+    type = models.ForeignKey(EveType, on_delete=models.CASCADE)
+    
     def __str__(self):
         return self.name
 
 
-class ExtractEvent(models.Model):
-    start_time = models.DateTimeField()
+class Extraction(models.Model):
+    refinery = models.ForeignKey(Refinery, on_delete=models.CASCADE)    
     arrival_time = models.DateTimeField()
     decay_time = models.DateTimeField()
-    structure = models.ForeignKey(Refinery, on_delete=models.CASCADE)
-    moon = models.ForeignKey(Moon, on_delete=models.CASCADE)
-    corp = models.ForeignKey(EveCorporationInfo, on_delete=models.CASCADE)
-
+            
     class Meta:
-        unique_together = (('arrival_time', 'moon'),)
+        unique_together = (('arrival_time', 'refinery'),)
 
     def __str__(self):
-        return "{} - {}".format(self.moon.name, self.arrival_time)
+        return "{} - {}".format(self.refinery, self.arrival_time)
 
 
-class MoonDataCharacter(models.Model):
-    character = models.OneToOneField(EveCharacter, on_delete=models.CASCADE)
-    latest_notification = models.BigIntegerField(null=True, default=0)
+class ExtrationProduct(models.Model):
+    extraction = models.ForeignKey(Extraction, on_delete=models.CASCADE)
+    ore_type = models.ForeignKey(
+        EveType,         
+        on_delete=models.DO_NOTHING,
+        null=True, 
+        default=None
+    )
+    amount = models.FloatField()
+
+    class Meta:
+        unique_together = (('extraction', 'ore_type'),)
+
+    def __str__(self):
+        return "{} - {}".format(self.extraction, self.ore_type)
 
 
 class MarketPrice(models.Model):

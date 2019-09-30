@@ -4,8 +4,9 @@ import yaml
 from celery import shared_task
 from django.db import utils, transaction
 from django.contrib.auth.models import User
-from esi.models import Token
 from esi.clients import esi_client_factory
+from esi.errors import TokenExpiredError, TokenInvalidError
+from esi.models import Token
 from allianceauth.notifications import notify
 from .models import *
 from .config import get_config
@@ -24,6 +25,10 @@ class LoggerAdapter(logging.LoggerAdapter):
 logger = logging.getLogger(__name__)
 logger = LoggerAdapter(logger, __package__)
 
+SWAGGER_SPEC_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 
+    'swagger.json'
+)
 """
 Swagger Operations:
 get_characters_character_id
@@ -37,6 +42,15 @@ post_universe_names
 
 config = get_config()
 
+REFINERY_GROUP_ID = 1406
+MOON_GROUP_ID = 8
+MAX_DISTANCE_TO_MOON_METERS = 3000000
+
+def makeLoggerTag(tag: str):
+    """creates a function to add logger tags"""
+    return lambda text : '{}: {}'.format(tag, text)
+
+"""
 def _get_tokens(scopes):
     try:
         tokens = []
@@ -47,15 +61,16 @@ def _get_tokens(scopes):
     except Exception as e:
         print(e)
         return False
+"""
 
 
 @shared_task
-def process_survey_input(scans, user_id = None):
+def process_survey_input(scans, user_pk = None):
     """process raw moon survey input from user
     
     Args:
         scans: raw text input from user containing moon survey data
-        user_id: (optional) id of user who submitted the data
+        user_pk: (optional) id of user who submitted the data
     """
 
     lines = scans.split('\n')
@@ -96,12 +111,12 @@ def process_survey_input(scans, user_id = None):
         try:
             with transaction.atomic():
                 moon_name = scan[0][0]
-                system_id = scan[1][4]
+                solar_system_id = scan[1][4]
                 moon_id = scan[1][6]
                 moon, _ = Moon.objects.get_or_create(
                     moon_id=moon_id,
                     defaults={
-                        'system_id':system_id,
+                        'solar_system_id':solar_system_id,
                         'income': None
                     }
                 )
@@ -120,7 +135,7 @@ def process_survey_input(scans, user_id = None):
                     config['reprocessing_yield']
                 )
                 moon.save()
-                logger.info('Added moon scan for {}'.format(moon.moon.evename))
+                logger.info('Added moon scan for {}'.format(moon.name()))
         except Exception as e:
             logger.info(
                 'An issue occurred while processing the following '
@@ -156,9 +171,9 @@ def process_survey_input(scans, user_id = None):
             error_id = '- {}'.format(result['error_id'])
         message += '#{}: {}: {} {}\n'. format(n, name, status, error_id)        
 
-    if user_id:    
+    if user_pk:    
         notify(
-            user=User.objects.get(pk=user_id),
+            user=User.objects.get(pk=user_pk),
             title='Moon survey input processing results: {}'.format(
                 'OK' if success else 'FAILED'
             ),
@@ -217,7 +232,7 @@ def check_notifications(token):
                 resource, _ = MoonProduct.objects.get_or_create(ore=types[k], amount=v, type_id=k)
                 moon.resources.add(resource.pk)
                 
-
+"""
 @shared_task
 def import_data():
     # Get tokens
@@ -271,7 +286,7 @@ def import_data():
                 start_time = event['extraction_start_time']
                 decay_time = event['natural_decay_time']
                 try:
-                    extract = ExtractEvent.objects.get_or_create(start_time=start_time, decay_time=decay_time,
+                    extract = Extraction.objects.get_or_create(start_time=start_time, decay_time=decay_time,
                                                                  arrival_time=arrival_time, structure=ref, moon=moon,
                                                                  corp=ref.owner)
                 except utils.IntegrityError:
@@ -282,6 +297,138 @@ def import_data():
             logger.error(e)
 
         check_notifications(token)
+"""
+
+@shared_task
+def update_refineries(mining_corp_pk, user_pk = None):
+    """create or update refineries for a mining corporation"""
+    
+    try:                
+        try:
+            mining_corp = MiningCorporation.objects.get(pk=mining_corp_pk)
+        except MiningCorporation.DoesNotExist as ex:        
+            raise MiningCorporation.DoesNotExist(
+                'task called for non existing corp with pk {}'.format(mining_corp_pk)
+            )
+            raise ex
+        else:
+            addTag = makeLoggerTag('update_refineries: {}'.format(mining_corp))
+        
+        if mining_corp.character is None:
+            logger.error(addTag('Missing character'))
+            raise EveCharacter.DoesNotExist()
+
+        try:
+            token = Token.objects.filter(            
+                character_id=mining_corp.character.character_id
+            ).require_scopes(
+                MiningCorporation.get_esi_scopes()
+            ).require_valid().first()
+        except TokenInvalidError as ex:        
+            logger.error(addTag('Invalid token for fetching refineries'))
+            raise ex
+            
+        except TokenExpiredError as ex:
+            logger.error(addTag('Token expired'))
+            raise ex
+        
+        else:
+            logger.info(addTag(
+                'Using token from {}'.format(mining_corp.character))
+            )
+
+        client = esi_client_factory(
+            token=token, 
+            spec_file=SWAGGER_SPEC_PATH
+        )
+        
+        # get all corporation structures
+        logger.info(addTag('Fetching corp structures'))
+
+        all_structures = client.Corporation.get_corporations_corporation_id_structures(
+            corporation_id=mining_corp.corporation.corporation_id
+        ).result()
+
+        # filter by refineres
+        refinery_type_ids = [
+            x.type_id for x in EveType.objects.filter(group_id=REFINERY_GROUP_ID)
+        ]
+        
+        refinery_structures = [
+            x for x in all_structures 
+            if x['type_id'] in refinery_type_ids
+        ]
+
+        # for each refinery
+        user_report = list()
+        for refinery in refinery_structures:
+            # get structure details for refinery
+            structure_info = client.Universe.get_universe_structures_structure_id(
+                structure_id=refinery['structure_id']
+            ).result()
+            
+            # determine moon next to refinery        
+            solar_system = EveSolarSystem.objects.get(
+                pk=structure_info['solar_system_id']
+            )            
+            moon_item = solar_system.get_nearest_celestials(
+                structure_info['position']['x'],
+                structure_info['position']['y'],
+                structure_info['position']['z'],
+                group_id=MOON_GROUP_ID, 
+                max_distance=MAX_DISTANCE_TO_MOON_METERS
+            )
+
+            if moon_item is not None:                
+                # create moon if it does not exist
+                moon, _ = Moon.objects.get_or_create(
+                    moon_id=moon_item.item_id,
+                    defaults={
+                        'solar_system': solar_system,
+                        'income': None
+                    }
+                )
+
+                # create refinery if it does not exist
+                Refinery.objects.get_or_create(
+                    structure_id = refinery['structure_id'],
+                    defaults={
+                        'name': structure_info['name'],
+                        'type_id': structure_info['type_id'],
+                        'moon': moon,
+                        'corporation': mining_corp
+                    }
+                )
+                user_report.append({
+                    'moon_name': moon.name(),
+                    'refinery_name': structure_info['name']
+                })        
+        
+    except Exception as ex:
+        logger.error(addTag('An unexpected error occurred: {}'. format(ex)))
+        success = False        
+        raise ex
+    else:
+        success = True
+    
+    if user_pk:    
+        message = 'The following refineries from {} have been added:\n\n'.format(
+            mining_corp
+        )
+        for report in user_report:
+            message = '{} @ {}\n'.format(
+                report['moon_name'],
+                report['refinery_name'],
+            )
+
+        notify(
+            user=User.objects.get(pk=user_pk),
+            title='Adding refinery report: {}'.format(
+                'OK' if success else 'FAILED'
+            ),
+            message=message,
+            level='success' if success else 'danger'
+        )
 
 
 @shared_task
