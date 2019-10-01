@@ -16,7 +16,7 @@ from evesde.models import EveTypeMaterial
 from .models import *
 from .forms import MoonScanForm
 from .tasks import process_survey_input, update_refineries
-from .config import get_config
+from .app_settings import *
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +30,6 @@ get_universe_moons_moon_id
 get_corporation_corporation_id
 get_corporation_corporation_id_mining_extractions
 """
-
-config = get_config()
 
 # Create your views here.
 @login_required
@@ -60,8 +58,8 @@ def moon_info(request, moonid):
         ctx['moon'] = moon
         ctx['moon_name'] = moon.name()
         income = moon.calc_income_estimate(
-            config['total_volume_per_month'], 
-            config['reprocessing_yield']
+            MOONPLANNER_VOLUME_PER_MONTH, 
+            MOONPLANNER_REPROCESSING_YIELD
         )
         ctx['moon_income'] = None if income is None else income / 1000000000
 
@@ -74,8 +72,8 @@ def moon_info(request, moonid):
                 )                
                 amount = int(round(product.amount * 100))
                 income = moon.calc_income_estimate(
-                    config['total_volume_per_month'], 
-                    config['reprocessing_yield'],
+                    MOONPLANNER_VOLUME_PER_MONTH, 
+                    MOONPLANNER_REPROCESSING_YIELD,
                     product
                 )
                 ore_type_url = "https://www.kalkoken.org/apps/eveitems/?typeId={}".format(
@@ -167,9 +165,9 @@ def moon_list(request):
     context = {
         'title': 'Our Moons',
         'ajax_url': reverse('moonplanner:moon_list_data', args=['our_moons']),
-        'reprocessing_yield': config['reprocessing_yield'] * 100,
+        'reprocessing_yield': MOONPLANNER_REPROCESSING_YIELD * 100,
         'total_volume_per_month': '{:,.1f}'.format(
-            config['total_volume_per_month'] / 1000000
+            MOONPLANNER_VOLUME_PER_MONTH / 1000000
         )
     }    
     return render(request, 'moonplanner/moon_list.html', context)
@@ -182,9 +180,9 @@ def moon_list_all(request):
     context = {
         'title': 'All Moons',
         'ajax_url': reverse('moonplanner:moon_list_data', args=['all_moons']),
-        'reprocessing_yield': config['reprocessing_yield'] * 100,
+        'reprocessing_yield': MOONPLANNER_REPROCESSING_YIELD * 100,
         'total_volume_per_month': '{:,.1f}'.format(
-            config['total_volume_per_month'] / 1000000
+            MOONPLANNER_VOLUME_PER_MONTH / 1000000
         )
     }                
     return render(request, 'moonplanner/moon_list.html', context)

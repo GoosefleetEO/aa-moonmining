@@ -1,6 +1,8 @@
 import os
 import logging
 import yaml
+import datetime
+import pytz
 from celery import shared_task
 from django.db import utils, transaction
 from django.contrib.auth.models import User
@@ -9,9 +11,8 @@ from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
 from allianceauth.notifications import notify
 from .models import *
-from .config import get_config
-import datetime
-import pytz
+from .app_settings import *
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +42,6 @@ get_corporation_corporation_id
 get_corporation_corporation_id_mining_extractions
 post_universe_names
 """
-
-config = get_config()
 
 REFINERY_GROUP_ID = 1406
 MOON_GROUP_ID = 8
@@ -499,8 +498,8 @@ def update_moon_income():
         with transaction.atomic():
             for moon in Moon.objects.all():
                 moon.income = moon.calc_income_estimate(
-                    config['total_volume_per_month'], 
-                    config['reprocessing_yield']
+                    MOONPLANNER_VOLUME_PER_MONTH, 
+                    MOONPLANNER_REPROCESSING_YIELD
                 )
                 moon.save()
         logger.info('Completed re-calculating moon income')
