@@ -1,11 +1,12 @@
 {% extends 'allianceauth/base.html' %}
 {% load i18n %}
 {% block page_title %}{{ moon_name }}{% endblock %}
+{% load static %}
 
 {% block content %}
     <div class="col-lg-12">
         <br>
-        {% include 'moonplanner/moonmenu.html' %}
+        {% include 'moonplanner/moon_menu.html' %}
         <h2>{{ moon_name }}</h2>
         <div class="row">
             <div class="col-md-6  mr-md-1">
@@ -121,25 +122,52 @@
                         {% if next_pull == None %}                            
                             <p> No pull scheduled</p> 
                         {% else %}                            
-                            <p>
-                                <strong>Scheduled:</strong> 
-                                {{ next_pull.arrival_time }}
-                            </p>
-                            <table class="table">
-                            <tr>
-                                <th></th>
-                                <th>Ore</th>
-                                <th>Volume</th>
-                                <th>Est. Value</th>
-                            </tr>
-                            {% for product in next_pull.products %}
+
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <p><strong>Scheduled</strong></p>
+                                </div>
+                                <div class="col-md-9">
+                                    <p>{{ next_pull.arrival_time }}</p>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <p><strong>Auto Fracture</strong></p>
+                                </div>
+                                <div class="col-md-9">
+                                    <p>{{ next_pull.auto_time }}</p>
+                                </div>
+                            </div>   
+                            
+                            <table class="table table-striped" id="table_next_pull">
+                            <thead>
                                 <tr>
-                                    <td><img src="{{ product.image_url}}"/></td>
-                                    <td>{{ product.ore_type_name}}</td>
-                                    <td>{{ product.volume}}</td>
-                                    <td>{{ product.value}}</td>
-                                </tr>            
-                            {% endfor %}                             
+                                    <th></th>
+                                    <th>Ore Type</th>
+                                    <th>Volume</th>
+                                    <th>Est. Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in next_pull.products %}
+                                    <tr>
+                                        <td><img src="{{ product.image_url }}"/></td>
+                                        <td><a href="{{ product.ore_type_url }}" target="_blank">{{ product.ore_type_name }}</a></td>
+                                        <td>{{ product.volume }}</td>
+                                        <td>{{ product.value | floatformat}} B</td>
+                                    </tr>            
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th></th>
+                                    <th>TOTAL</th>
+                                    <th>{{ next_pull.total_volume }}</th>
+                                    <th>{{ next_pull.total_value | floatformat}} B</th>
+                                </tr>
+                            </tfoot>
                             </table>
                         {% endif %}                            
                 
@@ -185,6 +213,11 @@
 {% endblock %}
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}
+     <link 
+        href="{% static "moonplanner/moon_info.css" %}" 
+        type="text/css" 
+        rel="stylesheet"
+    >
 {% endblock %}
 {% block extra_script %}
     $(document).ready(function(){

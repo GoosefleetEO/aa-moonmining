@@ -40,14 +40,17 @@ class Moon(models.Model):
             moon_product(optional): restrict estimation to given moon product
 
         Returns:
-            income estimate for moon or None if prices are missing
+            income estimate for moon or None if prices or products are missing
         
         """
         income = 0        
-        if moon_product is None:
+        if not moon_product:
             moon_products = self.moonproduct_set.select_related('ore_type')
+            if moon_products.count() == 0:
+                return None
         else:
             moon_products = [moon_product]
+        
         try:
             for product in moon_products:
                 volume_per_unit = product.ore_type.volume
@@ -109,9 +112,7 @@ class MiningCorporation(models.Model):
         on_delete=models.DO_NOTHING, 
         default=None, 
         null=True
-    )
-    # latest_notification = models.BigIntegerField(null=True, default=0)
-
+    )    
     def __str__(self):
         return self.corporation.corporation_name
 
@@ -171,6 +172,33 @@ class ExtractionProduct(models.Model):
 
     def __str__(self):
         return "{} - {}".format(self.extraction, self.ore_type)
+
+    def calc_value_estimate(self, reprocessing_yield):
+        """returns calculated value estimate in ISK
+        
+        Args:            
+            reprocessing_yield: expected average yield for ore reprocessing            
+        Returns:
+            value estimate or None if prices are missing
+        
+        """        
+        volume_per_unit = self.ore_type.volume
+        units = self.volume / volume_per_unit
+        r_units = units / 100
+        value = 0
+        try:
+            for t in EveTypeMaterial.objects.filter(
+                        type=self.ore_type
+                    ).select_related('material_type__marketprice'):
+            
+                value += (t.material_type.marketprice.average_price
+                    * t.quantity
+                    * r_units
+                    * reprocessing_yield)
+        except models.ObjectDoesNotExist:
+            value = None
+        else:   
+            return value
 
 
 class MarketPrice(models.Model):

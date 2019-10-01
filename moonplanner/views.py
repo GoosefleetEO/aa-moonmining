@@ -31,7 +31,9 @@ get_corporation_corporation_id
 get_corporation_corporation_id_mining_extractions
 """
 
-# Create your views here.
+URL_PROFILE_SOLAR_SYSTEM = 'https://evemaps.dotlan.net/system'
+URL_PROFILE_TYPE = 'https://www.kalkoken.org/apps/eveitems/?typeId='
+
 @login_required
 @permission_required('moonplanner.access_moonplanner')
 def moon_index(request):
@@ -47,22 +49,18 @@ def moon_index(request):
 
 @login_required
 @permission_required('moonplanner.access_moonplanner')
-def moon_info(request, moonid):
-    ctx = {}
+def moon_info(request, moonid):    
     if len(moonid) == 0 or not moonid:
         messages.warning(request, "You must specify a moon ID.")
         return redirect('moonplanner:moon_index')
 
     try:
-        moon = Moon.objects.get(moon_id=moonid)
-        ctx['moon'] = moon
-        ctx['moon_name'] = moon.name()
+        moon = Moon.objects.get(moon_id=moonid)        
         income = moon.calc_income_estimate(
             MOONPLANNER_VOLUME_PER_MONTH, 
             MOONPLANNER_REPROCESSING_YIELD
         )
-        ctx['moon_income'] = None if income is None else income / 1000000000
-
+        
         products = MoonProduct.objects.filter(moon=moon)
         product_rows = []
         if len(products) > 0:
@@ -76,7 +74,8 @@ def moon_info(request, moonid):
                     MOONPLANNER_REPROCESSING_YIELD,
                     product
                 )
-                ore_type_url = "https://www.kalkoken.org/apps/eveitems/?typeId={}".format(
+                ore_type_url = '{}{}'.format(
+                    URL_PROFILE_TYPE,
                     product.ore_type_id
                 )
                 product_rows.append({
@@ -86,8 +85,7 @@ def moon_info(request, moonid):
                     'image_url': image_url, 
                     'amount': amount, 
                     'income': None if income is None else income / 1000000000
-                })
-        ctx['product_rows'] = product_rows
+                })        
 
         today = datetime.today().replace(tzinfo=timezone.utc)        
         if hasattr(moon, 'refinery'):
@@ -96,14 +94,22 @@ def moon_info(request, moonid):
                 arrival_time__gte=today
             ).first()
             next_pull_product_rows = list()
+            total_value = 0
+            total_volume = 0
             for product in next_pull.extractionproduct_set.all():
                 image_url = "https://image.eveonline.com/Type/{}_32.png".format(
                     product.ore_type_id
                 )                                
-                value = None
-                ore_type_url = "https://www.kalkoken.org/apps/eveitems/?typeId={}".format(
+                value = product.calc_value_estimate(
+                    MOONPLANNER_REPROCESSING_YIELD
+                )
+                total_value += value
+                total_volume += product.volume
+                ore_type_url = '{}{}'.format(
+                    URL_PROFILE_TYPE,
                     product.ore_type_id
                 )
+                
                 next_pull_product_rows.append({
                     'ore_type_name': product.ore_type.type_name,
                     'ore_type_url': ore_type_url,
@@ -112,23 +118,37 @@ def moon_info(request, moonid):
                     'volume': '{:,.0f}'.format(product.volume),
                     'value': None if value is None else value / 1000000000
                 })
-            ctx['next_pull'] = {
+            next_pull_data = {
                 'arrival_time': next_pull.arrival_time,
-                'products': next_pull_product_rows
+                'auto_time': next_pull.decay_time,
+                'total_value': None if total_value is None else total_value / 1000000000,
+                'total_volume': '{:,.0f}'.format(total_volume),
+                'products': next_pull_product_rows,
             }
-            ctx['ppulls'] = Extraction.objects.filter(
+            ppulls_data= Extraction.objects.filter(
                 refinery=moon.refinery,
                 arrival_time__lt=today
             )
         else:
-            ctx['next_pull'] = None
-            ctx['ppulls'] = None
+            next_pull_data = None            
+            ppulls_data = None
 
     except models.ObjectDoesNotExist:
-        messages.warning(request, "Moon {} does not exist in the database.".format(moonid))
+        messages.warning(
+            request, 
+            "Moon {} does not exist in the database.".format(moonid)
+        )
         return redirect('moonplanner:moon_index')
-
-    return render(request, 'moonplanner/moon_info.html', ctx)
+    else:
+        context = {
+            'moon': moon,
+            'moon_name': moon.name(),
+            'moon_income': None if income is None else income / 1000000000,
+            'product_rows': product_rows,
+            'next_pull': next_pull_data,
+            'ppulls': ppulls_data,
+        }
+        return render(request, 'moonplanner/moon_info.html', context)
 
 
 @permission_required((
@@ -206,7 +226,8 @@ def moon_list_data(request, category):
     for moon in moon_query:
         moon_details_url = reverse('moonplanner:moon_info', args=[moon.moon_id])
         solar_system_name = moon.solar_system.solar_system_name
-        solar_system_link = '<a href="https://evemaps.dotlan.net/solar_system/{}" target="_blank">{}</a>'.format(
+        solar_system_link = '<a href="{}/{}" target="_blank">{}</a>'.format(
+            URL_PROFILE_SOLAR_SYSTEM,
             urllib.parse.quote_plus(solar_system_name),
             solar_system_name
         ) 

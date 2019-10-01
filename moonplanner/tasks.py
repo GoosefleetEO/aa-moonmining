@@ -437,7 +437,7 @@ def update_refineries(mining_corp_pk, user_pk = None):
                 )
                 
                 for ore_type_id, ore_volume in parsed_text['oreVolumeByType'].items():
-                    ExtrationProduct.objects.get_or_create(
+                    ExtractionProduct.objects.get_or_create(
                         extraction = extraction,
                         ore_type_id = ore_type_id,
                         defaults={
