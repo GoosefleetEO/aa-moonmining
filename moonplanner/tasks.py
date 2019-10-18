@@ -2,36 +2,26 @@ import os
 import logging
 import yaml
 import datetime
+
 import pytz
 from celery import shared_task
+
 from django.db import utils, transaction
 from django.contrib.auth.models import User
+
+from allianceauth.notifications import notify
 from esi.clients import esi_client_factory
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
-from allianceauth.notifications import notify
+
 from .models import *
 from .app_settings import *
+from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path
 
-
-logger = logging.getLogger(__name__)
 
 # add custom tag to logger with name of this app
-class LoggerAdapter(logging.LoggerAdapter):
-    def __init__(self, logger, prefix):
-        super(LoggerAdapter, self).__init__(logger, {})
-        self.prefix = prefix
+logger = LoggerAddTag(logging.getLogger(__name__), __package__)
 
-    def process(self, msg, kwargs):
-        return '[%s] %s' % (self.prefix, msg), kwargs
-
-logger = logging.getLogger(__name__)
-logger = LoggerAdapter(logger, __package__)
-
-SWAGGER_SPEC_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 
-    'swagger.json'
-)
 """
 Swagger Operations:
 get_characters_character_id
@@ -47,9 +37,6 @@ REFINERY_GROUP_ID = 1406
 MOON_GROUP_ID = 8
 MAX_DISTANCE_TO_MOON_METERS = 3000000
 
-def makeLoggerTag(tag: str):
-    """creates a function to add logger tags"""
-    return lambda text : '{}: {}'.format(tag, text)
 
 def ldapTime2datetime(ldap_time: int) -> datetime:
     """converts ldap time to datatime"""    
@@ -138,8 +125,8 @@ def process_survey_input(scans, user_pk = None):
                         ore_type_id=product_data[2]
                     )
                 moon.income = moon.calc_income_estimate(
-                    config['total_volume_per_month'], 
-                    config['reprocessing_yield']
+                    MOONPLANNER_VOLUME_PER_MONTH, 
+                    MOONPLANNER_REPROCESSING_YIELD
                 )
                 moon.save()
                 logger.info('Added moon scan for {}'.format(moon.name()))
@@ -190,6 +177,7 @@ def process_survey_input(scans, user_pk = None):
 
     return success
 
+"""
 @shared_task
 def check_notifications(token):
     c = token.get_esi_client()
@@ -238,14 +226,14 @@ def check_notifications(token):
                 v = float('%.10f' % v)
                 resource, _ = MoonProduct.objects.get_or_create(ore=types[k], amount=v, type_id=k)
                 moon.resources.add(resource.pk)
-                
+"""                
 
 @shared_task
-def update_refineries(mining_corp_pk, user_pk = None):
-    """create or update refineries for a mining corporation"""
+def run_refineries_update(mining_corp_pk, user_pk = None):
+    """update list of refineries with extractions for a mining corporation"""
     
     try:                
-        addTag = makeLoggerTag('(none)')
+        addTag = make_logger_prefix('(none)')
         try:
             mining_corp = MiningCorporation.objects.get(pk=mining_corp_pk)
         except MiningCorporation.DoesNotExist as ex:        
@@ -254,7 +242,7 @@ def update_refineries(mining_corp_pk, user_pk = None):
             )
             raise ex
         else:
-            addTag = makeLoggerTag('update_refineries: {}'.format(mining_corp))
+            addTag = make_logger_prefix('update_refineries: {}'.format(mining_corp))
         
         if mining_corp.character is None:
             logger.error(addTag('Missing character'))
@@ -281,7 +269,7 @@ def update_refineries(mining_corp_pk, user_pk = None):
 
         client = esi_client_factory(
             token=token, 
-            spec_file=SWAGGER_SPEC_PATH
+            spec_file=get_swagger_spec_path()
         )
         
         # get all corporation structures
@@ -354,7 +342,10 @@ def update_refineries(mining_corp_pk, user_pk = None):
         ).result()
                 
         # add extractions for refineries if any are found
-        logger.info(addTag('Process extraction events'))        
+        logger.info(addTag(
+            'Process extraction events from {} notifications'.format(
+                len(notifications)
+        )))
         with transaction.atomic():            
             last_extraction_started = dict()
             for notification in sorted(notifications, key=lambda k: k['timestamp']):
@@ -407,11 +398,11 @@ def update_refineries(mining_corp_pk, user_pk = None):
         success = True
     
     if user_pk:    
-        message = 'The following refineries from {} have been added:\n\n'.format(
+        message = 'The following refineries from {} have been added or updated:\n\n'.format(
             mining_corp
         )
         for report in user_report:
-            message = '{} @ {}\n'.format(
+            message += '{} @ {}\n'.format(
                 report['moon_name'],
                 report['refinery_name'],
             )

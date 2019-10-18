@@ -2,37 +2,31 @@ import os
 import urllib
 from datetime import date, datetime, timedelta, timezone
 import logging
+
 from django.shortcuts import render, redirect
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
 from django.urls import reverse
 from django.views.decorators.cache import cache_page
 from django.db.models import prefetch_related_objects
+
 from esi.decorators import token_required
 from esi.clients import esi_client_factory
 from evesde.models import EveTypeMaterial
-from .models import *
+
+from .app_settings import MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
 from .forms import MoonScanForm
-from .tasks import process_survey_input, update_refineries
-from .app_settings import *
+from .models import *
+from .tasks import process_survey_input, run_refineries_update
+from .utils import messages_plus
 
 logger = logging.getLogger(__name__)
 
-SWAGGER_SPEC_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'swagger.json')
-"""
-Swagger Operations:
-get_characters_character_id
-get_characters_character_id_notifications
-get_universe_structures_structure_id
-get_universe_moons_moon_id
-get_corporation_corporation_id
-get_corporation_corporation_id_mining_extractions
-"""
 
 URL_PROFILE_SOLAR_SYSTEM = 'https://evemaps.dotlan.net/system'
 URL_PROFILE_TYPE = 'https://www.kalkoken.org/apps/eveitems/?typeId='
+
 
 @login_required
 @permission_required('moonplanner.access_moonplanner')
@@ -50,7 +44,7 @@ def moon_index(request):
 @permission_required('moonplanner.access_moonplanner')
 def moon_info(request, moonid):    
     if len(moonid) == 0 or not moonid:
-        messages.warning(request, "You must specify a moon ID.")
+        messages_plus.warning(request, "You must specify a moon ID.")
         return redirect('moonplanner:moon_index')
 
     try:
@@ -133,7 +127,7 @@ def moon_info(request, moonid):
             ppulls_data = None
 
     except models.ObjectDoesNotExist:
-        messages.warning(
+        messages_plus.warning(
             request, 
             "Moon {} does not exist in the database.".format(moonid)
         )
@@ -162,13 +156,13 @@ def moon_scan(request):
             scans = request.POST['scan']
             process_survey_input.delay(scans, request.user.pk)
 
-            messages.success(
+            messages_plus.success(
                 request, 
                 'Your scan has been submitted for processing. You will' 
                 + 'receive a notification once processing is complete.')
             return render(request, 'moonplanner/add_scan.html')
         else:
-            messages.error(
+            messages_plus.error(
                 request, 
                 'Oh No! Something went wrong with your moon scan submission.'
             )
@@ -284,8 +278,8 @@ def add_mining_corporation(request, token):
             'character': character
         }
     )    
-    update_refineries.delay(mining_corporation.pk, request.user.pk)
-    messages.success(
+    run_refineries_update.delay(mining_corporation.pk, request.user.pk)
+    messages_plus.success(
         request, 
         'Update of refineres started for {}. '.format(
             corporation
