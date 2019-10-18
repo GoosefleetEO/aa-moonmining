@@ -116,25 +116,25 @@
                 
                 <div class="panel panel-primary">
                     <div class="panel-heading text-center">
-                        <h3 class="panel-title">Next Pull</h3>
+                        <h3 class="panel-title">Next Extraction</h3>
                     </div>
                     <div class="panel-body">                            
                         {% if next_pull == None %}                            
-                            <p> No pull scheduled</p> 
+                            <p> No extraction scheduled</p> 
                         {% else %}                            
 
                             <div class="row">
                                 <div class="col-md-3">
-                                    <p><strong>Scheduled</strong></p>
+                                    <p><strong>Ready Time</strong></p>
                                 </div>
                                 <div class="col-md-9">
-                                    <p>{{ next_pull.arrival_time }}</p>
+                                    <p>{{ next_pull.ready_time }}</p>
                                 </div>
                             </div>
 
                             <div class="row">
                                 <div class="col-md-3">
-                                    <p><strong>Auto Fracture</strong></p>
+                                    <p><strong>Auto Fracture Time</strong></p>
                                 </div>
                                 <div class="col-md-9">
                                     <p>{{ next_pull.auto_time }}</p>
@@ -179,7 +179,7 @@
                     
                     <div class="panel panel-primary">
                         <div class="panel-heading text-center">
-                            <h3 class="panel-title"> Past Pulls</h3>
+                            <h3 class="panel-title"> Past Extractions</h3>
                         </div>
                         <div class="panel-body">
                             <table class="table text-center" id="past-events">
@@ -189,12 +189,12 @@
                                 <tbody>
                                     {% if ppulls|length_is:"0" %}
                                         <tr>
-                                            <td> No Past Pulls recorded for this moon.</td>
+                                            <td> No past extraxtions recorded for this moon.</td>
                                         </tr>
                                     {% else %}
                                         {% for pull in ppulls %}
                                             <tr>
-                                                <td>{{ pull.arrival_time }}</td>
+                                                <td>{{ pull.ready_time }}</td>
                                             </tr>
                                         {% endfor %}
                                     {% endif %}

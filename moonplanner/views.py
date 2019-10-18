@@ -34,8 +34,8 @@ def moon_index(request):
     ctx = {}
     # Upcoming Extractions
     today = datetime.today().replace(tzinfo=timezone.utc)    
-    ctx['exts'] = Extraction.objects.filter(arrival_time__gte=today)
-    ctx['r_exts'] = Extraction.objects.filter(arrival_time__lt=today).order_by('-arrival_time')[:10]
+    ctx['exts'] = Extraction.objects.filter(ready_time__gte=today)
+    ctx['r_exts'] = Extraction.objects.filter(ready_time__lt=today).order_by('-ready_time')[:10]
 
     return render(request, 'moonplanner/moon_index.html', ctx)
 
@@ -84,7 +84,7 @@ def moon_info(request, moonid):
         if hasattr(moon, 'refinery'):
             next_pull = Extraction.objects.filter(
                 refinery=moon.refinery, 
-                arrival_time__gte=today
+                ready_time__gte=today
             ).first()
             next_pull_product_rows = list()
             total_value = 0
@@ -112,15 +112,15 @@ def moon_info(request, moonid):
                     'value': None if value is None else value / 1000000000
                 })
             next_pull_data = {
-                'arrival_time': next_pull.arrival_time,
-                'auto_time': next_pull.decay_time,
+                'ready_time': next_pull.ready_time,
+                'auto_time': next_pull.auto_time,
                 'total_value': None if total_value is None else total_value / 1000000000,
                 'total_volume': '{:,.0f}'.format(total_volume),
                 'products': next_pull_product_rows,
             }
             ppulls_data= Extraction.objects.filter(
                 refinery=moon.refinery,
-                arrival_time__lt=today
+                ready_time__lt=today
             )
         else:
             next_pull_data = None            

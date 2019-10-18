@@ -157,14 +157,14 @@ class Refinery(models.Model):
 
 class Extraction(models.Model):
     refinery = models.ForeignKey(Refinery, on_delete=models.CASCADE)    
-    arrival_time = models.DateTimeField()
-    decay_time = models.DateTimeField()
+    ready_time = models.DateTimeField()
+    auto_time = models.DateTimeField()
             
     class Meta:
-        unique_together = (('arrival_time', 'refinery'),)
+        unique_together = (('ready_time', 'refinery'),)
 
     def __str__(self):
-        return "{} - {}".format(self.refinery, self.arrival_time)
+        return "{} - {}".format(self.refinery, self.ready_time)
 
 
 class ExtractionProduct(models.Model):

@@ -359,9 +359,9 @@ def run_refineries_update(mining_corp_pk, user_pk = None):
                     )
                     extraction, created = Extraction.objects.get_or_create(
                         refinery=refinery,
-                        arrival_time=ldapTime2datetime(parsed_text['readyTime']),
+                        ready_time=ldapTime2datetime(parsed_text['readyTime']),
                         defaults={
-                            'decay_time':ldapTime2datetime(parsed_text['autoTime'])
+                            'auto_time':ldapTime2datetime(parsed_text['autoTime'])
                         }                    
                     )
                     last_extraction_started[structure_id] = extraction

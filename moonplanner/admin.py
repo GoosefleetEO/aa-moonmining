@@ -6,9 +6,9 @@ from . import tasks
 # Register your models here.
 @admin.register(Extraction)
 class ExtractionAdmin(admin.ModelAdmin):
-    list_display = ('refinery', 'arrival_time')
-    ordering = ('arrival_time',)
-    list_filter = ('refinery', 'arrival_time', )
+    list_display = ('refinery', 'ready_time')
+    ordering = ('ready_time',)
+    list_filter = ('refinery', 'ready_time', )
 
     search_fields = ('moon__name',)
 

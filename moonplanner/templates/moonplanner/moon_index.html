@@ -23,14 +23,14 @@
                     <table class="table table-striped" id="table_upcoming">
                         <thead>
                             <th>Moon</th>
-                            <th>Arrival Time</th>
+                            <th>Ready Time</th>
                             <th></th>
                         </thead>
                         <tbody>
                             {% for event in exts %}
                                 <tr>
                                     <td>{{ event.refinery.moon.name }}</td>
-                                    <td>{{ event.arrival_time }}</td>
+                                    <td>{{ event.ready_time }}</td>
                                     <td><a class="btn btn-primary btn-sm" href="{% url 'moonplanner:moon_info' event.refinery.moon.moon_id %}"><span class="fa fa-eye fa-fw"></span></a></td>
                                 </tr>
                             {% endfor %}
@@ -51,14 +51,14 @@
                     <table class="table table-striped" id="table_recent">
                         <thead>
                             <th>Moon</th>
-                            <th>Arrival Time</th>
+                            <th>Ready Time</th>
                             <th></th>
                         </thead>
                         <tbody>
                             {% for event in r_exts %}
                                 <tr>
                                     <td>{{ event.refinery.moon.name }}</td>
-                                    <td>{{ event.arrival_time }}</td>
+                                    <td>{{ event.ready_time }}</td>
                                     <td><a class="btn btn-primary btn-sm" href="{% url 'moonplanner:moon_info' event.refinery.moon.moon_id %}"><span class="fa fa-eye fa-fw"></span></a></td>
                                 </tr>
                             {% endfor %}
