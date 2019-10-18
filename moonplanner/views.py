@@ -39,9 +39,8 @@ URL_PROFILE_TYPE = 'https://www.kalkoken.org/apps/eveitems/?typeId='
 def moon_index(request):
     ctx = {}
     # Upcoming Extractions
-    today = datetime.today().replace(tzinfo=timezone.utc)
-    end = today + timedelta(days=7)
-    ctx['exts'] = Extraction.objects.filter(arrival_time__gte=today, arrival_time__lte=end)
+    today = datetime.today().replace(tzinfo=timezone.utc)    
+    ctx['exts'] = Extraction.objects.filter(arrival_time__gte=today)
     ctx['r_exts'] = Extraction.objects.filter(arrival_time__lt=today).order_by('-arrival_time')[:10]
 
     return render(request, 'moonplanner/moon_index.html', ctx)

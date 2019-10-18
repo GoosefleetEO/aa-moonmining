@@ -1,13 +1,18 @@
 from django.db import models
+from django.db.models import Q
+
 from allianceauth.eveonline.models import EveCorporationInfo, EveCharacter
 from evesde.models import EveSolarSystem, EveItem, EveType, EveTypeMaterial
 
+TYPE_MOON_ID = 14
+TYPE_REFINERY_ID = 1406
 
 class Moon(models.Model):
     moon = models.OneToOneField(
         EveItem,         
         on_delete=models.CASCADE,
-        primary_key=True
+        primary_key=True,
+        limit_choices_to={'type_id': TYPE_MOON_ID},
     )
     solar_system = models.ForeignKey(
         EveSolarSystem,         
@@ -87,7 +92,8 @@ class MoonProduct(models.Model):
         EveType,         
         on_delete=models.DO_NOTHING,
         null=True, 
-        default=None
+        default=None,
+        limit_choices_to=Q(group__category_id=25)
     )
     amount = models.FloatField()
 
@@ -139,7 +145,11 @@ class Refinery(models.Model):
         MiningCorporation, 
         on_delete=models.CASCADE
     )
-    type = models.ForeignKey(EveType, on_delete=models.CASCADE)
+    type = models.ForeignKey(
+        EveType, 
+        on_delete=models.CASCADE,        
+        limit_choices_to={'group_id': TYPE_REFINERY_ID},
+    )
     
     def __str__(self):
         return self.name
@@ -163,7 +173,8 @@ class ExtractionProduct(models.Model):
         EveType,         
         on_delete=models.DO_NOTHING,
         null=True, 
-        default=None
+        default=None,
+        limit_choices_to=Q(group__category_id=25)
     )
     volume = models.FloatField()
 

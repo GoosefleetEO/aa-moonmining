@@ -245,6 +245,7 @@ def update_refineries(mining_corp_pk, user_pk = None):
     """create or update refineries for a mining corporation"""
     
     try:                
+        addTag = makeLoggerTag('(none)')
         try:
             mining_corp = MiningCorporation.objects.get(pk=mining_corp_pk)
         except MiningCorporation.DoesNotExist as ex:        
@@ -351,17 +352,19 @@ def update_refineries(mining_corp_pk, user_pk = None):
         notifications = client.Character.get_characters_character_id_notifications(
             character_id=mining_corp.character.character_id
         ).result()
-        
-        logger.info(addTag('Checking for extraction events'))
+                
         # add extractions for refineries if any are found
-        with transaction.atomic():
-            for notification in notifications:                        
+        logger.info(addTag('Process extraction events'))        
+        with transaction.atomic():            
+            last_extraction_started = dict()
+            for notification in sorted(notifications, key=lambda k: k['timestamp']):
+
                 if notification['type'] == 'MoonminingExtractionStarted':
                     parsed_text = yaml.safe_load(notification['text'])
-                    logger.info(parsed_text)
-                    
+                                        
+                    structure_id=parsed_text['structureID']
                     refinery = Refinery.objects.get(
-                        structure_id=parsed_text['structureID']
+                        structure_id=structure_id
                     )
                     extraction, created = Extraction.objects.get_or_create(
                         refinery=refinery,
@@ -370,6 +373,7 @@ def update_refineries(mining_corp_pk, user_pk = None):
                             'decay_time':ldapTime2datetime(parsed_text['autoTime'])
                         }                    
                     )
+                    last_extraction_started[structure_id] = extraction
                     
                     for ore_type_id, ore_volume in parsed_text['oreVolumeByType'].items():
                         ExtractionProduct.objects.get_or_create(
@@ -380,11 +384,21 @@ def update_refineries(mining_corp_pk, user_pk = None):
                             }
                         )
 
+                # remove latest started extraction if it was canceled 
+                # and not finished
                 if notification['type'] == 'MoonminingExtractionCancelled':
-                    parsed_text = yaml.safe_load(notification['text'])
-                    logger.info(parsed_text)
-                
-        
+                    parsed_text = yaml.safe_load(notification['text'])                    
+                    structure_id=parsed_text['structureID']
+                    if structure_id in last_extraction_started:
+                        extraction = last_extraction_started[structure_id]                        
+                        extraction.delete()                        
+
+                if notification['type'] == 'MoonminingExtractionFinished':
+                    parsed_text = yaml.safe_load(notification['text'])                    
+                    structure_id=parsed_text['structureID']
+                    if structure_id in last_extraction_started:
+                        del last_extraction_started[structure_id]
+                    
     except Exception as ex:
         logger.error(addTag('An unexpected error occurred: {}'. format(ex)))
         success = False        
