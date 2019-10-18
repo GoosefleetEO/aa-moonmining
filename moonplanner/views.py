@@ -35,8 +35,7 @@ def extractions(request):
     # Upcoming Extractions
     today = datetime.today().replace(tzinfo=timezone.utc)    
     ctx['exts'] = Extraction.objects.filter(ready_time__gte=today)
-    ctx['r_exts'] = Extraction.objects.filter(ready_time__lt=today).order_by('-ready_time')[:10]
-
+    ctx['r_exts'] = Extraction.objects.filter(ready_time__lt=today)[:20]
     return render(request, 'moonplanner/extractions.html', ctx)
 
 
@@ -230,15 +229,12 @@ def moon_list_data(request, category):
         else:
             income = '(no data)'
                 
-        has_refinery = hasattr(moon, 'refinery')
-        name = moon.name()
-        if has_refinery:
-            name += ' <img src="{}"/>'.format(
-                moon.refinery.corporation.corporation.logo_url()
-            )
-
+        has_refinery = hasattr(moon, 'refinery')        
+        corporation = str(moon.refinery.corporation) if has_refinery else ""
+        
         moon_data = {
-            'moon_name': name,
+            'moon_name': moon.name(),
+            'corporation': corporation,
             'solar_system_name': solar_system_name,
             'solar_system_link': solar_system_link,
             'region_name': moon.solar_system.region.region_name,

@@ -1,85 +1,78 @@
 {% extends 'allianceauth/base.html' %}
 {% load i18n %}
-{% block page_title %}{% trans 'Moon Planer' %}{% endblock %}
+{% block page_title %}{% trans 'Moon Planner' %}{% endblock %}
+{% load static %}
 
 {% block content %}
     <div class="col-lg-12">
         <br>
         {% include 'moonplanner/menu.html' %}
-        <ul class="nav nav-pills">
-            <li class="active"><a data-toggle="tab" href="#upcoming"> Upcoming Extractions</a></li>
-            <li><a data-toggle="tab" href="#recent"> Recent Extractions</a></li>
+        
+        <ul class="nav nav-pills"  role="tablist">            
+            <li role="presentation" class="active"><a href="#upcoming" aria-controls="upcoming" role="tab" data-toggle="tab">Upcoming Extractions</a></li>
+            <li role="presentation"><a href="#recent" aria-controls="recent" role="tab" data-toggle="tab">Recent Extraction</a></li>            
         </ul>
-        <div class="tab-content">
-            <div class="tab-pane fade in active panel-default" id="upcoming">
-                <div class="panel-body">
-                    <h2> {% trans "Upcoming Extractions" %} </h2>
-                    <p class="lead">All times displayed are EVE/UTC</p>
-                    {% if exts|length_is:"0" %}
-                        <div class="alert alert-warning" role="alert">
-                            <p> There are no extractions happening in the next 7 days.</p>
-                        </div>
-                    {% else %}
-                    <table class="table table-striped" id="table_upcoming">
-                        <thead>
-                            <th>Moon</th>
-                            <th>Ready Time</th>
-                            <th></th>
-                        </thead>
-                        <tbody>
-                            {% for event in exts %}
-                                <tr>
-                                    <td>{{ event.refinery.moon.name }}</td>
-                                    <td>{{ event.ready_time }}</td>
-                                    <td><a class="btn btn-primary btn-sm" href="{% url 'moonplanner:moon_info' event.refinery.moon.moon_id %}"><span class="fa fa-eye fa-fw"></span></a></td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    {% endif %}
-                </div>
+        
+        <div class="tab-content">            
+            <div role="tabpanel" class="tab-pane fade in active panel-default" id="upcoming">                
+                {% include "moonplanner/extractions_table.html" with sub_title="Upcoming Extractions" tableid="tab_upcoming" extractions=exts %}             
             </div>
-            <div class="tab-pane fade active panel-default" id="recent">
-                <div class="panel-body">
-                    <h2> {% trans "Recent Extractions" %} </h2>
-                    <p class="lead">All times displayed are EVE/UTC</p>
-                    {% if r_exts|length_is:"0" %}
-                        <div class="alert alert-warning" role="alert">
-                            <p> There are no extractions happening in the next 7 days.</p>
-                        </div>
-                    {% else %}
-                    <table class="table table-striped" id="table_recent">
-                        <thead>
-                            <th>Moon</th>
-                            <th>Ready Time</th>
-                            <th></th>
-                        </thead>
-                        <tbody>
-                            {% for event in r_exts %}
-                                <tr>
-                                    <td>{{ event.refinery.moon.name }}</td>
-                                    <td>{{ event.ready_time }}</td>
-                                    <td><a class="btn btn-primary btn-sm" href="{% url 'moonplanner:moon_info' event.refinery.moon.moon_id %}"><span class="fa fa-eye fa-fw"></span></a></td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    {% endif %}
-                </div>
+            
+            <div role="tabpanel" class="tab-pane fade panel-default" id="recent">                
+                {% include "moonplanner/extractions_table.html" with sub_title="Recent Extractions" tableid="tab_recent" extractions=r_exts %}        
             </div>
-        </div>
-    </div>
+        </div>  
+
+        <p class="text-muted">All times displayed are EVE/UTC</p>
+
+    </div>    
 
 {% endblock %}
 {% block extra_javascript %}
     {% include 'bundles/datatables-js.html' %}
+    <script 
+        type="text/javascript" 
+        src="{% static "moonplanner/filterDropDown.min.js" %}">
+    </script>
 {% endblock %}
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}
 {% endblock %}
+
 {% block extra_script %}
-    $(document).ready(function(){
-        $('#table_recent').DataTable();
-        $('#table_upcoming').DataTable();
+
+    $(function() {
+        $('#tab_upcoming').DataTable({
+            order: [ [0, "asc"], [1, "asc"] ],
+
+            columnDefs: [														
+                { "orderable": false, "targets": [ 3 ] }
+            ],
+            filterDropDown: {										
+                columns: [																                    
+                    { 
+                        idx: 2
+                    }
+                ],
+                bootstrap: true,
+                autoSize: false
+            }
+        });
+        $('#tab_recent').DataTable({
+            order: [ [0, "asc"], [1, "asc"] ],
+
+            columnDefs: [														
+                { "orderable": false, "targets": [ 3 ] }
+            ],
+            filterDropDown: {										
+                columns: [																                    
+                    { 
+                        idx: 2
+                    }
+                ],
+                bootstrap: true,
+                autoSize: false
+            }
+        });
     });
 {% endblock %}

@@ -17,6 +17,7 @@
             <table class="table table-striped" id="moon-list" style="width:100%;">
                 <thead>
                     <th>Moon</th>
+                    <th>Corporation</th>
                     <th>System</th>
                     <th>Region</th>
                     <th>Monthly income est. in B ISK</th>
@@ -65,6 +66,7 @@
 
             columns: [																			
                 { data: 'moon_name' },
+                { data: 'corporation' },
                 { data: 'solar_system_link' },
                 { data: 'region_name' },
                 { data: 'income' },
@@ -79,22 +81,25 @@
             order: [ [0, "asc"] ],
 
             columnDefs: [														
-                { "orderable": false, "targets": [ 4 ] },
-                { "visible": false, "targets": [ 5, 6 ] },
+                { "orderable": false, "targets": [ 5 ] },
+                { "visible": false, "targets": [ 6, 7 ] },
             ],
       
             filterDropDown: {										
                 columns: [																                    
                     { 
-                        idx: 2
+                        idx: 1
                     },
                     { 
-                        idx: 5,
+                        idx: 3
+                    },
+                    { 
+                        idx: 6,
                         title: "System"
                     }
                     ,
                     { 
-                        idx: 6,
+                        idx: 7,
                         title: "Our moon"
                     }
                 ],
