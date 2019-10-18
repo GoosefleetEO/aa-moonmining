@@ -30,14 +30,14 @@ URL_PROFILE_TYPE = 'https://www.kalkoken.org/apps/eveitems/?typeId='
 
 @login_required
 @permission_required('moonplanner.access_moonplanner')
-def moon_index(request):
+def extractions(request):
     ctx = {}
     # Upcoming Extractions
     today = datetime.today().replace(tzinfo=timezone.utc)    
     ctx['exts'] = Extraction.objects.filter(ready_time__gte=today)
     ctx['r_exts'] = Extraction.objects.filter(ready_time__lt=today).order_by('-ready_time')[:10]
 
-    return render(request, 'moonplanner/moon_index.html', ctx)
+    return render(request, 'moonplanner/extractions.html', ctx)
 
 
 @login_required
@@ -45,7 +45,7 @@ def moon_index(request):
 def moon_info(request, moonid):    
     if len(moonid) == 0 or not moonid:
         messages_plus.warning(request, "You must specify a moon ID.")
-        return redirect('moonplanner:moon_index')
+        return redirect('moonplanner:extractions')
 
     try:
         moon = Moon.objects.get(moon_id=moonid)        
@@ -131,7 +131,7 @@ def moon_info(request, moonid):
             request, 
             "Moon {} does not exist in the database.".format(moonid)
         )
-        return redirect('moonplanner:moon_index')
+        return redirect('moonplanner:extractions')
     else:
         context = {
             'moon': moon,
@@ -149,7 +149,7 @@ def moon_info(request, moonid):
     'moonplanner.upload_moon_scan'
 ))
 @login_required()
-def moon_scan(request):
+def add_moon_scan(request):
     if request.method == 'POST':
         form = MoonScanForm(request.POST)
         if form.is_valid():            
@@ -286,4 +286,4 @@ def add_mining_corporation(request, token):
         ) 
         + 'You will receive a notifications with results shortly.'
     )
-    return redirect('moonplanner:moon_index')
+    return redirect('moonplanner:extractions')

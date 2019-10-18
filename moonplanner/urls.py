@@ -5,10 +5,9 @@ from . import views
 app_name = 'moonplanner'
 
 urlpatterns = [
-    url(r'^$', views.moon_index, name='moon_index'),
-    url(r'^add_corporation/$', views.add_mining_corporation, name='add_mining_corporation'),
-    url(r'^moon/(?P<moonid>[0-9]+)/$', views.moon_info, name='moon_info'),
-    url(r'^moon/scan/$', views.moon_scan, name='moon_scan'),
+    url(r'^extractions$', views.extractions, name='extractions'),
+    url(r'^add_corporation/$', views.add_mining_corporation, name='add_mining_corporation'),    
+    url(r'^add_moon_scan/$', views.add_moon_scan, name='add_moon_scan'),
     url(
         r'^list_data/(?P<category>\w+)/$', 
         views.moon_list_data, 
@@ -16,4 +15,5 @@ urlpatterns = [
     ),
     url(r'^list/$', views.moon_list, name='moon_list'),
     url(r'^list_all/$', views.moon_list_all, name='moon_list_all'),
+    url(r'^moon/(?P<moonid>[0-9]+)/$', views.moon_info, name='moon_info'),
 ]

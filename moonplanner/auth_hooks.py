@@ -8,7 +8,7 @@ class MoonMenu(MenuItemHook):
     def __init__(self):
         MenuItemHook.__init__(self, 'Moon Planner',
                               'fa fa-moon-o fa-fw',
-                              'moonplanner:moon_index',
+                              'moonplanner:add_moon_scan',
                               navactive=['moonplanner:'])
 
     def render(self, request):
