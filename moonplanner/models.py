@@ -4,10 +4,25 @@ from django.db.models import Q
 from allianceauth.eveonline.models import EveCorporationInfo, EveCharacter
 from evesde.models import EveSolarSystem, EveItem, EveType, EveTypeMaterial
 
-TYPE_MOON_ID = 14
-TYPE_REFINERY_ID = 1406
+
+class MoonPlanner(models.Model):
+    """Meta model for global app permissions"""
+
+    class Meta:
+        managed = False                         
+        default_permissions = ()
+        permissions = ( 
+            ('access_moonplanner', 'Can access the moonplanner app'),
+            ('access_our_moons', 'Can access our moons and see extractions'),
+            ('access_all_moons', 'Can access all moons in the database'),
+            ('upload_moon_scan', 'Can upload moon scans'),
+            ('add_mining_corporation', 'Can add mining corporation'),
+        )
+
 
 class Moon(models.Model):
+    TYPE_MOON_ID = 14
+
     moon = models.OneToOneField(
         EveItem,         
         on_delete=models.CASCADE,
@@ -75,12 +90,8 @@ class Moon(models.Model):
 
         return income
 
-    class Meta:
-        permissions = (
-            ('access_moonplanner', 'Can access the moonplanner app'),
-            ('research_moons', 'Can research all moons in the database'),
-            ('upload_moon_scan', 'Can upload moon scans'),
-        )
+    def is_owned(self):
+        return hasattr(self, 'refinery')
 
 
 class MoonProduct(models.Model):
@@ -133,6 +144,8 @@ class MiningCorporation(models.Model):
 
 
 class Refinery(models.Model):
+    TYPE_REFINERY_ID = 1406
+
     structure_id = models.BigIntegerField(primary_key=True)
     moon = models.OneToOneField(
         Moon, 

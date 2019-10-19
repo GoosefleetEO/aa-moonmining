@@ -3,7 +3,7 @@ import urllib
 from datetime import date, datetime, timedelta, timezone
 import logging
 
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, HttpResponse
 from django.contrib.auth.decorators import login_required, permission_required
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
@@ -27,9 +27,22 @@ logger = logging.getLogger(__name__)
 URL_PROFILE_SOLAR_SYSTEM = 'https://evemaps.dotlan.net/system'
 URL_PROFILE_TYPE = 'https://www.kalkoken.org/apps/eveitems/?typeId='
 
-
 @login_required
 @permission_required('moonplanner.access_moonplanner')
+def index(request):
+    if request.user.has_perm('access_all_moons'):
+        return redirect('moonplanner:moon_list_all') 
+    elif request.user.has_perm('moon_list_ours'):
+        return redirect('moonplanner:extractions') 
+    elif request.user.has_perm('upload_moon_scan'):
+        return redirect('moonplanner:add_moon_scan') 
+    else:
+        return HttpResponse('Insufficient permissions to use this app')
+
+@login_required
+@permission_required(
+    ('moonplanner.access_our_moons', 'moonplanner.access_moonplanner')
+)
 def extractions(request):
     ctx = {}
     # Upcoming Extractions
@@ -44,10 +57,26 @@ def extractions(request):
 def moon_info(request, moonid):    
     if len(moonid) == 0 or not moonid:
         messages_plus.warning(request, "You must specify a moon ID.")
-        return redirect('moonplanner:extractions')
+        return redirect('moonplanner:index')
 
     try:
-        moon = Moon.objects.get(moon_id=moonid)        
+        moon = Moon.objects.get(moon_id=moonid)
+        
+        # check for correct permission to view this moon
+        if (request.user.has_perm('access_all_moons')):
+            has_permission = True
+        elif moon.is_owned and request.user.has_perm('access_our_moons'):
+            has_permission = True
+        else:
+            has_permission = False
+
+        if not has_permission:
+            messages_plus.error(
+                request, 
+                "You do not have permission to view this moon"
+            )
+            return redirect('moonplanner:index')
+        
         income = moon.calc_income_estimate(
             MOONPLANNER_VOLUME_PER_MONTH, 
             MOONPLANNER_REPROCESSING_YIELD
@@ -171,8 +200,8 @@ def add_moon_scan(request):
 
 
 @login_required()
-@permission_required('moonplanner.access_moonplanner')
-def moon_list(request):    
+@permission_required(('moonplanner.access_moonplanner', 'access_our_moons'))
+def moon_list_ours(request):    
     # render the page only, data is retrieved through ajax from moon_list_data
     context = {
         'title': 'Our Moons',
@@ -186,7 +215,7 @@ def moon_list(request):
 
 
 @login_required()
-@permission_required('moonplanner.access_moonplanner')
+@permission_required(('moonplanner.access_moonplanner', 'access_all_moons'))
 def moon_list_all(request):    
     # render the page only, data is retrieved through ajax from moon_list_data
     context = {
@@ -251,7 +280,7 @@ def moon_list_data(request, category):
 
 
 @permission_required((
-    'moonplanner.add_extractevent', 
+    'moonplanner.add_mining_corporation', 
     'moonplanner.access_moonplanner'
 ))
 @token_required(scopes=MiningCorporation.get_esi_scopes())

@@ -11,20 +11,23 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
         </button>
-        <a class="navbar-brand" href="{% url 'moonplanner:add_moon_scan' %}">{% trans "Moon Planner" %}</a>
+        <a class="navbar-brand" href="{% url 'moonplanner:index' %}">{% trans "Moon Planner" %}</a>
     </div>
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
         <ul class="nav navbar-nav">
-            <li class="{% navactive request 'moonplanner:extractions' %}"><a href="{% url 'moonplanner:extractions' %}">Extractions</a> </li>
-            <li class="{% navactive request 'moonplanner:moon_list' %}"><a href="{% url 'moonplanner:moon_list' %}">Our Moons</a> </li>
-            {% if perms.moonplanner.research_moons %}
-            <li class="{% navactive request 'moonplanner:moon_list_all' %}"><a href="{% url 'moonplanner:moon_list_all' %}">All Moons</a> </li>
+            {% if perms.moonplanner.access_our_moons %}
+                <li class="{% navactive request 'moonplanner:extractions' %}"><a href="{% url 'moonplanner:extractions' %}">Extractions</a> </li>
+                <li class="{% navactive request 'moonplanner:moon_list_ours' %}"><a href="{% url 'moonplanner:moon_list_ours' %}">Our Moons</a> </li>
             {% endif %}
+            {% if perms.moonplanner.access_all_moons %}
+                <li class="{% navactive request 'moonplanner:moon_list_all' %}"><a href="{% url 'moonplanner:moon_list_all' %}">All Moons</a> </li>
+            {% endif %}
+            
             {% if perms.moonplanner.upload_moon_scan %}
-            <li class="{% navactive request 'moonplanner:add_moon_scan' %}"> <a href="{% url 'moonplanner:add_moon_scan' %}">Add Moon Scan</a></li>
+                <li class="{% navactive request 'moonplanner:add_moon_scan' %}"> <a href="{% url 'moonplanner:add_moon_scan' %}">Add Moon Scan</a></li>
             {% endif %}
         </ul>
-        {% if perms.moonplanner.add_extractevent %}
+        {% if perms.moonplanner.add_mining_corporation %}
         <a class="btn btn-default navbar-btn" style="float: right" href="{% url 'moonplanner:add_mining_corporation' %}">Add Corporation</a>
         {% endif %}
     </div>
