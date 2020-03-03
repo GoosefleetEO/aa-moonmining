@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [0.1.10] - 2020-03-04
+
+### Fixed
+
+- Incorrect permission checks
+
 ## [0.1.9] - 2020-03-03
 
 ### Changed

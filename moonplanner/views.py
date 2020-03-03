@@ -27,11 +27,11 @@ URL_PROFILE_TYPE = 'https://www.kalkoken.org/apps/eveitems/?typeId='
 @login_required
 @permission_required('moonplanner.access_moonplanner')
 def index(request):
-    if request.user.has_perm('access_all_moons'):
+    if request.user.has_perm('moonplanner.access_all_moons'):
         return redirect('moonplanner:moon_list_all') 
-    elif request.user.has_perm('moon_list_ours'):
+    elif request.user.has_perm('moonplanner.access_our_moons'):
         return redirect('moonplanner:extractions') 
-    elif request.user.has_perm('upload_moon_scan'):
+    elif request.user.has_perm('moonplanner.upload_moon_scan'):
         return redirect('moonplanner:add_moon_scan') 
     else:
         return HttpResponse('Insufficient permissions to use this app')
@@ -61,9 +61,12 @@ def moon_info(request, moonid):
         moon = Moon.objects.get(moon_id=moonid)
         
         # check for correct permission to view this moon
-        if (request.user.has_perm('access_all_moons')):
+        if (request.user.has_perm('moonplanner.access_all_moons')):
             has_permission = True
-        elif moon.is_owned and request.user.has_perm('access_our_moons'):
+        elif (
+            moon.is_owned 
+            and request.user.has_perm('moonplanner.access_our_moons')
+        ):
             has_permission = True
         else:
             has_permission = False
@@ -173,8 +176,7 @@ def moon_info(request, moonid):
 
 
 @permission_required((
-    'moonplanner.access_moonplanner', 
-    'moonplanner.upload_moon_scan'
+    'moonplanner.access_moonplanner', 'moonplanner.upload_moon_scan'
 ))
 @login_required()
 def add_moon_scan(request):
@@ -200,7 +202,9 @@ def add_moon_scan(request):
 
 
 @login_required()
-@permission_required(('moonplanner.access_moonplanner', 'access_our_moons'))
+@permission_required((
+    'moonplanner.access_moonplanner', 'moonplanner.access_our_moons'
+))
 def moon_list_ours(request):    
     # render the page only, data is retrieved through ajax from moon_list_data
     context = {
@@ -215,7 +219,9 @@ def moon_list_ours(request):
 
 
 @login_required()
-@permission_required(('moonplanner.access_moonplanner', 'access_all_moons'))
+@permission_required((
+    'moonplanner.access_moonplanner', 'moonplanner.access_all_moons'
+))
 def moon_list_all(request):    
     # render the page only, data is retrieved through ajax from moon_list_data
     context = {
