@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [0.1.9] - 2020-03-03
+
+### Changed
+
+- Added fault tolerance to moon income update task for missing types
+
 ## [0.1.8] - 2020-03-03
 
 ### Changed

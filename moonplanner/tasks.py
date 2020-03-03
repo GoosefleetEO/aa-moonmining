@@ -5,7 +5,7 @@ import datetime
 import pytz
 from celery import shared_task
 
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.contrib.auth.models import User
 
 from allianceauth.eveonline.models import EveCharacter
@@ -380,24 +380,31 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
 
 @shared_task
 def update_moon_income():
-    """update the income for all moons"""
-
+    """update the income for all moons"""    
     try:
-        logger.info('Updating market prices from ESI')
-        
-        client = esi_client_factory()    
-        
-        with transaction.atomic():
-            MarketPrice.objects.all().delete()
-            for row in client.Market.get_markets_prices().result():
-                average_price = row['average_price'] \
-                    if 'average_price' in row else None
-                adjusted_price = row['adjusted_price'] \
-                    if 'adjusted_price' in row else None
-                MarketPrice.objects.create(
+        logger.info('Starting ESI client...')
+        client = esi_client_factory()
+        logger.info('Fetching market prices from ESI...')
+        market_data = client.Market.get_markets_prices().result()
+        logger.info('Storing market prices...')
+        for row in market_data:
+            average_price = row['average_price'] \
+                if 'average_price' in row else None
+            adjusted_price = row['adjusted_price'] \
+                if 'adjusted_price' in row else None
+            try:
+                MarketPrice.objects.update_or_create(
                     type_id=row['type_id'],
-                    average_price=average_price,
-                    adjusted_price=adjusted_price,
+                    defaults={
+                        'average_price': average_price,
+                        'adjusted_price': adjusted_price,
+                    }
+                )
+            except IntegrityError as error:
+                # ignore rows which no matching evetype in the DB
+                logger.info(
+                    'failed to add row for type ID {} due to '
+                    'IntegrityError: {}'.format(row['type_id'], error)
                 )
 
         logger.info(
