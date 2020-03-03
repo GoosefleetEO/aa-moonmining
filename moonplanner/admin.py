@@ -42,5 +42,8 @@ class RefineryAdmin(admin.ModelAdmin):
         ('type', admin.RelatedOnlyFieldListFilter)
     )
 
+
 admin.site.register(Moon)
+
+
 admin.site.register(MoonProduct)

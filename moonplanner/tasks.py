@@ -1,4 +1,3 @@
-import os
 import logging
 import yaml
 import datetime
@@ -6,32 +5,34 @@ import datetime
 import pytz
 from celery import shared_task
 
-from django.db import utils, transaction
+from django.db import transaction
 from django.contrib.auth.models import User
 
+from allianceauth.eveonline.models import EveCharacter
 from allianceauth.notifications import notify
+
+from evesde.models import EveType, EveSolarSystem
 from esi.clients import esi_client_factory
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
 
-from .models import *
-from .app_settings import *
+from .models import (
+    Moon, 
+    MoonProduct, 
+    MiningCorporation, 
+    MarketPrice, 
+    Extraction, 
+    ExtractionProduct,
+    Refinery
+)
+from .app_settings import (
+    MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
+)
 from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path
 
 
 # add custom tag to logger with name of this app
 logger = LoggerAddTag(logging.getLogger(__name__), __package__)
-
-"""
-Swagger Operations:
-get_characters_character_id
-get_characters_character_id_notifications
-get_universe_structures_structure_id
-get_universe_moons_moon_id
-get_corporation_corporation_id
-get_corporation_corporation_id_mining_extractions
-post_universe_names
-"""
 
 REFINERY_GROUP_ID = 1406
 MOON_GROUP_ID = 8
@@ -43,6 +44,7 @@ def ldapTime2datetime(ldap_time: int) -> datetime:
     return pytz.utc.localize(datetime.datetime.utcfromtimestamp(
         (ldap_time / 10000000) - 11644473600
     ))    
+
 
 """
 def _get_tokens(scopes):
@@ -59,7 +61,7 @@ def _get_tokens(scopes):
 
 
 @shared_task
-def process_survey_input(scans, user_pk = None):
+def process_survey_input(scans, user_pk=None):
     """process raw moon survey input from user
     
     Args:
@@ -80,7 +82,7 @@ def process_survey_input(scans, user_pk = None):
     sublists = []
     for line in lines:
         # Find the lines that start a scan
-        if line[0] is '':
+        if line[0] == '':
             pass
         else:
             sublists.append(lines.index(line))
@@ -90,15 +92,15 @@ def process_survey_input(scans, user_pk = None):
     for i in range(len(sublists)):
         # The First List
         if i == 0:
-            if i+2 > len(sublists):
+            if i + 2 > len(sublists):
                 scans.append(lines[sublists[i]:])
             else:
-                scans.append(lines[sublists[i]:sublists[i+1]])
+                scans.append(lines[sublists[i]:sublists[i + 1]])
         else:
-            if i+2 > len(sublists):
+            if i + 2 > len(sublists):
                 scans.append(lines[sublists[i]:])
             else:
-                scans.append(lines[sublists[i]:sublists[i+1]])
+                scans.append(lines[sublists[i]:sublists[i + 1]])
     
     process_results = list()    
     for scan in scans:
@@ -110,7 +112,7 @@ def process_survey_input(scans, user_pk = None):
                 moon, _ = Moon.objects.get_or_create(
                     moon_id=moon_id,
                     defaults={
-                        'solar_system_id':solar_system_id,
+                        'solar_system_id': solar_system_id,
                         'income': None
                     }
                 )
@@ -149,7 +151,7 @@ def process_survey_input(scans, user_pk = None):
             'error_id': error_id
         }) 
         
-    #send result notification to user
+    # send result notification to user
     success = True
     message = 'We have completed processing your moon survey input:\n\n'
     n = 0
@@ -177,59 +179,9 @@ def process_survey_input(scans, user_pk = None):
 
     return success
 
-"""
-@shared_task
-def check_notifications(token):
-    c = token.get_esi_client()
-
-    # Get notifications
-    notifications = c.Character.get_characters_character_id_notifications(character_id=token.character_id).result()
-    char = MoonDataCharacter.objects.get(character__character_id=token.character_id)
-    moon_pops = []
-
-    moon_ids = Moon.objects.all().values_list('moon_id', flat=True)
-    print(moon_ids)
-
-    for noti in notifications:
-        if ("MoonminingExtraction" in noti['type']) and ("Cancelled" not in noti['type']):
-            # Parse the notification
-            text = noti['text']
-            parsed_text = yaml.load(text)
-
-            total_ore = 0
-            # Get total volume, so we can calculate percentages
-            for k, v in parsed_text['oreVolumeByType'].items():
-                total_ore += int(v)
-            # Replace volume with percent in oreVolumeByType
-            for k, v in parsed_text['oreVolumeByType'].items():
-                percentage = int(v) / total_ore
-                parsed_text['oreVolumeByType'][k] = percentage
-
-            moon_pops.append(parsed_text)
-
-    # Process notifications
-    for pop in moon_pops:
-        if pop['moonID'] in moon_ids:
-            moon = Moon.objects.get(moon_id=pop['moonID'])
-            moon.resources.clear()
-            # Get ore names
-            types = []
-            for k in pop['oreVolumeByType']:
-                types.append(int(k))
-            names = c.Universe.post_universe_names(ids=types).result()
-            types = {}
-            for name in names:
-                types[name['id']] = name['name']
-            # Create the resources.
-            for k, v in pop['oreVolumeByType'].items():
-                # Truncate amount to ensure duplicates are caught correctly
-                v = float('%.10f' % v)
-                resource, _ = MoonProduct.objects.get_or_create(ore=types[k], amount=v, type_id=k)
-                moon.resources.add(resource.pk)
-"""                
 
 @shared_task
-def run_refineries_update(mining_corp_pk, user_pk = None):
+def run_refineries_update(mining_corp_pk, user_pk=None):
     """update list of refineries with extractions for a mining corporation"""
     
     try:                
@@ -238,11 +190,15 @@ def run_refineries_update(mining_corp_pk, user_pk = None):
             mining_corp = MiningCorporation.objects.get(pk=mining_corp_pk)
         except MiningCorporation.DoesNotExist as ex:        
             raise MiningCorporation.DoesNotExist(
-                'task called for non existing corp with pk {}'.format(mining_corp_pk)
+                'task called for non existing corp with pk {}'.format(
+                    mining_corp_pk
+                )
             )
             raise ex
         else:
-            addTag = make_logger_prefix('update_refineries: {}'.format(mining_corp))
+            addTag = make_logger_prefix(
+                'update_refineries: {}'.format(mining_corp)
+            )
         
         if mining_corp.character is None:
             logger.error(addTag('Missing character'))
@@ -275,9 +231,10 @@ def run_refineries_update(mining_corp_pk, user_pk = None):
         # get all corporation structures
         logger.info(addTag('Fetching corp structures'))
 
-        all_structures = client.Corporation.get_corporations_corporation_id_structures(
-            corporation_id=mining_corp.corporation.corporation_id
-        ).result()
+        all_structures = client.Corporation\
+            .get_corporations_corporation_id_structures(
+                corporation_id=mining_corp.corporation.corporation_id
+            ).result()
 
         # filter by refineres
         refinery_type_ids = [
@@ -322,7 +279,7 @@ def run_refineries_update(mining_corp_pk, user_pk = None):
 
                 # create refinery if it does not exist
                 Refinery.objects.get_or_create(
-                    structure_id = refinery['structure_id'],
+                    structure_id=refinery['structure_id'],
                     defaults={
                         'name': structure_info['name'],
                         'type_id': structure_info['type_id'],
@@ -345,15 +302,15 @@ def run_refineries_update(mining_corp_pk, user_pk = None):
         logger.info(addTag(
             'Process extraction events from {} notifications'.format(
                 len(notifications)
-        )))
+            )
+        ))
         with transaction.atomic():            
             last_extraction_started = dict()
             for notification in sorted(notifications, key=lambda k: k['timestamp']):
 
                 if notification['type'] == 'MoonminingExtractionStarted':
-                    parsed_text = yaml.safe_load(notification['text'])
-                                        
-                    structure_id=parsed_text['structureID']
+                    parsed_text = yaml.safe_load(notification['text'])                                        
+                    structure_id = parsed_text['structureID']
                     refinery = Refinery.objects.get(
                         structure_id=structure_id
                     )
@@ -361,15 +318,16 @@ def run_refineries_update(mining_corp_pk, user_pk = None):
                         refinery=refinery,
                         ready_time=ldapTime2datetime(parsed_text['readyTime']),
                         defaults={
-                            'auto_time':ldapTime2datetime(parsed_text['autoTime'])
+                            'auto_time': ldapTime2datetime(parsed_text['autoTime'])
                         }                    
                     )
                     last_extraction_started[structure_id] = extraction
                     
-                    for ore_type_id, ore_volume in parsed_text['oreVolumeByType'].items():
+                    ore_volume_by_type = parsed_text['oreVolumeByType'].items()
+                    for ore_type_id, ore_volume in ore_volume_by_type:
                         ExtractionProduct.objects.get_or_create(
-                            extraction = extraction,
-                            ore_type_id = ore_type_id,
+                            extraction=extraction,
+                            ore_type_id=ore_type_id,
                             defaults={
                                 'volume': ore_volume
                             }
@@ -379,14 +337,14 @@ def run_refineries_update(mining_corp_pk, user_pk = None):
                 # and not finished
                 if notification['type'] == 'MoonminingExtractionCancelled':
                     parsed_text = yaml.safe_load(notification['text'])                    
-                    structure_id=parsed_text['structureID']
+                    structure_id = parsed_text['structureID']
                     if structure_id in last_extraction_started:
                         extraction = last_extraction_started[structure_id]                        
                         extraction.delete()                        
 
                 if notification['type'] == 'MoonminingExtractionFinished':
                     parsed_text = yaml.safe_load(notification['text'])                    
-                    structure_id=parsed_text['structureID']
+                    structure_id = parsed_text['structureID']
                     if structure_id in last_extraction_started:
                         del last_extraction_started[structure_id]
                     
@@ -398,8 +356,11 @@ def run_refineries_update(mining_corp_pk, user_pk = None):
         success = True
     
     if user_pk:    
-        message = 'The following refineries from {} have been added or updated:\n\n'.format(
-            mining_corp
+        message = (
+            'The following refineries from {} have been added '
+            'or updated:\n\n'.format(
+                mining_corp
+            )
         )
         for report in user_report:
             message += '{} @ {}\n'.format(
@@ -429,16 +390,21 @@ def update_moon_income():
         with transaction.atomic():
             MarketPrice.objects.all().delete()
             for row in client.Market.get_markets_prices().result():
+                average_price = row['average_price'] \
+                    if 'average_price' in row else None
+                adjusted_price = row['adjusted_price'] \
+                    if 'adjusted_price' in row else None
                 MarketPrice.objects.create(
                     type_id=row['type_id'],
-                    average_price=row['average_price'] if 'average_price' in row else None,
-                    adjusted_price=row['adjusted_price'] if 'adjusted_price' in row else None,
+                    average_price=average_price,
+                    adjusted_price=adjusted_price,
                 )
 
         logger.info(
             'Started re-calculating moon income for {:,} moons'.format(
                 Moon.objects.count()
-        ))
+            )
+        )
         with transaction.atomic():
             for moon in Moon.objects.all():
                 moon.income = moon.calc_income_estimate(

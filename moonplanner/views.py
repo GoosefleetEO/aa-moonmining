@@ -1,23 +1,19 @@
-import os
 import urllib
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timezone
 import logging
 
 from django.shortcuts import render, redirect, HttpResponse
 from django.contrib.auth.decorators import login_required, permission_required
-from django.forms.models import model_to_dict
 from django.http import JsonResponse
-from django.urls import reverse
 from django.views.decorators.cache import cache_page
-from django.db.models import prefetch_related_objects
+from django.urls import reverse
 
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.decorators import token_required
-from esi.clients import esi_client_factory
-from evesde.models import EveTypeMaterial
 
 from .app_settings import MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
 from .forms import MoonScanForm
-from .models import *
+from .models import Extraction, Moon, MoonProduct, Refinery, MiningCorporation
 from .tasks import process_survey_input, run_refineries_update
 from .utils import messages_plus
 
@@ -26,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 URL_PROFILE_SOLAR_SYSTEM = 'https://evemaps.dotlan.net/system'
 URL_PROFILE_TYPE = 'https://www.kalkoken.org/apps/eveitems/?typeId='
+
 
 @login_required
 @permission_required('moonplanner.access_moonplanner')
@@ -38,6 +35,7 @@ def index(request):
         return redirect('moonplanner:add_moon_scan') 
     else:
         return HttpResponse('Insufficient permissions to use this app')
+
 
 @login_required
 @permission_required(
@@ -139,14 +137,16 @@ def moon_info(request, moonid):
                     'volume': '{:,.0f}'.format(product.volume),
                     'value': None if value is None else value / 1000000000
                 })
+            
+            total_value = None if total_value is None else total_value / 1000000000
             next_pull_data = {
                 'ready_time': next_pull.ready_time,
                 'auto_time': next_pull.auto_time,
-                'total_value': None if total_value is None else total_value / 1000000000,
+                'total_value': total_value,
                 'total_volume': '{:,.0f}'.format(total_volume),
                 'products': next_pull_product_rows,
             }
-            ppulls_data= Extraction.objects.filter(
+            ppulls_data = Extraction.objects.filter(
                 refinery=moon.refinery,
                 ready_time__lt=today
             )
@@ -154,7 +154,7 @@ def moon_info(request, moonid):
             next_pull_data = None            
             ppulls_data = None
 
-    except models.ObjectDoesNotExist:
+    except Moon.ObjectDoesNotExist:
         messages_plus.warning(
             request, 
             "Moon {} does not exist in the database.".format(moonid)
@@ -229,7 +229,7 @@ def moon_list_all(request):
     return render(request, 'moonplanner/moon_list.html', context)
 
 
-#@cache_page(60 * 5)
+@cache_page(60 * 5)
 @login_required()
 @permission_required('moonplanner.access_moonplanner')
 def moon_list_data(request, category):
@@ -270,10 +270,19 @@ def moon_list_data(request, category):
             'income': income,
             'has_refinery': has_refinery,
             'has_refinery_str': 'yes' if has_refinery else 'no',
-            'details': ('<a class="btn btn-primary btn-sm" href="{}" data-toggle="tooltip" data-placement="top" title="Show details in current window">'.format(moon_details_url)
-                + '<span class="fa fa-eye fa-fw"></span></a>'
-                + '&nbsp;&nbsp;<a class="btn btn-default btn-sm" href="{}" target="_blank" data-toggle="tooltip" data-placement="top" title="Open details in new window">'.format(moon_details_url)
-                + '<span class="fa fa-window-restore fa-fw"></span></a>')
+            'details': (
+                '<a class="btn btn-primary btn-sm" href="{}" '
+                'data-toggle="tooltip" data-placement="top" '
+                'title="Show details in current window">'
+                '<span class="fa fa-eye fa-fw"></span></a>'
+                '&nbsp;&nbsp;<a class="btn btn-default btn-sm" href="{}" '
+                'target="_blank" data-toggle="tooltip" data-placement="top" '
+                'title="Open details in new window">'
+                '<span class="fa fa-window-restore fa-fw"></span></a>'.format(
+                    moon_details_url,
+                    moon_details_url
+                )
+            )
         }        
         data.append(moon_data)    
     return JsonResponse(data, safe=False)

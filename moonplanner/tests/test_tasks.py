@@ -2,10 +2,15 @@ import os
 import inspect
 import logging
 import sys
+
 from django.test import TestCase
-from evesde.models import *
-from . import tasks
-from .models import *
+
+from evesde.models import (
+    EveRegion, EveSolarSystem, EveType, EveItem, EveItemDenormalized
+)
+
+from .. import tasks
+from ..models import Moon
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
     inspect.currentframe()
@@ -17,52 +22,68 @@ logger = logging.getLogger('moonplanner.tasks')
 logger.level = logging.DEBUG
 logger.addHandler(c_handler)
 
+
 class TestTasks(TestCase):
 
     @classmethod
     def setUpClass(cls):
         super(TestTasks, cls).setUpClass()
 
-        region, _ = EveRegion.objects.get_or_create(
+        EveRegion.objects.create(
             region_id=10000030,
             region_name='Heimatar'
         )
-        EveSolarSystem.objects.get_or_create(
-            region=region,
+        EveSolarSystem.objects.create(
+            region_id=10000030,
             solar_system_id=30002542,
             solar_system_name='Auga'
         )
-        EveType.objects.get_or_create(
+        EveType.objects.create(
             type_id=45506,
             type_name='Cinnabar'
         )
-        EveType.objects.get_or_create(
+        EveType.objects.create(
             type_id=46676,
             type_name='Cubic Bistot'
         )
-        EveType.objects.get_or_create(
+        EveType.objects.create(
             type_id=46678,
             type_name='Flawless Arkonor'
         )
-        EveType.objects.get_or_create(
+        EveType.objects.create(
             type_id=45492,
             type_name='Bitumens'
         )
-        EveType.objects.get_or_create(
+        EveType.objects.create(
             type_id=46689,
             type_name='Stable Veldspar'
         )
-        EveType.objects.get_or_create(        
+        EveType.objects.create(        
             type_id=45494,
             type_name='Cobaltite'
         )
-        EveItem.objects.get_or_create(
+        EveType.objects.create(        
+            type_id=14,
+            type_name='Moon'
+        )
+        EveItem.objects.create(
             item_id=40161708
         )
-        EveItem.objects.get_or_create(
+        EveItemDenormalized.objects.create(
+            item_id=40161708,
+            item_name='Auga V - Moon 1',
+            type_id=14,
+            solar_system_id=30002542
+        )     
+        EveItem.objects.create(
             item_id=40161709
         )
-
+        EveItemDenormalized.objects.create(
+            item_id=40161709,
+            item_name='Auga V - Moon 2',
+            type_id=14,
+            solar_system_id=30002542
+        ) 
 
     def test_process_resources(self):
         with open(
@@ -120,5 +141,3 @@ class TestTasks(TestCase):
                 m2.moonproduct_set.get(ore_type_id=46678).amount, 
                 0.29
             )
-
-                

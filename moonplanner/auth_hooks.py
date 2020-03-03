@@ -6,7 +6,7 @@ from allianceauth.services.hooks import MenuItemHook, UrlHook
 
 class MoonMenu(MenuItemHook):
     def __init__(self):
-        MenuItemHook.__init__(self, 'Moon Planner',
+        MenuItemHook.__init__(self, _('Moon Planner'),
                               'fa fa-moon-o fa-fw',
                               'moonplanner:index',
                               navactive=['moonplanner:'])

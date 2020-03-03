@@ -7,7 +7,11 @@ app_name = 'moonplanner'
 urlpatterns = [
     url(r'^$', views.index, name='index'),
     url(r'^extractions$', views.extractions, name='extractions'),
-    url(r'^add_corporation/$', views.add_mining_corporation, name='add_mining_corporation'),    
+    url(
+        r'^add_corporation/$', 
+        views.add_mining_corporation, 
+        name='add_mining_corporation'
+    ),    
     url(r'^add_moon_scan/$', views.add_moon_scan, name='add_moon_scan'),
     url(
         r'^list_data/(?P<category>\w+)/$', 

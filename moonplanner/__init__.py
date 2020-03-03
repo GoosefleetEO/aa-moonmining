@@ -1,3 +1,3 @@
 default_app_config = 'moonplanner.apps.MoonPlanerConfig'
 
-__version__ = '2.0.6'
+__version__ = '0.1.7'

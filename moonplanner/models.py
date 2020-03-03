@@ -41,17 +41,20 @@ class Moon(models.Model):
     )    
     
     def name(self):
-        return str(self.moon.eveitemdenormalized.item_name)
+        if hasattr(self.moon, 'eveitemdenormalized'):
+            return str(self.moon.eveitemdenormalized.item_name)
+        else:
+            return 'moon-id:{}'.format(self.moon_id)
 
     def __str__(self):
         return self.name()
-
     
     def calc_income_estimate(
         self, 
         total_volume, 
         reprocessing_yield, 
-        moon_product = None):
+        moon_product=None
+    ):
         """returns newly calculated income estimate for a given volume in ISK
         
         Args:
@@ -64,7 +67,7 @@ class Moon(models.Model):
         
         """
         income = 0        
-        if not moon_product:
+        if moon_product is None:
             moon_products = self.moonproduct_set.select_related('ore_type')
             if moon_products.count() == 0:
                 return None
@@ -73,18 +76,21 @@ class Moon(models.Model):
         
         try:
             for product in moon_products:
-                volume_per_unit = product.ore_type.volume
-                volume = total_volume * product.amount
-                units = volume / volume_per_unit      
-                r_units = units / 100            
-                for t in EveTypeMaterial.objects.filter(
-                            type=product.ore_type
-                        ).select_related('material_type__marketprice'):
-                
-                    income += (t.material_type.marketprice.average_price
-                        * t.quantity
-                        * r_units
-                        * reprocessing_yield)
+                if product.ore_type.volume:
+                    volume_per_unit = product.ore_type.volume
+                    volume = total_volume * product.amount
+                    units = volume / volume_per_unit      
+                    r_units = units / 100            
+                    types_qs = EveTypeMaterial.objects\
+                        .filter(type=product.ore_type)\
+                        .select_related('material_type__marketprice')
+                    for t in types_qs:                
+                        income += (
+                            t.material_type.marketprice.average_price
+                            * t.quantity
+                            * r_units
+                            * reprocessing_yield
+                        )
         except models.ObjectDoesNotExist:
             income = None
 
@@ -129,7 +135,8 @@ class MiningCorporation(models.Model):
         on_delete=models.DO_NOTHING, 
         default=None, 
         null=True
-    )    
+    )
+
     def __str__(self):
         return self.corporation.corporation_name
 
@@ -211,14 +218,16 @@ class ExtractionProduct(models.Model):
         r_units = units / 100
         value = 0
         try:
-            for t in EveTypeMaterial.objects.filter(
-                        type=self.ore_type
-                    ).select_related('material_type__marketprice'):
-            
-                value += (t.material_type.marketprice.average_price
+            types_qs = EveTypeMaterial.objects\
+                .filter(type=self.ore_type)\
+                .select_related('material_type__marketprice')
+            for t in types_qs:
+                value += (
+                    t.material_type.marketprice.average_price
                     * t.quantity
                     * r_units
-                    * reprocessing_yield)
+                    * reprocessing_yield
+                )
         except models.ObjectDoesNotExist:
             value = None
         else:   
@@ -236,7 +245,7 @@ class MarketPrice(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):        
-        if not self.average_price is None:
+        if self.average_price is not None:
             return "{} {:,.2f}".format(self.type.type_name, self.average_price)
         else:
             return "{} {}".format(self.type.type_name, self.average_price)
