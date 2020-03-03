@@ -13,9 +13,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [0.1.8] - 2020-03-03
+
+### Changed
+
+- Squashed migrations incl. old migrations
+
 ## [0.1.7] - 2020-03-03
 
 ### Changed
 
 - Added automated testing with tox and Gitlab runner
-
