@@ -16,6 +16,7 @@ from esi.clients import esi_client_factory
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
 
+from . import __title__
 from .models import (
     Moon,
     MoonProduct,
@@ -30,7 +31,7 @@ from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path
 
 
 # add custom tag to logger with name of this app
-logger = LoggerAddTag(logging.getLogger(__name__), __package__)
+logger = LoggerAddTag(logging.getLogger(__name__), __title__)
 
 REFINERY_GROUP_ID = 1406
 MOON_GROUP_ID = 8
@@ -66,98 +67,113 @@ def process_survey_input(scans, user_pk=None):
         scans: raw text input from user containing moon survey data
         user_pk: (optional) id of user who submitted the data
     """
-
-    lines = scans.split("\n")
-    lines_ = []
-    for line in lines:
-        line = line.strip("\r").split("\t")
-        lines_.append(line)
-    lines = lines_
-
-    # Find all groups of scans.
-    if len(lines[0]) == 0 or lines[0][0] == "Moon":
-        lines = lines[1:]
-    sublists = []
-    for line in lines:
-        # Find the lines that start a scan
-        if line[0] == "":
-            pass
-        else:
-            sublists.append(lines.index(line))
-
-    # Separate out individual scans
-    scans = []
-    for i in range(len(sublists)):
-        # The First List
-        if i == 0:
-            if i + 2 > len(sublists):
-                scans.append(lines[sublists[i] :])
-            else:
-                scans.append(lines[sublists[i] : sublists[i + 1]])
-        else:
-            if i + 2 > len(sublists):
-                scans.append(lines[sublists[i] :])
-            else:
-                scans.append(lines[sublists[i] : sublists[i + 1]])
-
     process_results = list()
-    for scan in scans:
-        try:
-            with transaction.atomic():
-                moon_name = scan[0][0]
-                solar_system_id = scan[1][4]
-                moon_id = scan[1][6]
-                moon, _ = Moon.objects.get_or_create(
-                    moon_id=moon_id,
-                    defaults={"solar_system_id": solar_system_id, "income": None},
-                )
-                moon.moonproduct_set.all().delete()
-                scan = scan[1:]
-                for product_data in scan:
-                    # Trim off the empty index at the front
-                    product_data = product_data[1:]
-                    MoonProduct.objects.create(
-                        moon=moon, amount=product_data[1], ore_type_id=product_data[2]
-                    )
-                moon.income = moon.calc_income_estimate(
-                    MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
-                )
-                moon.save()
-                logger.info("Added moon scan for {}".format(moon.name()))
-        except Exception as e:
-            logger.info(
-                "An issue occurred while processing the following "
-                + "moon scan. {}".format(scan)
-            )
-            logger.info(e)
-            error_id = type(e).__name__
-            success = False
-            raise e
-        else:
-            success = True
-            error_id = None
+    try:
+        lines = scans.split("\n")
+        lines_ = []
+        for line in lines:
+            line = line.strip("\r").split("\t")
+            lines_.append(line)
+        lines = lines_
 
-        process_results.append(
-            {"moon_name": moon_name, "success": success, "error_id": error_id}
+        # Find all groups of scans.
+        if len(lines[0]) == 0 or lines[0][0] == "Moon":
+            lines = lines[1:]
+        sublists = []
+        for line in lines:
+            # Find the lines that start a scan
+            if line[0] == "":
+                pass
+            else:
+                sublists.append(lines.index(line))
+
+        # Separate out individual scans
+        scans = []
+        for i in range(len(sublists)):
+            # The First List
+            if i == 0:
+                if i + 2 > len(sublists):
+                    scans.append(lines[sublists[i] :])
+                else:
+                    scans.append(lines[sublists[i] : sublists[i + 1]])
+            else:
+                if i + 2 > len(sublists):
+                    scans.append(lines[sublists[i] :])
+                else:
+                    scans.append(lines[sublists[i] : sublists[i + 1]])
+
+    except Exception as ex:
+        logger.warning(
+            "An issue occurred while trying to parse the scans", exc_info=True
         )
+        error_name = type(ex).__name__
+        success = False
+
+    else:
+        success = True
+        error_name = None
+        moon_name = None
+        for scan in scans:
+            try:
+                with transaction.atomic():
+                    moon_name = scan[0][0]
+                    solar_system_id = scan[1][4]
+                    moon_id = scan[1][6]
+                    moon, _ = Moon.objects.get_or_create(
+                        moon_id=moon_id,
+                        defaults={"solar_system_id": solar_system_id, "income": None},
+                    )
+                    moon.moonproduct_set.all().delete()
+                    scan = scan[1:]
+                    for product_data in scan:
+                        # Trim off the empty index at the front
+                        product_data = product_data[1:]
+                        MoonProduct.objects.create(
+                            moon=moon,
+                            amount=product_data[1],
+                            ore_type_id=product_data[2],
+                        )
+                    moon.income = moon.calc_income_estimate(
+                        MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
+                    )
+                    moon.save()
+                    logger.info("Added moon scan for %s", moon.name())
+
+            except Exception as ex:
+                logger.info(
+                    "An issue occurred while processing the following moon scan: "
+                    f"{scan}",
+                    exc_info=True,
+                )
+                error_name = type(ex).__name__
+                success = False
+            else:
+                success = True
+                error_name = None
+
+            process_results.append(
+                {"moon_name": moon_name, "success": success, "error_name": error_name}
+            )
 
     # send result notification to user
-    success = True
-    message = "We have completed processing your moon survey input:\n\n"
-    n = 0
-    for result in process_results:
-        n = n + 1
-        name = result["moon_name"]
-        if result["success"]:
-            status = "OK"
-            error_id = ""
-        else:
-            status = "FAILED"
-            success = False
-            error_id = "- {}".format(result["error_id"])
-        message += "#{}: {}: {} {}\n".format(n, name, status, error_id)
-
     if user_pk:
+        message = "We have completed processing your moon survey input:\n\n"
+        if process_results:
+            n = 0
+            for result in process_results:
+                n = n + 1
+                name = result["moon_name"]
+                if result["success"]:
+                    status = "OK"
+                    error_name = ""
+                else:
+                    status = "FAILED"
+                    success = False
+                    error_name = "- {}".format(result["error_name"])
+                message += "#{}: {}: {} {}\n".format(n, name, status, error_name)
+        else:
+            message += f"\nProcessing failed: {error_name}"
+
         notify(
             user=User.objects.get(pk=user_pk),
             title="Moon survey input processing results: {}".format(
@@ -174,8 +190,8 @@ def process_survey_input(scans, user_pk=None):
 def run_refineries_update(mining_corp_pk, user_pk=None):
     """update list of refineries with extractions for a mining corporation"""
 
+    addTag = make_logger_prefix("(none)")
     try:
-        addTag = make_logger_prefix("(none)")
         try:
             mining_corp = MiningCorporation.objects.get(pk=mining_corp_pk)
         except MiningCorporation.DoesNotExist as ex:

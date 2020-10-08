@@ -1,7 +1,6 @@
-import os
-import inspect
 import logging
 import sys
+from unittest.mock import patch
 
 from django.test import TestCase
 
@@ -13,10 +12,13 @@ from evesde.models import (
     EveItemDenormalized,
 )
 
+from allianceauth.tests.auth_utils import AuthUtils
+
+from .test_data.load_data import survey_data
 from .. import tasks
 from ..models import Moon
 
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+MODULE_PATH = "moonplanner.tasks"
 
 # reconfigure logger so we get logging from tasks to console during test
 c_handler = logging.StreamHandler(sys.stdout)
@@ -29,7 +31,6 @@ class TestTasks(TestCase):
     @classmethod
     def setUpClass(cls):
         super(TestTasks, cls).setUpClass()
-
         EveRegion.objects.create(region_id=10000030, region_name="Heimatar")
         EveSolarSystem.objects.create(
             region_id=10000030, solar_system_id=30002542, solar_system_name="Auga"
@@ -55,19 +56,14 @@ class TestTasks(TestCase):
             type_id=14,
             solar_system_id=30002542,
         )
+        cls.survey_data = survey_data()
+        cls.user = AuthUtils.create_user("Bruce Wayne")
 
     def test_process_resources(self):
-        with open(
-            os.path.join(currentdir, "test_data/moon_survey_input_2.txt"),
-            "r",
-            encoding="utf-8",
-        ) as f:
-            scans = f.read()
-
         # process 2 times: first against empty DB,
         # second against existing objects
         for x in range(2):
-            self.assertTrue(tasks.process_survey_input(scans))
+            self.assertTrue(tasks.process_survey_input(self.survey_data))
 
             m1 = Moon.objects.get(pk=40161708)
             self.assertEqual(m1.moonproduct_set.count(), 4)
@@ -82,3 +78,21 @@ class TestTasks(TestCase):
             self.assertEqual(m2.moonproduct_set.get(ore_type_id=45494).amount, 0.23)
             self.assertEqual(m2.moonproduct_set.get(ore_type_id=46676).amount, 0.21)
             self.assertEqual(m2.moonproduct_set.get(ore_type_id=46678).amount, 0.29)
+
+    @patch(MODULE_PATH + ".notify")
+    def test_notification_on_success(self, mock_notify):
+        result = tasks.process_survey_input(self.survey_data, self.user.pk)
+        self.assertTrue(result)
+        self.assertTrue(mock_notify.called)
+        _, kwargs = mock_notify.call_args
+        self.assertEqual(kwargs["user"], self.user)
+        self.assertEqual(kwargs["level"], "success")
+
+    @patch(MODULE_PATH + ".notify")
+    def test_notification_on_error_1(self, mock_notify):
+        result = tasks.process_survey_input("invalid input", self.user.pk)
+        self.assertFalse(result)
+        self.assertTrue(mock_notify.called)
+        _, kwargs = mock_notify.call_args
+        self.assertEqual(kwargs["user"], self.user)
+        self.assertEqual(kwargs["level"], "danger")

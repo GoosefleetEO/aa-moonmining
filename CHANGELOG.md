@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
-## [0.2.0] - 2020-10-08
+## [0.1.11] - 2020-10-08
 
 ### Changed
 
@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Icon is now shown again
 - Fixes for Django 3
+- Better error handling and more reliable feedback when survey scan fails
 
 ## [0.1.10] - 2020-03-04
 

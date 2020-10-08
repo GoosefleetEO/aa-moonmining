@@ -170,8 +170,10 @@ def add_moon_scan(request):
 
             messages_plus.success(
                 request,
-                "Your scan has been submitted for processing. You will"
-                + "receive a notification once processing is complete.",
+                (
+                    "Your scan has been submitted for processing. You will"
+                    "receive a notification once processing is complete."
+                ),
             )
             return render(request, "moonplanner/add_scan.html")
         else:
