@@ -6,13 +6,13 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('evesde', '0014_delete_evename'),
-        ('moonplanner', '0005_auto_20190930_2040'),
+        ("evesde", "0014_delete_evename"),
+        ("moonplanner", "0005_auto_20190930_2040"),
     ]
 
     operations = [
         migrations.RenameModel(
-            old_name='ExtrationProduct',
-            new_name='ExtractionProduct',
+            old_name="ExtrationProduct",
+            new_name="ExtractionProduct",
         ),
     ]

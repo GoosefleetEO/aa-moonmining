@@ -7,42 +7,64 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('moonplanner', '0006_auto_20190930_2216'),
+        ("moonplanner", "0006_auto_20190930_2216"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='extraction',
-            old_name='decay_time',
-            new_name='auto_time',
+            model_name="extraction",
+            old_name="decay_time",
+            new_name="auto_time",
         ),
         migrations.RenameField(
-            model_name='extraction',
-            old_name='arrival_time',
-            new_name='ready_time',
+            model_name="extraction",
+            old_name="arrival_time",
+            new_name="ready_time",
         ),
         migrations.AlterField(
-            model_name='extractionproduct',
-            name='ore_type',
-            field=models.ForeignKey(default=None, limit_choices_to=models.Q(group__category_id=25), null=True, on_delete=django.db.models.deletion.DO_NOTHING, to='evesde.EveType'),
+            model_name="extractionproduct",
+            name="ore_type",
+            field=models.ForeignKey(
+                default=None,
+                limit_choices_to=models.Q(group__category_id=25),
+                null=True,
+                on_delete=django.db.models.deletion.DO_NOTHING,
+                to="evesde.EveType",
+            ),
         ),
         migrations.AlterField(
-            model_name='moon',
-            name='moon',
-            field=models.OneToOneField(limit_choices_to={'type_id': 14}, on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='evesde.EveItem'),
+            model_name="moon",
+            name="moon",
+            field=models.OneToOneField(
+                limit_choices_to={"type_id": 14},
+                on_delete=django.db.models.deletion.CASCADE,
+                primary_key=True,
+                serialize=False,
+                to="evesde.EveItem",
+            ),
         ),
         migrations.AlterField(
-            model_name='moonproduct',
-            name='ore_type',
-            field=models.ForeignKey(default=None, limit_choices_to=models.Q(group__category_id=25), null=True, on_delete=django.db.models.deletion.DO_NOTHING, to='evesde.EveType'),
+            model_name="moonproduct",
+            name="ore_type",
+            field=models.ForeignKey(
+                default=None,
+                limit_choices_to=models.Q(group__category_id=25),
+                null=True,
+                on_delete=django.db.models.deletion.DO_NOTHING,
+                to="evesde.EveType",
+            ),
         ),
         migrations.AlterField(
-            model_name='refinery',
-            name='type',
-            field=models.ForeignKey(limit_choices_to={'group_id': 1406}, on_delete=django.db.models.deletion.CASCADE, to='evesde.EveType'),
+            model_name="refinery",
+            name="type",
+            field=models.ForeignKey(
+                limit_choices_to={"group_id": 1406},
+                on_delete=django.db.models.deletion.CASCADE,
+                to="evesde.EveType",
+            ),
         ),
         migrations.AlterUniqueTogether(
-            name='extraction',
-            unique_together={('ready_time', 'refinery')},
+            name="extraction",
+            unique_together={("ready_time", "refinery")},
         ),
     ]

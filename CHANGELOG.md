@@ -13,6 +13,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [0.2.0] - 2020-10-08
+
+### Changed
+
+- Added black formatting and linter
+- Added CI tests for Django 3
+
+### Fixed
+
+- Icon is now shown again
+- Fixes for Django 3
+
 ## [0.1.10] - 2020-03-04
 
 ### Fixed

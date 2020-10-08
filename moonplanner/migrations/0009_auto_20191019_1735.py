@@ -6,12 +6,22 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('moonplanner', '0008_auto_20191019_1733'),
+        ("moonplanner", "0008_auto_20191019_1733"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='moonplanner',
-            options={'default_permissions': (), 'managed': False, 'permissions': (('access_moonplanner', 'Can access the moonplanner app'), ('access_our_moons', 'Can access our moons and see extractions'), ('access_all_moons', 'Can access all moons in the database'), ('upload_moon_scan', 'Can upload moon scans'), ('add_mining_corporation', 'Can add mining corporation'))},
+            name="moonplanner",
+            options={
+                "default_permissions": (),
+                "managed": False,
+                "permissions": (
+                    ("access_moonplanner", "Can access the moonplanner app"),
+                    ("access_our_moons", "Can access our moons and see extractions"),
+                    ("access_all_moons", "Can access all moons in the database"),
+                    ("upload_moon_scan", "Can upload moon scans"),
+                    ("add_mining_corporation", "Can add mining corporation"),
+                ),
+            },
         ),
     ]

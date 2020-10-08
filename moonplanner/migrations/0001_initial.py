@@ -9,93 +9,211 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('evesde', '0010_auto_20190927_1846'),
-        ('eveonline', '0010_alliance_ticker'),
+        ("evesde", "0010_auto_20190927_1846"),
+        ("eveonline", "0010_alliance_ticker"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Extraction',
+            name="Extraction",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('arrival_time', models.DateTimeField()),
-                ('decay_time', models.DateTimeField()),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("arrival_time", models.DateTimeField()),
+                ("decay_time", models.DateTimeField()),
             ],
         ),
         migrations.CreateModel(
-            name='MarketPrice',
+            name="MarketPrice",
             fields=[
-                ('type', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='evesde.EveType')),
-                ('average_price', models.FloatField(default=None, null=True)),
-                ('adjusted_price', models.FloatField(default=None, null=True)),
-                ('last_updated', models.DateTimeField(auto_now=True)),
+                (
+                    "type",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        primary_key=True,
+                        serialize=False,
+                        to="evesde.EveType",
+                    ),
+                ),
+                ("average_price", models.FloatField(default=None, null=True)),
+                ("adjusted_price", models.FloatField(default=None, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True)),
             ],
         ),
         migrations.CreateModel(
-            name='MiningCorporation',
+            name="MiningCorporation",
             fields=[
-                ('corporation', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='eveonline.EveCorporationInfo')),
-                ('character', models.OneToOneField(default=None, null=True, on_delete=django.db.models.deletion.DO_NOTHING, to='eveonline.EveCharacter')),
+                (
+                    "corporation",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        primary_key=True,
+                        serialize=False,
+                        to="eveonline.EveCorporationInfo",
+                    ),
+                ),
+                (
+                    "character",
+                    models.OneToOneField(
+                        default=None,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        to="eveonline.EveCharacter",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Moon',
+            name="Moon",
             fields=[
-                ('moon', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='evesde.EveItem')),
-                ('income', models.BigIntegerField(default=None, null=True)),
-                ('system', models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.DO_NOTHING, to='evesde.EveSolarSystem')),
+                (
+                    "moon",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        primary_key=True,
+                        serialize=False,
+                        to="evesde.EveItem",
+                    ),
+                ),
+                ("income", models.BigIntegerField(default=None, null=True)),
+                (
+                    "system",
+                    models.ForeignKey(
+                        default=None,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        to="evesde.EveSolarSystem",
+                    ),
+                ),
             ],
             options={
-                'permissions': (('access_moonplanner', 'Can access the moonplanner app'), ('research_moons', 'Can research all moons in the database'), ('upload_moon_scan', 'Can upload moon scans')),
+                "permissions": (
+                    ("access_moonplanner", "Can access the moonplanner app"),
+                    ("research_moons", "Can research all moons in the database"),
+                    ("upload_moon_scan", "Can upload moon scans"),
+                ),
             },
         ),
         migrations.CreateModel(
-            name='Refinery',
+            name="Refinery",
             fields=[
-                ('structure_id', models.BigIntegerField(primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=150)),
-                ('corporation', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='moonplanner.MiningCorporation')),
-                ('location', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='moonplanner.Moon')),
-                ('type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='evesde.EveType')),
+                (
+                    "structure_id",
+                    models.BigIntegerField(primary_key=True, serialize=False),
+                ),
+                ("name", models.CharField(max_length=150)),
+                (
+                    "corporation",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="moonplanner.MiningCorporation",
+                    ),
+                ),
+                (
+                    "location",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="moonplanner.Moon",
+                    ),
+                ),
+                (
+                    "type",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="evesde.EveType"
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='MoonProduct',
+            name="MoonProduct",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('amount', models.FloatField()),
-                ('moon', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='moonplanner.Moon')),
-                ('ore_type', models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.DO_NOTHING, to='evesde.EveType')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("amount", models.FloatField()),
+                (
+                    "moon",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="moonplanner.Moon",
+                    ),
+                ),
+                (
+                    "ore_type",
+                    models.ForeignKey(
+                        default=None,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        to="evesde.EveType",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='ExtrationProduct',
+            name="ExtrationProduct",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('amount', models.FloatField()),
-                ('extraction', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='moonplanner.Extraction')),
-                ('ore_type', models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.DO_NOTHING, to='evesde.EveType')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("amount", models.FloatField()),
+                (
+                    "extraction",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="moonplanner.Extraction",
+                    ),
+                ),
+                (
+                    "ore_type",
+                    models.ForeignKey(
+                        default=None,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        to="evesde.EveType",
+                    ),
+                ),
             ],
         ),
         migrations.AddField(
-            model_name='extraction',
-            name='refinery',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='moonplanner.Refinery'),
+            model_name="extraction",
+            name="refinery",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="moonplanner.Refinery"
+            ),
         ),
         migrations.AddIndex(
-            model_name='moonproduct',
-            index=models.Index(fields=['moon'], name='moonplanner_moon_id_5b5124_idx'),
+            model_name="moonproduct",
+            index=models.Index(fields=["moon"], name="moonplanner_moon_id_5b5124_idx"),
         ),
         migrations.AlterUniqueTogether(
-            name='moonproduct',
-            unique_together={('moon', 'ore_type')},
+            name="moonproduct",
+            unique_together={("moon", "ore_type")},
         ),
         migrations.AlterUniqueTogether(
-            name='extrationproduct',
-            unique_together={('extraction', 'ore_type')},
+            name="extrationproduct",
+            unique_together={("extraction", "ore_type")},
         ),
         migrations.AlterUniqueTogether(
-            name='extraction',
-            unique_together={('arrival_time', 'refinery')},
+            name="extraction",
+            unique_together={("arrival_time", "refinery")},
         ),
     ]

@@ -6,22 +6,25 @@ from allianceauth.services.hooks import MenuItemHook, UrlHook
 
 class MoonMenu(MenuItemHook):
     def __init__(self):
-        MenuItemHook.__init__(self, _('Moon Planner'),
-                              'fa fa-moon-o fa-fw',
-                              'moonplanner:index',
-                              navactive=['moonplanner:'])
+        MenuItemHook.__init__(
+            self,
+            _("Moon Planner"),
+            "far fa-moon fa-fw",
+            "moonplanner:index",
+            navactive=["moonplanner:"],
+        )
 
     def render(self, request):
-        if request.user.has_perm('moonplanner.access_moonplanner'):
+        if request.user.has_perm("moonplanner.access_moonplanner"):
             return MenuItemHook.render(self, request)
-        return ''
+        return ""
 
 
-@hooks.register('menu_item_hook')
+@hooks.register("menu_item_hook")
 def register_menu():
     return MoonMenu()
 
 
-@hooks.register('url_hook')
+@hooks.register("url_hook")
 def register_url():
-    return UrlHook(urls, 'moonplanner', r'^moonplanner/')
+    return UrlHook(urls, "moonplanner", r"^moonplanner/")

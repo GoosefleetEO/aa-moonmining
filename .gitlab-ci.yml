@@ -1,5 +1,7 @@
 stages:
-- "test"
+- lint
+- test
+- deploy
 
 before_script:
 - apt-get update
@@ -7,24 +9,45 @@ before_script:
 - redis-server --daemonize yes
 - python -V
 - pip install tox
-    
-test-3.5:
-  image: python:3.5-buster
-  script:  
-  - tox -e py35
 
-test-3.6:
-  image: python:3.6-buster
-  script:  
-  - tox -e py36
-
-test-3.7:
-  image: python:3.7-buster
-  script:  
-  - tox -e py37
-
-test-3.8:
+linter:
+  stage: lint
   image: python:3.8-buster
   script:  
-  - tox -e py38
+  - tox -e linter
 
+.test-py36:
+  stage: test
+  image: python:3.6-buster
+  
+.test-py37:
+  stage: test
+  image: python:3.7-buster
+  
+.test-py38:
+  stage: test
+  image: python:3.8-buster
+  
+test-36-django22:
+  extends: .test-py36
+  script:  
+  - tox -e py36-django22
+
+test-36-django31:
+  extends: .test-py36
+  script:  
+  - tox -e py36-django31
+
+deploy-pypi:
+  stage: deploy
+  image: python:3.7-buster
+
+  before_script:
+    - pip install twine
+
+  script:
+    - python setup.py sdist
+    - twine upload dist/*
+
+  only:
+    - tags
