@@ -63,7 +63,7 @@ class TestTasks(TestCase):
         # process 2 times: first against empty DB,
         # second against existing objects
         for x in range(2):
-            self.assertTrue(tasks.process_survey_input(self.survey_data))
+            self.assertTrue(tasks.process_survey_input(self.survey_data.get(2)))
 
             m1 = Moon.objects.get(pk=40161708)
             self.assertEqual(m1.moonproduct_set.count(), 4)
@@ -79,9 +79,12 @@ class TestTasks(TestCase):
             self.assertEqual(m2.moonproduct_set.get(ore_type_id=46676).amount, 0.21)
             self.assertEqual(m2.moonproduct_set.get(ore_type_id=46678).amount, 0.29)
 
+    def test_process_resources_bad_data(self):
+        self.assertFalse(tasks.process_survey_input(self.survey_data.get(3)))
+
     @patch(MODULE_PATH + ".notify")
     def test_notification_on_success(self, mock_notify):
-        result = tasks.process_survey_input(self.survey_data, self.user.pk)
+        result = tasks.process_survey_input(self.survey_data.get(2), self.user.pk)
         self.assertTrue(result)
         self.assertTrue(mock_notify.called)
         _, kwargs = mock_notify.call_args

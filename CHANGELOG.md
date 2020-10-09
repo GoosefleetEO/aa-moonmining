@@ -13,6 +13,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [0.1.12] - 2020-10-09
+
+### Changed
+
+- Add more tests
+- Added menu item for moon detail page
+
+### Fixed
+
+- Fixed more Font Awesome icons to work with v5
+
 ## [0.1.11] - 2020-10-08
 
 ### Changed

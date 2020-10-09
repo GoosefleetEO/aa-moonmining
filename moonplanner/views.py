@@ -8,8 +8,10 @@ from django.http import JsonResponse
 from django.views.decorators.cache import cache_page
 from django.urls import reverse
 
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.decorators import token_required
+
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.eveonline.evelinks import eveimageserver
 
 from .app_settings import MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
 from .forms import MoonScanForm
@@ -29,10 +31,13 @@ URL_PROFILE_TYPE = "https://www.kalkoken.org/apps/eveitems/?typeId="
 def index(request):
     if request.user.has_perm("moonplanner.access_all_moons"):
         return redirect("moonplanner:moon_list_all")
+
     elif request.user.has_perm("moonplanner.access_our_moons"):
         return redirect("moonplanner:extractions")
+
     elif request.user.has_perm("moonplanner.upload_moon_scan"):
         return redirect("moonplanner:add_moon_scan")
+
     else:
         return HttpResponse("Insufficient permissions to use this app")
 
@@ -78,9 +83,7 @@ def moon_info(request, moonid):
         product_rows = []
         if len(products) > 0:
             for product in products:
-                image_url = "https://image.eveonline.com/Type/{}_64.png".format(
-                    product.ore_type_id
-                )
+                image_url = eveimageserver.type_icon_url(product.ore_type_id, 64)
                 amount = int(round(product.amount * 100))
                 income = moon.calc_income_estimate(
                     MOONPLANNER_VOLUME_PER_MONTH,
@@ -108,9 +111,7 @@ def moon_info(request, moonid):
             total_value = 0
             total_volume = 0
             for product in next_pull.extractionproduct_set.all():
-                image_url = "https://image.eveonline.com/Type/{}_32.png".format(
-                    product.ore_type_id
-                )
+                image_url = eveimageserver.type_icon_url(product.ore_type_id, 32)
                 value = product.calc_value_estimate(MOONPLANNER_REPROCESSING_YIELD)
                 total_value += value
                 total_volume += product.volume
@@ -254,16 +255,14 @@ def moon_list_data(request, category):
             "has_refinery": has_refinery,
             "has_refinery_str": "yes" if has_refinery else "no",
             "details": (
-                '<a class="btn btn-primary btn-sm" href="{}" '
+                f'<a class="btn btn-primary btn-sm" href="{moon_details_url}" '
                 'data-toggle="tooltip" data-placement="top" '
                 'title="Show details in current window">'
-                '<span class="fa fa-eye fa-fw"></span></a>'
-                '&nbsp;&nbsp;<a class="btn btn-default btn-sm" href="{}" '
+                '<i class="fas fa-eye"></i></a>&nbsp;&nbsp;'
+                f'<a class="btn btn-default btn-sm" href="{moon_details_url}" '
                 'target="_blank" data-toggle="tooltip" data-placement="top" '
                 'title="Open details in new window">'
-                '<span class="fa fa-window-restore fa-fw"></span></a>'.format(
-                    moon_details_url, moon_details_url
-                )
+                '<i class="fas fa-window-restore"></i></a>'
             ),
         }
         data.append(moon_data)

@@ -9,7 +9,7 @@ class MoonMenu(MenuItemHook):
         MenuItemHook.__init__(
             self,
             _("Moon Planner"),
-            "far fa-moon fa-fw",
+            "fas fa-moon fa-fw",
             "moonplanner:index",
             navactive=["moonplanner:"],
         )

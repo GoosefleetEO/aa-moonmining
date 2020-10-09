@@ -87,24 +87,24 @@ def process_survey_input(scans, user_pk=None):
             else:
                 sublists.append(lines.index(line))
 
-        # Separate out individual scans
-        scans = []
+        # Separate out individual surveys
+        surveys = []
         for i in range(len(sublists)):
             # The First List
             if i == 0:
                 if i + 2 > len(sublists):
-                    scans.append(lines[sublists[i] :])
+                    surveys.append(lines[sublists[i] :])
                 else:
-                    scans.append(lines[sublists[i] : sublists[i + 1]])
+                    surveys.append(lines[sublists[i] : sublists[i + 1]])
             else:
                 if i + 2 > len(sublists):
-                    scans.append(lines[sublists[i] :])
+                    surveys.append(lines[sublists[i] :])
                 else:
-                    scans.append(lines[sublists[i] : sublists[i + 1]])
+                    surveys.append(lines[sublists[i] : sublists[i + 1]])
 
     except Exception as ex:
         logger.warning(
-            "An issue occurred while trying to parse the scans", exc_info=True
+            "An issue occurred while trying to parse the surveys", exc_info=True
         )
         error_name = type(ex).__name__
         success = False
@@ -113,19 +113,19 @@ def process_survey_input(scans, user_pk=None):
         success = True
         error_name = None
         moon_name = None
-        for scan in scans:
+        for survey in surveys:
             try:
                 with transaction.atomic():
-                    moon_name = scan[0][0]
-                    solar_system_id = scan[1][4]
-                    moon_id = scan[1][6]
+                    moon_name = survey[0][0]
+                    solar_system_id = survey[1][4]
+                    moon_id = survey[1][6]
                     moon, _ = Moon.objects.get_or_create(
                         moon_id=moon_id,
                         defaults={"solar_system_id": solar_system_id, "income": None},
                     )
                     moon.moonproduct_set.all().delete()
-                    scan = scan[1:]
-                    for product_data in scan:
+                    survey = survey[1:]
+                    for product_data in survey:
                         # Trim off the empty index at the front
                         product_data = product_data[1:]
                         MoonProduct.objects.create(
@@ -137,12 +137,12 @@ def process_survey_input(scans, user_pk=None):
                         MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
                     )
                     moon.save()
-                    logger.info("Added moon scan for %s", moon.name())
+                    logger.info("Added moon survey for %s", moon.name())
 
             except Exception as ex:
-                logger.info(
-                    "An issue occurred while processing the following moon scan: "
-                    f"{scan}",
+                logger.warning(
+                    "An issue occurred while processing the following moon survey: "
+                    f"{survey}",
                     exc_info=True,
                 )
                 error_name = type(ex).__name__
