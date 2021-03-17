@@ -1,7 +1,9 @@
-from . import urls
 from django.utils.translation import ugettext_lazy as _
+
 from allianceauth import hooks
 from allianceauth.services.hooks import MenuItemHook, UrlHook
+
+from . import urls
 
 
 class MoonMenu(MenuItemHook):

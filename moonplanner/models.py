@@ -1,8 +1,9 @@
+from evesde.models import EveItem, EveSolarSystem, EveType, EveTypeMaterial
+
 from django.db import models
 from django.db.models import Q
 
-from allianceauth.eveonline.models import EveCorporationInfo, EveCharacter
-from evesde.models import EveSolarSystem, EveItem, EveType, EveTypeMaterial
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
 
 class MoonPlanner(models.Model):

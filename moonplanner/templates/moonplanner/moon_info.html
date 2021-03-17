@@ -10,13 +10,13 @@
         <h2>{{ moon_name }}</h2>
         <div class="row">
             <div class="col-md-6  mr-md-1">
-                
+
                 <div class="panel panel-primary" style="height:200px">
                     <div class="panel-heading text-center">
                         <h3 class="panel-title">Moon</h3>
                     </div>
-                    
-                    <div class="panel-body">                    
+
+                    <div class="panel-body">
                         <div class="row">
                             <div class="col-md-3">
                                 <p><strong>Solar System</strong></p>
@@ -28,25 +28,25 @@
 
                          <div class="row">
                             <div class="col-md-3">
-                                <p><strong>Security</strong></p>             
+                                <p><strong>Security</strong></p>
                             </div>
                             <div class="col-md-9">
                                 <p>{{ moon.solar_system.security | floatformat }}</p>
                             </div>
-                        </div>                         
+                        </div>
 
                          <div class="row">
                             <div class="col-md-3">
-                                <p><strong>Region</strong></p>             
+                                <p><strong>Region</strong></p>
                             </div>
                             <div class="col-md-9">
                                 <p>{{ moon.solar_system.region.region_name }}</p>
                             </div>
                         </div>
-                        
+
                         <div class="row">
                             <div class="col-md-3">
-                                <p><strong>Monthly income est.</strong></p> 
+                                <p><strong>Monthly income est.</strong></p>
                             </div>
                             <div class="col-md-9">
                             <p>{{ moon_income | floatformat }} B</p>
@@ -54,7 +54,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="panel panel-primary">
                     <div class="panel-heading text-center">
                         <h3 class="panel-title">Product</h3>
@@ -63,12 +63,12 @@
                         {% if product_rows|length_is:"0" %}
                             <div class="alert alert-warning">
                                 <p>
-                                    There are no resources recorded for {{ moon_name }}. 
+                                    There are no resources recorded for {{ moon_name }}.
                                     {% if perms.moonplanner.add_moon %} Why not add a moon scan? {% endif %}
                                 </p>
                             </div>
                         {% else %}
-                            
+
                             {% for product_row in product_rows %}
                                 <div class="row">
                                     <div class="col-md-2">
@@ -78,16 +78,16 @@
                                     <div class="col-md-8">
                                         <p><a href="{{ product_row.ore_type_url}}" target="_blank">
                                                 {{ product_row.ore_type_name }}
-                                            </a> 
+                                            </a>
                                             ({{ product_row.ore_group_name }})
                                         </p>
                                         <div class="progress" style="height: 20px; width: 100%">
-                                            <div 
-                                                class="progress-bar progress-bar-danger progress-bar-striped" 
-                                                role="progressbar" 
-                                                aria-valuenow="{{ product_row.amount }}" 
-                                                aria-valuemin="0" 
-                                                aria-valuemax="100" 
+                                            <div
+                                                class="progress-bar progress-bar-danger progress-bar-striped"
+                                                role="progressbar"
+                                                aria-valuenow="{{ product_row.amount }}"
+                                                aria-valuemin="0"
+                                                aria-valuemax="100"
                                                 style="width: {{ product_row.amount }}%; line-height: 20px;"
                                             >
                                                 <span class="sr-only">
@@ -96,11 +96,11 @@
                                                 <h5 class="media-heading" style="padding-top: 2px">
                                                     {{ product_row.amount }}%
                                                     </h5>
-                                            </div>                                                
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="col-md-2">                                        
+                                    <div class="col-md-2">
                                         <span class="pull-right">
                                             <br>
                                             {{ product_row.income | floatformat }} B
@@ -113,15 +113,15 @@
                 </div>
             </div>
             <div class="col-md-6">
-                
+
                 <div class="panel panel-primary">
                     <div class="panel-heading text-center">
                         <h3 class="panel-title">Next Extraction</h3>
                     </div>
-                    <div class="panel-body">                            
-                        {% if next_pull == None %}                            
-                            <p> No extraction scheduled</p> 
-                        {% else %}                            
+                    <div class="panel-body">
+                        {% if next_pull == None %}
+                            <p> No extraction scheduled</p>
+                        {% else %}
 
                             <div class="row">
                                 <div class="col-md-3">
@@ -139,8 +139,8 @@
                                 <div class="col-md-9">
                                     <p>{{ next_pull.auto_time }}</p>
                                 </div>
-                            </div>   
-                            
+                            </div>
+
                             <table class="table table-striped" id="table_next_pull">
                             <thead>
                                 <tr>
@@ -157,7 +157,7 @@
                                         <td><a href="{{ product.ore_type_url }}" target="_blank">{{ product.ore_type_name }}</a></td>
                                         <td>{{ product.volume }}</td>
                                         <td>{{ product.value | floatformat}} B</td>
-                                    </tr>            
+                                    </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot>
@@ -169,14 +169,14 @@
                                 </tr>
                             </tfoot>
                             </table>
-                        {% endif %}                            
-                
+                        {% endif %}
+
                     </div>
                 </div>
 
             </div>
             <div class="col-md-6 {% if product_rows|length_is:"0" %}col-md-offset-6{% endif %}">
-                    
+
                     <div class="panel panel-primary">
                         <div class="panel-heading text-center">
                             <h3 class="panel-title"> Past Extractions</h3>
@@ -213,9 +213,9 @@
 {% endblock %}
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}
-     <link 
-        href="{% static "moonplanner/moon_info.css" %}" 
-        type="text/css" 
+     <link
+        href="{% static "moonplanner/moon_info.css" %}"
+        type="text/css"
         rel="stylesheet"
     >
 {% endblock %}

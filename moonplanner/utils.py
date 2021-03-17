@@ -1,9 +1,9 @@
-import socket
-from datetime import datetime, timedelta
 import json
 import logging
 import os
 import re
+import socket
+from datetime import datetime, timedelta
 from typing import Any
 from urllib.parse import urljoin
 
@@ -11,15 +11,14 @@ from pytz import timezone
 
 from django.apps import apps
 from django.conf import settings
-from django.contrib.messages.constants import DEBUG, ERROR, SUCCESS, WARNING, INFO
 from django.contrib import messages
+from django.contrib.messages.constants import DEBUG, ERROR, INFO, SUCCESS, WARNING
 from django.db import models
 from django.test import TestCase
 from django.urls import reverse
 from django.utils.functional import lazy
 from django.utils.html import format_html, mark_safe
 from django.utils.translation import gettext_lazy as _
-
 
 # Format for output of datetime for this app
 DATETIME_FORMAT = "%Y-%m-%d %H:%M"

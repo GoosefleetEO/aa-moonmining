@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+### Changed
+
+- Add pre-commit checks
+
 ## [0.1.12] - 2020-10-09
 
 ### Changed

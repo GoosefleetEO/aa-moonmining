@@ -2,21 +2,21 @@ import logging
 import sys
 from unittest.mock import patch
 
-from django.test import TestCase
-
 from evesde.models import (
+    EveItem,
+    EveItemDenormalized,
     EveRegion,
     EveSolarSystem,
     EveType,
-    EveItem,
-    EveItemDenormalized,
 )
+
+from django.test import TestCase
 
 from allianceauth.tests.auth_utils import AuthUtils
 
-from .test_data.load_data import survey_data
 from .. import tasks
 from ..models import Moon
+from .test_data.load_data import survey_data
 
 MODULE_PATH = "moonplanner.tasks"
 

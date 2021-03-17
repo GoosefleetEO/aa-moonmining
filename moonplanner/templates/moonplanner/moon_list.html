@@ -8,11 +8,11 @@
         <br>
         {% include 'moonplanner/menu.html' %}
         <h2> {{ title }} </h2>
-                
+
         <div id="loader">
 			<img class="center-block" src="{% static "moonplanner/Spinner-1s-200px.gif" %}" alt="Spinner"/>
 		</div>
-        
+
         <div id="moon_table" style="display: none !important;">
             <table class="table table-striped" id="moon-list" style="width:100%;">
                 <thead>
@@ -23,14 +23,14 @@
                     <th>Monthly income est. in B ISK</th>
                     <th>Details</th>
                 </thead>
-                <tbody>                   
+                <tbody>
                 </tbody>
             </table>
         </div>
     </div>
     <p class="text-muted">
-        Income estimates are calculated using reprocessed ores, 
-        current average market prices, 
+        Income estimates are calculated using reprocessed ores,
+        current average market prices,
         a reprocessing yield of {{ reprocessing_yield|floatformat }}%
         and an assumed monthly ore volume of {{ total_volume_per_month }} million m3
     </p>
@@ -40,17 +40,17 @@
 {% block extra_javascript %}
     {% include 'bundles/datatables-js.html' %}
     <!--load JS for filterDropDown plugin -->
-    <script 
-        type="text/javascript" 
+    <script
+        type="text/javascript"
         src="{% static "moonplanner/filterDropDown.min.js" %}">
     </script>
 {% endblock %}
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}
 
-    <link 
-        href="{% static "moonplanner/moon_list.css" %}" 
-        type="text/css" 
+    <link
+        href="{% static "moonplanner/moon_list.css" %}"
+        type="text/css"
         rel="stylesheet"
     >
 {% endblock %}
@@ -59,12 +59,12 @@
         /* datatable definition */
         var table = $('#moon-list').DataTable({
             ajax: {
-                url: '{{ ajax_url }}',                
+                url: '{{ ajax_url }}',
                 dataSrc: '',
                 cache: true
-            },	
+            },
 
-            columns: [																			
+            columns: [
                 { data: 'moon_name' },
                 { data: 'corporation' },
                 { data: 'solar_system_link' },
@@ -80,25 +80,25 @@
 
             order: [ [0, "asc"] ],
 
-            columnDefs: [														
+            columnDefs: [
                 { "orderable": false, "targets": [ 5 ] },
                 { "visible": false, "targets": [ 6, 7 ] },
             ],
-      
-            filterDropDown: {										
-                columns: [																                    
-                    { 
+
+            filterDropDown: {
+                columns: [
+                    {
                         idx: 1
                     },
-                    { 
+                    {
                         idx: 3
                     },
-                    { 
+                    {
                         idx: 6,
                         title: "System"
                     }
                     ,
-                    { 
+                    {
                         idx: 7,
                         title: "Our moon"
                     }
@@ -107,18 +107,18 @@
                 autoSize: false
             },
 
-            createdRow: function( row, data, dataIndex ) 
+            createdRow: function( row, data, dataIndex )
             {
                 if (data['has_refinery'])
                 {
                     $(row).addClass('success');
-                }               
+                }
             }
-            
+
         });
 
         /* show table after loading from AJAX source is complete */
-        table.on( 'xhr', function () {						
+        table.on( 'xhr', function () {
             table.columns.adjust().draw();
             $("#loader").hide();
             $("#moon_table").show();

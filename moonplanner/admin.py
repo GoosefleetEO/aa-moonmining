@@ -1,7 +1,7 @@
 from django.contrib import admin
 
-from .models import Extraction, Moon, Refinery, MiningCorporation, MoonProduct
 from . import tasks
+from .models import Extraction, MiningCorporation, Moon, MoonProduct, Refinery
 
 
 @admin.register(Extraction)

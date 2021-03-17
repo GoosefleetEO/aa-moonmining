@@ -1,21 +1,20 @@
+import logging
 import urllib
 from datetime import datetime, timezone
-import logging
 
-from django.shortcuts import render, redirect, HttpResponse
 from django.contrib.auth.decorators import login_required, permission_required
 from django.http import JsonResponse
-from django.views.decorators.cache import cache_page
+from django.shortcuts import HttpResponse, redirect, render
 from django.urls import reverse
+from django.views.decorators.cache import cache_page
 
+from allianceauth.eveonline.evelinks import eveimageserver
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.decorators import token_required
 
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-from allianceauth.eveonline.evelinks import eveimageserver
-
-from .app_settings import MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
+from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
 from .forms import MoonScanForm
-from .models import Extraction, Moon, MoonProduct, Refinery, MiningCorporation
+from .models import Extraction, MiningCorporation, Moon, MoonProduct, Refinery
 from .tasks import process_survey_input, run_refineries_update
 from .utils import messages_plus
 

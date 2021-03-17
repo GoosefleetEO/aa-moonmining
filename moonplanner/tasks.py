@@ -1,34 +1,32 @@
-import logging
-import yaml
 import datetime
+import logging
 
 import pytz
+import yaml
 from celery import shared_task
+from evesde.models import EveSolarSystem, EveType
 
-from django.db import transaction, IntegrityError
 from django.contrib.auth.models import User
+from django.db import IntegrityError, transaction
 
 from allianceauth.eveonline.models import EveCharacter
 from allianceauth.notifications import notify
-
-from evesde.models import EveType, EveSolarSystem
 from esi.clients import esi_client_factory
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
 
 from . import __title__
+from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
 from .models import (
-    Moon,
-    MoonProduct,
-    MiningCorporation,
-    MarketPrice,
     Extraction,
     ExtractionProduct,
+    MarketPrice,
+    MiningCorporation,
+    Moon,
+    MoonProduct,
     Refinery,
 )
-from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
-from .utils import LoggerAddTag, make_logger_prefix, get_swagger_spec_path
-
+from .utils import LoggerAddTag, get_swagger_spec_path, make_logger_prefix
 
 # add custom tag to logger with name of this app
 logger = LoggerAddTag(logging.getLogger(__name__), __title__)

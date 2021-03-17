@@ -15,21 +15,15 @@ WIP !!
 Features inherited from moonstuf:
 
 - Manage moon extractions
-
 - Add moons via surveys
-
 - Browse list of scanned moons
-
 - Detail view of moons
 
 Additional features:
 
 - Filter by solar solar_system and region in moon list
-
 - Show estimated monthly income for moons and ores
-
 - Optimized to handle thousands of moons with good performance
-
 - Open multiple moon detail pages at the same time
 
 ## Installation

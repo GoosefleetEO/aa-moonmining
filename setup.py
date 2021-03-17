@@ -1,8 +1,8 @@
 import os
+
 from setuptools import find_packages, setup
 
 from moonplanner import __version__
-
 
 # read the contents of your README file
 this_directory = os.path.abspath(os.path.dirname(__file__))
@@ -41,7 +41,6 @@ setup(
         "allianceauth",
         "django-bootstrap-form",
         "django-navhelper",
-        "allianceauth-evesde",
+        "allianceauth-evesde @ git+https://gitlab.com/ErikKalkoken/allianceauth-evesde.git",
     ],
-    extras_require={"testing": []},
 )

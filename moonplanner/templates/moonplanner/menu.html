@@ -4,7 +4,7 @@
 
 <nav class="navbar navbar-default">
     <div class="container-fluid">
-        
+
         <div class="navbar-header">
             <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
                 <span class="sr-only">{% trans "Toggle navigation" %}</span>
@@ -14,7 +14,7 @@
             </button>
             <a class="navbar-brand" href="{% url 'moonplanner:index' %}">{% trans "Moon Planner" %}</a>
         </div>
-        
+
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav">
                 {% if perms.moonplanner.access_our_moons %}
@@ -30,7 +30,7 @@
                         <a href="{% url 'moonplanner:moon_list_all' %}">All Moons</a>
                     </li>
                 {% endif %}
-                
+
                 {% if perms.moonplanner.upload_moon_scan %}
                     <li class="{% navactive request 'moonplanner:add_moon_scan' %}">
                         <a href="{% url 'moonplanner:add_moon_scan' %}">Add Moon Scan</a>
@@ -42,12 +42,12 @@
                     </li>
                 {% endif %}
             </ul>
-            
+
             {% if perms.moonplanner.add_mining_corporation %}
                 <a class="btn btn-default navbar-btn" style="float: right" href="{% url 'moonplanner:add_mining_corporation' %}">
                     Add Corporation
                 </a>
-            {% endif %}           
+            {% endif %}
         </div>
 
     </div>
