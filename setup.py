@@ -23,8 +23,6 @@ setup(
     classifiers=[
         "Environment :: Web Environment",
         "Framework :: Django",
-        "Framework :: Django :: 2.2",
-        "Framework :: Django :: 3.0",
         "Framework :: Django :: 3.1",
         "Intended Audience :: End Users/Desktop",
         "License :: OSI Approved :: MIT License",
@@ -38,9 +36,9 @@ setup(
     ],
     python_requires="~=3.6",
     install_requires=[
-        "allianceauth",
+        "allianceauth>=2.8.2",
         "django-bootstrap-form",
         "django-navhelper",
-        "allianceauth-evesde @ git+https://gitlab.com/ErikKalkoken/allianceauth-evesde.git",
+        "django-eveuniverse>=0.8.0a3",
     ],
 )

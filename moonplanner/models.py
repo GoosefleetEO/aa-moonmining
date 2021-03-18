@@ -1,9 +1,8 @@
-from evesde.models import EveItem, EveSolarSystem, EveType, EveTypeMaterial
-
 from django.db import models
 from django.db.models import Q
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from eveuniverse.models import EveMoon, EveType, EveTypeMaterial
 
 
 class MoonPlanner(models.Model):
@@ -21,28 +20,16 @@ class MoonPlanner(models.Model):
         )
 
 
-class Moon(models.Model):
+class MoonIncome(models.Model):
     TYPE_MOON_ID = 14
 
-    moon = models.OneToOneField(
-        EveItem,
-        on_delete=models.CASCADE,
-        primary_key=True,
-        limit_choices_to={"type_id": TYPE_MOON_ID},
+    eve_moon = models.OneToOneField(
+        EveMoon, on_delete=models.CASCADE, primary_key=True, related_name="income"
     )
-    solar_system = models.ForeignKey(
-        EveSolarSystem, on_delete=models.DO_NOTHING, null=True, default=None
-    )
-    income = models.BigIntegerField(null=True, default=None)
-
-    def name(self):
-        if hasattr(self.moon, "eveitemdenormalized"):
-            return str(self.moon.eveitemdenormalized.item_name)
-        else:
-            return "moon-id:{}".format(self.moon_id)
+    income = models.FloatField(null=True, default=None)
 
     def __str__(self):
-        return self.name()
+        return self.eve_moon.name
 
     def calc_income_estimate(self, total_volume, reprocessing_yield, moon_product=None):
         """returns newly calculated income estimate for a given volume in ISK
@@ -58,7 +45,7 @@ class Moon(models.Model):
         """
         income = 0
         if moon_product is None:
-            moon_products = self.moonproduct_set.select_related("ore_type")
+            moon_products = self.moonproduct_set.select_related("eve_type")
             if moon_products.count() == 0:
                 return None
         else:
@@ -66,13 +53,13 @@ class Moon(models.Model):
 
         try:
             for product in moon_products:
-                if product.ore_type.volume:
-                    volume_per_unit = product.ore_type.volume
+                if product.eve_type.volume:
+                    volume_per_unit = product.eve_type.volume
                     volume = total_volume * product.amount
                     units = volume / volume_per_unit
                     r_units = units / 100
                     types_qs = EveTypeMaterial.objects.filter(
-                        type=product.ore_type
+                        type=product.eve_type
                     ).select_related("material_type__marketprice")
                     for t in types_qs:
                         income += (
@@ -91,29 +78,35 @@ class Moon(models.Model):
 
 
 class MoonProduct(models.Model):
-    moon = models.ForeignKey(Moon, on_delete=models.CASCADE)
-    ore_type = models.ForeignKey(
+    eve_moon = models.ForeignKey(
+        EveMoon, on_delete=models.CASCADE, related_name="products"
+    )
+    eve_type = models.ForeignKey(
         EveType,
         on_delete=models.DO_NOTHING,
         null=True,
         default=None,
         limit_choices_to=Q(group__category_id=25),
+        related_name="+",
     )
     amount = models.FloatField()
 
     def __str__(self):
-        return "{} - {}".format(self.ore_type.type_name, self.amount)
+        return "{} - {}".format(self.eve_type.type_name, self.amount)
 
-    class Meta:
-        unique_together = (("moon", "ore_type"),)
-        indexes = [
-            models.Index(fields=["moon"]),
-        ]
+    # class Meta:
+    #     unique_together = (("eve_moon", "eve_type"),)
+    #     indexes = [
+    #         models.Index(fields=["eve_moon"]),
+    #     ]
 
 
 class MiningCorporation(models.Model):
     corporation = models.OneToOneField(
-        EveCorporationInfo, on_delete=models.CASCADE, primary_key=True
+        EveCorporationInfo,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name="mining_corporations",
     )
     character = models.OneToOneField(
         EveCharacter, on_delete=models.DO_NOTHING, default=None, null=True
@@ -136,15 +129,20 @@ class Refinery(models.Model):
     TYPE_REFINERY_ID = 1406
 
     structure_id = models.BigIntegerField(primary_key=True)
-    moon = models.OneToOneField(
-        Moon, on_delete=models.SET_DEFAULT, default=None, null=True
+    eve_moon = models.OneToOneField(
+        EveMoon,
+        on_delete=models.SET_DEFAULT,
+        default=None,
+        null=True,
+        related_name="refinery",
     )
     name = models.CharField(max_length=150)
     corporation = models.ForeignKey(MiningCorporation, on_delete=models.CASCADE)
-    type = models.ForeignKey(
+    eve_type = models.ForeignKey(
         EveType,
         on_delete=models.CASCADE,
-        limit_choices_to={"group_id": TYPE_REFINERY_ID},
+        limit_choices_to={"id": TYPE_REFINERY_ID},
+        related_name="+",
     )
 
     def __str__(self):
@@ -152,33 +150,37 @@ class Refinery(models.Model):
 
 
 class Extraction(models.Model):
-    refinery = models.ForeignKey(Refinery, on_delete=models.CASCADE)
+    refinery = models.ForeignKey(
+        Refinery, on_delete=models.CASCADE, related_name="extractions"
+    )
     ready_time = models.DateTimeField()
     auto_time = models.DateTimeField()
 
-    class Meta:
-        unique_together = (("ready_time", "refinery"),)
+    # class Meta:
+    #     unique_together = (("ready_time", "refinery"),)
 
     def __str__(self):
         return "{} - {}".format(self.refinery, self.ready_time)
 
 
 class ExtractionProduct(models.Model):
-    extraction = models.ForeignKey(Extraction, on_delete=models.CASCADE)
-    ore_type = models.ForeignKey(
+    extraction = models.ForeignKey(
+        Extraction, on_delete=models.CASCADE, related_name="products"
+    )
+    eve_type = models.ForeignKey(
         EveType,
         on_delete=models.DO_NOTHING,
         null=True,
         default=None,
-        limit_choices_to=Q(group__category_id=25),
+        limit_choices_to=Q(eve_group__eve_category_id=25),
     )
     volume = models.FloatField()
 
-    class Meta:
-        unique_together = (("extraction", "ore_type"),)
+    # class Meta:
+    #     unique_together = (("extraction", "eve_type"),)
 
     def __str__(self):
-        return "{} - {}".format(self.extraction, self.ore_type)
+        return "{} - {}".format(self.extraction, self.eve_type)
 
     def calc_value_estimate(self, reprocessing_yield):
         """returns calculated value estimate in ISK
@@ -189,14 +191,12 @@ class ExtractionProduct(models.Model):
             value estimate or None if prices are missing
 
         """
-        volume_per_unit = self.ore_type.volume
+        volume_per_unit = self.eve_type.volume
         units = self.volume / volume_per_unit
         r_units = units / 100
         value = 0
         try:
-            types_qs = EveTypeMaterial.objects.filter(
-                type=self.ore_type
-            ).select_related("material_type__marketprice")
+            types_qs = EveTypeMaterial.objects.filter(type=self.eve_type)
             for t in types_qs:
                 value += (
                     t.material_type.marketprice.average_price
@@ -208,16 +208,3 @@ class ExtractionProduct(models.Model):
             value = None
         else:
             return value
-
-
-class MarketPrice(models.Model):
-    type = models.OneToOneField(EveType, on_delete=models.CASCADE, primary_key=True)
-    average_price = models.FloatField(null=True, default=None)
-    adjusted_price = models.FloatField(null=True, default=None)
-    last_updated = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        if self.average_price is not None:
-            return "{} {:,.2f}".format(self.type.type_name, self.average_price)
-        else:
-            return "{} {}".format(self.type.type_name, self.average_price)

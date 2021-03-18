@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from . import tasks
-from .models import Extraction, MiningCorporation, Moon, MoonProduct, Refinery
+from .models import Extraction, MiningCorporation, MoonProduct, Refinery
 
 
 @admin.register(Extraction)
@@ -13,7 +13,7 @@ class ExtractionAdmin(admin.ModelAdmin):
         "ready_time",
     )
 
-    search_fields = ("moon__name",)
+    search_fields = ("eve_moon__name",)
 
 
 @admin.register(MiningCorporation)
@@ -35,14 +35,14 @@ class MiningCorporationAdmin(admin.ModelAdmin):
 
 @admin.register(Refinery)
 class RefineryAdmin(admin.ModelAdmin):
-    list_display = ("name", "moon", "corporation", "type")
+    list_display = ("name", "eve_moon", "corporation", "eve_type")
     list_filter = (
         "corporation__corporation",
         ("type", admin.RelatedOnlyFieldListFilter),
     )
 
 
-admin.site.register(Moon)
+#  admin.site.register(Moon)
 
 
 admin.site.register(MoonProduct)

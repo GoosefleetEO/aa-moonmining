@@ -3,8 +3,9 @@ import logging
 
 import pytz
 import yaml
+from app_utils.helpers import swagger_spec_path
+from app_utils.logging import LoggerAddTag, make_logger_prefix
 from celery import shared_task
-from evesde.models import EveSolarSystem, EveType
 
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
@@ -14,19 +15,21 @@ from allianceauth.notifications import notify
 from esi.clients import esi_client_factory
 from esi.errors import TokenExpiredError, TokenInvalidError
 from esi.models import Token
+from eveuniverse.models import EveMarketPrice, EveSolarSystem, EveType
 
 from . import __title__
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
-from .models import (
+from .models import (  # MarketPrice,; Moon,
     Extraction,
     ExtractionProduct,
-    MarketPrice,
     MiningCorporation,
-    Moon,
+    MoonIncome,
     MoonProduct,
     Refinery,
 )
-from .utils import LoggerAddTag, get_swagger_spec_path, make_logger_prefix
+
+# from evesde.models import EveSolarSystem, EveType
+
 
 # add custom tag to logger with name of this app
 logger = LoggerAddTag(logging.getLogger(__name__), __title__)
@@ -117,7 +120,7 @@ def process_survey_input(scans, user_pk=None):
                     moon_name = survey[0][0]
                     solar_system_id = survey[1][4]
                     moon_id = survey[1][6]
-                    moon, _ = Moon.objects.get_or_create(
+                    moon, _ = MoonIncome.objects.get_or_create(
                         moon_id=moon_id,
                         defaults={"solar_system_id": solar_system_id, "income": None},
                     )
@@ -222,7 +225,7 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
         else:
             logger.info(addTag("Using token from {}".format(mining_corp.character)))
 
-        client = esi_client_factory(token=token, spec_file=get_swagger_spec_path())
+        client = esi_client_factory(token=token, spec_file=swagger_spec_path())
 
         # get all corporation structures
         logger.info(addTag("Fetching corp structures"))
@@ -263,7 +266,7 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
 
             if moon_item is not None:
                 # create moon if it does not exist
-                moon, _ = Moon.objects.get_or_create(
+                moon, _ = MoonIncome.objects.get_or_create(
                     moon_id=moon_item.item_id,
                     defaults={"solar_system": solar_system, "income": None},
                 )
@@ -375,7 +378,7 @@ def update_moon_income():
             average_price = row["average_price"] if "average_price" in row else None
             adjusted_price = row["adjusted_price"] if "adjusted_price" in row else None
             try:
-                MarketPrice.objects.update_or_create(
+                EveMarketPrice.objects.update_or_create(
                     type_id=row["type_id"],
                     defaults={
                         "average_price": average_price,
@@ -391,11 +394,11 @@ def update_moon_income():
 
         logger.info(
             "Started re-calculating moon income for {:,} moons".format(
-                Moon.objects.count()
+                MoonIncome.objects.count()
             )
         )
         with transaction.atomic():
-            for moon in Moon.objects.all():
+            for moon in MoonIncome.objects.all():
                 moon.income = moon.calc_income_estimate(
                     MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
                 )
