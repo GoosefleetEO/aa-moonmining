@@ -1,9 +1,7 @@
-import datetime
 import logging
 
-import pytz
 import yaml
-from app_utils.helpers import swagger_spec_path
+from app_utils.datetime import ldap_time_2_datetime
 from app_utils.logging import LoggerAddTag, make_logger_prefix
 from celery import shared_task
 
@@ -12,9 +10,6 @@ from django.db import IntegrityError, transaction
 
 from allianceauth.eveonline.models import EveCharacter
 from allianceauth.notifications import notify
-from esi.clients import esi_client_factory
-from esi.errors import TokenExpiredError, TokenInvalidError
-from esi.models import Token
 from eveuniverse.models import EveMarketPrice, EveSolarSystem, EveType
 
 from . import __title__
@@ -27,6 +22,7 @@ from .models import (  # MarketPrice,; Moon,
     MoonProduct,
     Refinery,
 )
+from .providers import esi
 
 # from evesde.models import EveSolarSystem, EveType
 
@@ -37,13 +33,6 @@ logger = LoggerAddTag(logging.getLogger(__name__), __title__)
 REFINERY_GROUP_ID = 1406
 MOON_GROUP_ID = 8
 MAX_DISTANCE_TO_MOON_METERS = 3000000
-
-
-def ldapTime2datetime(ldap_time: int) -> datetime:
-    """converts ldap time to datatime"""
-    return pytz.utc.localize(
-        datetime.datetime.utcfromtimestamp((ldap_time / 10000000) - 11644473600)
-    )
 
 
 """
@@ -207,88 +196,65 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
             logger.error(addTag("Missing character"))
             raise EveCharacter.DoesNotExist()
 
-        try:
-            token = (
-                Token.objects.filter(character_id=mining_corp.character.character_id)
-                .require_scopes(MiningCorporation.get_esi_scopes())
-                .require_valid()
-                .first()
-            )
-        except TokenInvalidError as ex:
-            logger.error(addTag("Invalid token for fetching refineries"))
-            raise ex
-
-        except TokenExpiredError as ex:
-            logger.error(addTag("Token expired"))
-            raise ex
-
-        else:
-            logger.info(addTag("Using token from {}".format(mining_corp.character)))
-
-        client = esi_client_factory(token=token, spec_file=swagger_spec_path())
+        token = mining_corp.fetch_token()
+        logger.info(addTag("Using token from {}".format(mining_corp.character)))
 
         # get all corporation structures
         logger.info(addTag("Fetching corp structures"))
 
-        all_structures = client.Corporation.get_corporations_corporation_id_structures(
-            corporation_id=mining_corp.corporation.corporation_id
-        ).result()
-
-        # filter by refineres
-        refinery_type_ids = [
-            x.type_id for x in EveType.objects.filter(group_id=REFINERY_GROUP_ID)
-        ]
-
-        refinery_structures = [
-            x for x in all_structures if x["type_id"] in refinery_type_ids
-        ]
+        all_structures = (
+            esi.client.Corporation.get_corporations_corporation_id_structures(
+                corporation_id=mining_corp.corporation.corporation_id,
+                token=token.valid_access_token(),
+            ).result()
+        )
 
         logger.info(addTag("Updating refineries"))
-        # for each refinery
         user_report = list()
-        for refinery in refinery_structures:
-            # get structure details for refinery
-            structure_info = client.Universe.get_universe_structures_structure_id(
-                structure_id=refinery["structure_id"]
-            ).result()
-
-            # determine moon next to refinery
-            solar_system = EveSolarSystem.objects.get(
-                pk=structure_info["solar_system_id"]
-            )
-            moon_item = solar_system.get_nearest_celestials(
-                structure_info["position"]["x"],
-                structure_info["position"]["y"],
-                structure_info["position"]["z"],
-                group_id=MOON_GROUP_ID,
-                max_distance=MAX_DISTANCE_TO_MOON_METERS,
-            )
-
-            if moon_item is not None:
-                # create moon if it does not exist
-                moon, _ = MoonIncome.objects.get_or_create(
-                    moon_id=moon_item.item_id,
-                    defaults={"solar_system": solar_system, "income": None},
+        for refinery in all_structures:
+            eve_type, _ = EveType.objects.get_or_create_esi(id=refinery["type_id"])
+            if eve_type.eve_group_id == REFINERY_GROUP_ID:
+                # determine moon next to refinery
+                structure_info = (
+                    esi.client.Universe.get_universe_structures_structure_id(
+                        structure_id=refinery["structure_id"],
+                        token=token.valid_access_token(),
+                    ).result()
+                )
+                solar_system, _ = EveSolarSystem.objects.get_or_create_esi(
+                    id=structure_info["solar_system_id"]
+                )
+                nearest_celestial = solar_system.nearest_celestial(
+                    structure_info["position"]["x"],
+                    structure_info["position"]["y"],
+                    structure_info["position"]["z"],
+                    group_id=MOON_GROUP_ID,
+                    max_distance=MAX_DISTANCE_TO_MOON_METERS,
                 )
 
-                # create refinery if it does not exist
-                Refinery.objects.get_or_create(
-                    structure_id=refinery["structure_id"],
-                    defaults={
-                        "name": structure_info["name"],
-                        "type_id": structure_info["type_id"],
-                        "moon": moon,
-                        "corporation": mining_corp,
-                    },
-                )
-                user_report.append(
-                    {"moon_name": moon.name(), "refinery_name": structure_info["name"]}
-                )
+                if nearest_celestial and nearest_celestial.eve_type.id == 14:
+                    eve_moon = nearest_celestial.eve_object
+                    eve_type, _ = EveType.objects.get_or_create_esi(
+                        id=structure_info["type_id"]
+                    )
+                    refinery, _ = Refinery.objects.update_or_create(
+                        structure_id=refinery["structure_id"],
+                        defaults={
+                            "name": structure_info["name"],
+                            "eve_type": eve_type,
+                            "eve_moon": eve_moon,
+                            "corporation": mining_corp,
+                        },
+                    )
+                    user_report.append(
+                        {"moon_name": eve_moon.name, "refinery_name": refinery.name}
+                    )
 
         # fetch notifications
         logger.info(addTag("Fetching notifications"))
-        notifications = client.Character.get_characters_character_id_notifications(
-            character_id=mining_corp.character.character_id
+        notifications = esi.client.Character.get_characters_character_id_notifications(
+            character_id=mining_corp.character.character_id,
+            token=token.valid_access_token(),
         ).result()
 
         # add extractions for refineries if any are found
@@ -302,25 +268,24 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
         with transaction.atomic():
             last_extraction_started = dict()
             for notification in sorted(notifications, key=lambda k: k["timestamp"]):
-
                 if notification["type"] == "MoonminingExtractionStarted":
                     parsed_text = yaml.safe_load(notification["text"])
                     structure_id = parsed_text["structureID"]
                     refinery = Refinery.objects.get(structure_id=structure_id)
-                    extraction, created = Extraction.objects.get_or_create(
+                    extraction, _ = Extraction.objects.get_or_create(
                         refinery=refinery,
-                        ready_time=ldapTime2datetime(parsed_text["readyTime"]),
+                        ready_time=ldap_time_2_datetime(parsed_text["readyTime"]),
                         defaults={
-                            "auto_time": ldapTime2datetime(parsed_text["autoTime"])
+                            "auto_time": ldap_time_2_datetime(parsed_text["autoTime"])
                         },
                     )
                     last_extraction_started[structure_id] = extraction
-
                     ore_volume_by_type = parsed_text["oreVolumeByType"].items()
                     for ore_type_id, ore_volume in ore_volume_by_type:
+                        eve_type, _ = EveType.objects.get_or_create_esi(id=ore_type_id)
                         ExtractionProduct.objects.get_or_create(
                             extraction=extraction,
-                            ore_type_id=ore_type_id,
+                            eve_type=eve_type,
                             defaults={"volume": ore_volume},
                         )
 
@@ -370,9 +335,8 @@ def update_moon_income():
     """update the income for all moons"""
     try:
         logger.info("Starting ESI client...")
-        client = esi_client_factory()
         logger.info("Fetching market prices from ESI...")
-        market_data = client.Market.get_markets_prices().result()
+        market_data = esi.client.Market.get_markets_prices().result()
         logger.info("Storing market prices...")
         for row in market_data:
             average_price = row["average_price"] if "average_price" in row else None

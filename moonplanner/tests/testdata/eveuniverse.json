@@ -42,6 +42,12 @@
             "published": false
         },
         {
+            "eve_category_id": 2,
+            "id": 8,
+            "name": "Moon",
+            "published": false
+        },
+        {
             "eve_category_id": 25,
             "id": 450,
             "name": "Arkonor",
@@ -185,6 +191,22 @@
             "id": 13,
             "mass": 1e+35,
             "name": "Planet (Gas)",
+            "packaged_volume": 1.0,
+            "portion_size": 1,
+            "published": false,
+            "radius": 10000.0,
+            "volume": 1.0
+        },
+        {
+            "capacity": 0.0,
+            "enabled_sections": 0,
+            "eve_graphic_id": null,
+            "eve_group_id": 8,
+            "eve_market_group_id": null,
+            "icon_id": 10141,
+            "id": 14,
+            "mass": 1e+35,
+            "name": "Moon",
             "packaged_volume": 1.0,
             "portion_size": 1,
             "published": false,
@@ -350,6 +372,22 @@
             "published": true,
             "radius": 1.0,
             "volume": 0.1
+        },
+        {
+            "capacity": 0.0,
+            "enabled_sections": 0,
+            "eve_graphic_id": null,
+            "eve_group_id": 8,
+            "eve_market_group_id": null,
+            "icon_id": 10141,
+            "id": 52673,
+            "mass": 1e+35,
+            "name": "Moon",
+            "packaged_volume": 1.0,
+            "portion_size": 1,
+            "published": false,
+            "radius": 10000.0,
+            "volume": 1.0
         }
     ]
 }

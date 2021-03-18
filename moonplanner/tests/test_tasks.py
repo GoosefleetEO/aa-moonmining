@@ -1,14 +1,21 @@
-# from unittest.mock import patch
+from unittest.mock import patch
 
 from app_utils.testing import NoSocketsTestCase, create_user_from_evecharacter
 
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from eveuniverse.models import EveMoon, EveSolarSystem, EveType
+
 from .. import tasks
+from ..models import MiningCorporation, Refinery
+from .testdata.esi_client_stub import esi_client_stub
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
 
 MODULE_PATH = "moonplanner.tasks"
 
 
+@patch(MODULE_PATH + ".EveSolarSystem.nearest_celestial")
+@patch(MODULE_PATH + ".esi")
 class TestRunRefineriesUpdate(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
@@ -22,13 +29,33 @@ class TestRunRefineriesUpdate(NoSocketsTestCase):
                 "moonplanner.access_our_moons",
                 "moonplanner.add_mining_corporation",
             ],
+            scopes=[
+                "esi-industry.read_corporation_mining.v1",
+                "esi-universe.read_structures.v1",
+                "esi-characters.read_notifications.v1",
+                "esi-corporations.read_structures.v1",
+            ],
+        )
+        cls.mining_corporation = MiningCorporation.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character=EveCharacter.objects.get(character_id=1001),
         )
 
-    def test_should_create_new(self):
+    def test_should_create_new(self, mock_esi, mock_nearest_celestial):
+        # given
+        mock_esi.client = esi_client_stub
+        my_eve_moon = EveMoon.objects.get(id=40161708)
+        mock_nearest_celestial.return_value = EveSolarSystem.NearestCelestial(
+            eve_type=EveType.objects.get(id=14), eve_object=my_eve_moon, distance=123
+        )
         # when
-        tasks.run_refineries_update(2001)
+        tasks.run_refineries_update(self.mining_corporation.pk)
         # then
-        ...
+        refinery = Refinery.objects.get(structure_id=1000000000001)
+        self.assertEqual(refinery.name, "Auga - Paradise Alpha")
+        self.assertEqual(refinery.eve_moon, my_eve_moon)
+
+    # TODO: test when refinery does not exist for notification
 
 
 # class TestTasks(TestCase):

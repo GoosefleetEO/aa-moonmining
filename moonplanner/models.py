@@ -2,6 +2,7 @@ from django.db import models
 from django.db.models import Q
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from esi.models import Token
 from eveuniverse.models import EveMoon, EveType, EveTypeMaterial
 
 
@@ -123,6 +124,15 @@ class MiningCorporation(models.Model):
             "esi-characters.read_notifications.v1",
             "esi-corporations.read_structures.v1",
         ]
+
+    def fetch_token(self):
+        """Fetch token for this mining corp and return it..."""
+        return (
+            Token.objects.filter(character_id=self.character.character_id)
+            .require_scopes(self.get_esi_scopes())
+            .require_valid()
+            .first()
+        )
 
 
 class Refinery(models.Model):
