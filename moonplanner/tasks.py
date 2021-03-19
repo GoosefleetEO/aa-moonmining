@@ -2,7 +2,7 @@ import logging
 
 import yaml
 from app_utils.datetime import ldap_time_2_datetime
-from app_utils.logging import LoggerAddTag, make_logger_prefix
+from app_utils.logging import LoggerAddTag
 from celery import shared_task
 
 from django.contrib.auth.models import User
@@ -179,29 +179,16 @@ def process_survey_input(scans, user_pk=None):
 @shared_task
 def run_refineries_update(mining_corp_pk, user_pk=None):
     """update list of refineries with extractions for a mining corporation"""
-
-    addTag = make_logger_prefix("(none)")
     try:
-        try:
-            mining_corp = MiningCorporation.objects.get(pk=mining_corp_pk)
-        except MiningCorporation.DoesNotExist as ex:
-            raise MiningCorporation.DoesNotExist(
-                "task called for non existing corp with pk {}".format(mining_corp_pk)
-            )
-            raise ex
-        else:
-            addTag = make_logger_prefix("update_refineries: {}".format(mining_corp))
-
+        mining_corp = MiningCorporation.objects.get(pk=mining_corp_pk)
         if mining_corp.character is None:
-            logger.error(addTag("Missing character"))
+            logger.error("%s: Missing character", mining_corp)
             raise EveCharacter.DoesNotExist()
 
         token = mining_corp.fetch_token()
-        logger.info(addTag("Using token from {}".format(mining_corp.character)))
+        logger.info("%s: Using token from %s", mining_corp, mining_corp.character)
 
-        # get all corporation structures
-        logger.info(addTag("Fetching corp structures"))
-
+        logger.info("%s: Fetching corp structures from ESI", mining_corp)
         all_structures = (
             esi.client.Corporation.get_corporations_corporation_id_structures(
                 corporation_id=mining_corp.corporation.corporation_id,
@@ -209,7 +196,7 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
             ).result()
         )
 
-        logger.info(addTag("Updating refineries"))
+        logger.info("%s: Updating refineries", mining_corp)
         user_report = list()
         for refinery in all_structures:
             eve_type, _ = EveType.objects.get_or_create_esi(id=refinery["type_id"])
@@ -250,8 +237,7 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
                         {"moon_name": eve_moon.name, "refinery_name": refinery.name}
                     )
 
-        # fetch notifications
-        logger.info(addTag("Fetching notifications"))
+        logger.info("%s: Fetching notifications", mining_corp)
         notifications = esi.client.Character.get_characters_character_id_notifications(
             character_id=mining_corp.character.character_id,
             token=token.valid_access_token(),
@@ -259,53 +245,53 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
 
         # add extractions for refineries if any are found
         logger.info(
-            addTag(
-                "Process extraction events from {} notifications".format(
-                    len(notifications)
-                )
-            )
+            "%s: Process extraction events from %d notifications",
+            mining_corp,
+            len(notifications),
         )
-        with transaction.atomic():
-            last_extraction_started = dict()
-            for notification in sorted(notifications, key=lambda k: k["timestamp"]):
-                if notification["type"] == "MoonminingExtractionStarted":
-                    parsed_text = yaml.safe_load(notification["text"])
-                    structure_id = parsed_text["structureID"]
+        last_extraction_started = dict()
+        for notification in sorted(notifications, key=lambda k: k["timestamp"]):
+            if notification["type"] == "MoonminingExtractionStarted":
+                parsed_text = yaml.safe_load(notification["text"])
+                structure_id = parsed_text["structureID"]
+                try:
                     refinery = Refinery.objects.get(structure_id=structure_id)
-                    extraction, _ = Extraction.objects.get_or_create(
-                        refinery=refinery,
-                        ready_time=ldap_time_2_datetime(parsed_text["readyTime"]),
-                        defaults={
-                            "auto_time": ldap_time_2_datetime(parsed_text["autoTime"])
-                        },
+                except Refinery.DoesNotExist:
+                    continue  # we ignore notifications for unknown refineries
+                extraction, _ = Extraction.objects.get_or_create(
+                    refinery=refinery,
+                    ready_time=ldap_time_2_datetime(parsed_text["readyTime"]),
+                    defaults={
+                        "auto_time": ldap_time_2_datetime(parsed_text["autoTime"])
+                    },
+                )
+                last_extraction_started[structure_id] = extraction
+                ore_volume_by_type = parsed_text["oreVolumeByType"].items()
+                for ore_type_id, ore_volume in ore_volume_by_type:
+                    eve_type, _ = EveType.objects.get_or_create_esi(id=ore_type_id)
+                    ExtractionProduct.objects.get_or_create(
+                        extraction=extraction,
+                        eve_type=eve_type,
+                        defaults={"volume": ore_volume},
                     )
-                    last_extraction_started[structure_id] = extraction
-                    ore_volume_by_type = parsed_text["oreVolumeByType"].items()
-                    for ore_type_id, ore_volume in ore_volume_by_type:
-                        eve_type, _ = EveType.objects.get_or_create_esi(id=ore_type_id)
-                        ExtractionProduct.objects.get_or_create(
-                            extraction=extraction,
-                            eve_type=eve_type,
-                            defaults={"volume": ore_volume},
-                        )
 
-                # remove latest started extraction if it was canceled
-                # and not finished
-                if notification["type"] == "MoonminingExtractionCancelled":
-                    parsed_text = yaml.safe_load(notification["text"])
-                    structure_id = parsed_text["structureID"]
-                    if structure_id in last_extraction_started:
-                        extraction = last_extraction_started[structure_id]
-                        extraction.delete()
+            # remove latest started extraction if it was canceled
+            # and not finished
+            if notification["type"] == "MoonminingExtractionCancelled":
+                parsed_text = yaml.safe_load(notification["text"])
+                structure_id = parsed_text["structureID"]
+                if structure_id in last_extraction_started:
+                    extraction = last_extraction_started[structure_id]
+                    extraction.delete()
 
-                if notification["type"] == "MoonminingExtractionFinished":
-                    parsed_text = yaml.safe_load(notification["text"])
-                    structure_id = parsed_text["structureID"]
-                    if structure_id in last_extraction_started:
-                        del last_extraction_started[structure_id]
+            if notification["type"] == "MoonminingExtractionFinished":
+                parsed_text = yaml.safe_load(notification["text"])
+                structure_id = parsed_text["structureID"]
+                if structure_id in last_extraction_started:
+                    del last_extraction_started[structure_id]
 
     except Exception as ex:
-        logger.error(addTag("An unexpected error occurred: {}".format(ex)))
+        logger.error("%s: An unexpected error occurred", mining_corp, exc_info=True)
         success = False
         raise ex
     else:
