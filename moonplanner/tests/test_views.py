@@ -11,6 +11,7 @@ from eveuniverse.models import EveMoon
 
 from .. import views
 from ..models import Moon
+from . import helpers
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
 
@@ -79,8 +80,6 @@ class TestMoonListData(TestCase):
             reverse("moonplanner:moon_list_data", args={"category": "all_moons"})
         )
         request.user = self.user
-        middleware = SessionMiddleware()
-        middleware.process_request(request)
         # when
         response = views.moon_list_data(request, category="all moons")
         # then
@@ -89,3 +88,74 @@ class TestMoonListData(TestCase):
         self.assertSetEqual(set(data.keys()), {40131695, 40161708, 40161709})
         obj = data[40161708]
         self.assertEqual(obj["moon_name"], "Auga V - Moon 1")
+
+
+class TestViewsAreWorking(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.factory = RequestFactory()
+        load_eveuniverse()
+        load_allianceauth()
+        cls.user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=[
+                "moonplanner.access_moonplanner",
+                "moonplanner.access_our_moons",
+                "moonplanner.access_all_moons",
+                "moonplanner.upload_moon_scan",
+                "moonplanner.add_mining_corporation",
+            ],
+            scopes=[
+                "esi-industry.read_corporation_mining.v1",
+                "esi-universe.read_structures.v1",
+                "esi-characters.read_notifications.v1",
+                "esi-corporations.read_structures.v1",
+            ],
+        )
+        helpers.create_moons()
+
+    def test_should_open_extractions_page(self):
+        # given
+        request = self.factory.get(reverse("moonplanner:extractions"))
+        request.user = self.user
+        # when
+        response = views.extractions(request)
+        # then
+        self.assertEqual(response.status_code, 200)
+
+    def test_should_open_add_moon_scan_page(self):
+        # given
+        request = self.factory.get(reverse("moonplanner:add_moon_scan"))
+        request.user = self.user
+        # when
+        response = views.add_moon_scan(request)
+        # then
+        self.assertEqual(response.status_code, 200)
+
+    def test_should_open_all_moons_page(self):
+        # given
+        request = self.factory.get(reverse("moonplanner:moon_list_all"))
+        request.user = self.user
+        # when
+        response = views.moon_list_all(request)
+        # then
+        self.assertEqual(response.status_code, 200)
+
+    def test_should_open_our_moons_page(self):
+        # given
+        request = self.factory.get(reverse("moonplanner:moon_list_ours"))
+        request.user = self.user
+        # when
+        response = views.moon_list_ours(request)
+        # then
+        self.assertEqual(response.status_code, 200)
+
+    def test_should_open_moon_detail_page(self):
+        # given
+        request = self.factory.get(reverse("moonplanner:moon_info", args=["40161708"]))
+        request.user = self.user
+        # when
+        response = views.moon_info(request, 40161708)
+        # then
+        self.assertEqual(response.status_code, 200)

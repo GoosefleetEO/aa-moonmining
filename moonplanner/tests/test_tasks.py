@@ -6,10 +6,11 @@ from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from eveuniverse.models import EveMoon, EveSolarSystem, EveType
 
 from .. import tasks
-from ..models import MiningCorporation, Refinery
+from ..models import MiningCorporation, Moon, Refinery
 from .testdata.esi_client_stub import esi_client_stub
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
+from .testdata.survey_data import fetch_survey_data
 
 MODULE_PATH = "moonplanner.tasks"
 
@@ -58,57 +59,48 @@ class TestRunRefineriesUpdate(NoSocketsTestCase):
     # TODO: test when refinery does not exist for notification
 
 
-# class TestTasks(TestCase):
-#     @classmethod
-#     def setUpClass(cls):
-#         super(TestTasks, cls).setUpClass()
-#         EveRegion.objects.create(region_id=10000030, region_name="Heimatar")
-#         EveSolarSystem.objects.create(
-#             region_id=10000030, solar_system_id=30002542, solar_system_name="Auga"
-#         )
-#         EveType.objects.create(type_id=45506, type_name="Cinnabar")
-#         EveType.objects.create(type_id=46676, type_name="Cubic Bistot")
-#         EveType.objects.create(type_id=46678, type_name="Flawless Arkonor")
-#         EveType.objects.create(type_id=45492, type_name="Bitumens")
-#         EveType.objects.create(type_id=46689, type_name="Stable Veldspar")
-#         EveType.objects.create(type_id=45494, type_name="Cobaltite")
-#         EveType.objects.create(type_id=14, type_name="Moon")
-#         EveItem.objects.create(item_id=40161708)
-#         EveItemDenormalized.objects.create(
-#             item_id=40161708,
-#             item_name="Auga V - Moon 1",
-#             type_id=14,
-#             solar_system_id=30002542,
-#         )
-#         EveItem.objects.create(item_id=40161709)
-#         EveItemDenormalized.objects.create(
-#             item_id=40161709,
-#             item_name="Auga V - Moon 2",
-#             type_id=14,
-#             solar_system_id=30002542,
-#         )
-#         cls.survey_data = survey_data()
-#         cls.user = AuthUtils.create_user("Bruce Wayne")
+class TestProcessSurveyInput(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        load_allianceauth()
+        cls.user, cls.character_ownership = create_user_from_evecharacter(
+            1001,
+            permissions=[
+                "moonplanner.access_moonplanner",
+                "moonplanner.access_our_moons",
+                "moonplanner.add_mining_corporation",
+            ],
+            scopes=[
+                "esi-industry.read_corporation_mining.v1",
+                "esi-universe.read_structures.v1",
+                "esi-characters.read_notifications.v1",
+                "esi-corporations.read_structures.v1",
+            ],
+        )
+        cls.survey_data = fetch_survey_data()
 
-#     def test_process_resources(self):
-#         # process 2 times: first against empty DB,
-#         # second against existing objects
-#         for x in range(2):
-#             self.assertTrue(tasks.process_survey_input(self.survey_data.get(2)))
+    def test_process_resources(self):
+        # process 2 times: first against empty DB,
+        # second against existing objects
+        for x in range(2):
+            self.assertTrue(tasks.process_survey_input(self.survey_data.get(2)))
 
-#             m1 = MoonIncome.objects.get(pk=40161708)
-#             self.assertEqual(m1.moonproduct_set.count(), 4)
-#             self.assertEqual(m1.moonproduct_set.get(ore_type_id=45506).amount, 0.19)
-#             self.assertEqual(m1.moonproduct_set.get(ore_type_id=46676).amount, 0.23)
-#             self.assertEqual(m1.moonproduct_set.get(ore_type_id=46678).amount, 0.25)
-#             self.assertEqual(m1.moonproduct_set.get(ore_type_id=46689).amount, 0.33)
+            m1 = Moon.objects.get(pk=40161708)
+            self.assertEqual(m1.products.count(), 4)
+            self.assertEqual(m1.products.get(eve_type_id=45506).amount, 0.19)
+            self.assertEqual(m1.products.get(eve_type_id=46676).amount, 0.23)
+            self.assertEqual(m1.products.get(eve_type_id=46678).amount, 0.25)
+            self.assertEqual(m1.products.get(eve_type_id=46689).amount, 0.33)
 
-#             m2 = MoonIncome.objects.get(pk=40161709)
-#             self.assertEqual(m2.moonproduct_set.count(), 4)
-#             self.assertEqual(m2.moonproduct_set.get(ore_type_id=45492).amount, 0.27)
-#             self.assertEqual(m2.moonproduct_set.get(ore_type_id=45494).amount, 0.23)
-#             self.assertEqual(m2.moonproduct_set.get(ore_type_id=46676).amount, 0.21)
-#             self.assertEqual(m2.moonproduct_set.get(ore_type_id=46678).amount, 0.29)
+            m2 = Moon.objects.get(pk=40161709)
+            self.assertEqual(m2.products.count(), 4)
+            self.assertEqual(m2.products.get(eve_type_id=45492).amount, 0.27)
+            self.assertEqual(m2.products.get(eve_type_id=45494).amount, 0.23)
+            self.assertEqual(m2.products.get(eve_type_id=46676).amount, 0.21)
+            self.assertEqual(m2.products.get(eve_type_id=46678).amount, 0.29)
+
 
 #     def test_process_resources_bad_data(self):
 #         self.assertFalse(tasks.process_survey_input(self.survey_data.get(3)))

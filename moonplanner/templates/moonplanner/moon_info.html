@@ -22,7 +22,7 @@
                                 <p><strong>Solar System</strong></p>
                             </div>
                             <div class="col-md-9">
-                                <p>{{ moon.solar_system.solar_system_name }}</p>
+                                <p>{{ solar_system.name }}</p>
                             </div>
                         </div>
 
@@ -31,7 +31,7 @@
                                 <p><strong>Security</strong></p>
                             </div>
                             <div class="col-md-9">
-                                <p>{{ moon.solar_system.security | floatformat }}</p>
+                                <p>{{ solar_system.security_status | floatformat }}</p>
                             </div>
                         </div>
 
@@ -40,7 +40,7 @@
                                 <p><strong>Region</strong></p>
                             </div>
                             <div class="col-md-9">
-                                <p>{{ moon.solar_system.region.region_name }}</p>
+                                <p>{{ solar_system.eve_constellation.eve_region.name }}</p>
                             </div>
                         </div>
 

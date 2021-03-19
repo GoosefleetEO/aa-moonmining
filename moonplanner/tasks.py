@@ -10,11 +10,11 @@ from django.db import IntegrityError, transaction
 
 from allianceauth.eveonline.models import EveCharacter
 from allianceauth.notifications import notify
-from eveuniverse.models import EveMarketPrice, EveSolarSystem, EveType
+from eveuniverse.models import EveMarketPrice, EveMoon, EveSolarSystem, EveType
 
 from . import __title__, constants
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
-from .models import (  # MarketPrice,; Moon,
+from .models import (
     Extraction,
     ExtractionProduct,
     MiningCorporation,
@@ -24,12 +24,7 @@ from .models import (  # MarketPrice,; Moon,
 )
 from .providers import esi
 
-# from evesde.models import EveSolarSystem, EveType
-
-
-# add custom tag to logger with name of this app
 logger = LoggerAddTag(logging.getLogger(__name__), __title__)
-
 
 MAX_DISTANCE_TO_MOON_METERS = 3000000
 
@@ -106,27 +101,25 @@ def process_survey_input(scans, user_pk=None):
             try:
                 with transaction.atomic():
                     moon_name = survey[0][0]
-                    solar_system_id = survey[1][4]
                     moon_id = survey[1][6]
-                    moon, _ = Moon.objects.get_or_create(
-                        moon_id=moon_id,
-                        defaults={"solar_system_id": solar_system_id, "income": None},
-                    )
-                    moon.moonproduct_set.all().delete()
+                    eve_moon, _ = EveMoon.objects.get_or_create_esi(id=moon_id)
+                    moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
+                    moon.products.all().delete()
                     survey = survey[1:]
                     for product_data in survey:
                         # Trim off the empty index at the front
                         product_data = product_data[1:]
+                        eve_type, _ = EveType.objects.get_or_create_esi(
+                            id=product_data[2]
+                        )
                         MoonProduct.objects.create(
-                            moon=moon,
-                            amount=product_data[1],
-                            ore_type_id=product_data[2],
+                            moon=moon, amount=product_data[1], eve_type=eve_type
                         )
                     moon.income = moon.calc_income_estimate(
                         MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
                     )
                     moon.save()
-                    logger.info("Added moon survey for %s", moon.name())
+                    logger.info("Added moon survey for %s", moon.eve_moon.name)
 
             except Exception as ex:
                 logger.warning(

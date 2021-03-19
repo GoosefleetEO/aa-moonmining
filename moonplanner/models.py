@@ -1,3 +1,4 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 
@@ -32,13 +33,15 @@ class Moon(models.Model):
     eve_moon = models.OneToOneField(
         EveMoon, on_delete=models.CASCADE, primary_key=True, related_name="income"
     )
-    income = models.FloatField(null=True, default=None)
+    income = models.FloatField(
+        null=True, default=None, validators=[MinValueValidator(0.0)]
+    )
 
     def __str__(self):
         return self.eve_moon.name
 
     def calc_income_estimate(self, total_volume, reprocessing_yield, moon_product=None):
-        """returns newly calculated income estimate for a given volume in ISK
+        """Return newly calculated income estimate for given volume in ISK.
 
         Args:
             total_volume: total excepted ore volume for this moon
@@ -47,11 +50,10 @@ class Moon(models.Model):
 
         Returns:
             income estimate for moon or None if prices or products are missing
-
         """
         income = 0
         if moon_product is None:
-            moon_products = self.moonproduct_set.select_related("eve_type")
+            moon_products = self.products.select_related("eve_type")
             if moon_products.count() == 0:
                 return None
         else:
@@ -64,13 +66,10 @@ class Moon(models.Model):
                     volume = total_volume * product.amount
                     units = volume / volume_per_unit
                     r_units = units / 100
-                    types_qs = EveTypeMaterial.objects.filter(
-                        type=product.eve_type
-                    ).select_related("material_type__marketprice")
-                    for t in types_qs:
+                    for type_material in product.eve_type.materials.all():
                         income += (
-                            t.material_type.marketprice.average_price
-                            * t.quantity
+                            type_material.eve_type.market_price.average_price
+                            * type_material.quantity
                             * r_units
                             * reprocessing_yield
                         )
@@ -93,7 +92,9 @@ class MoonProduct(models.Model):
         limit_choices_to=Q(group__category_id=25),
         related_name="+",
     )
-    amount = models.FloatField()
+    amount = models.FloatField(
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
+    )
 
     def __str__(self):
         return "{} - {}".format(self.eve_type.type_name, self.amount)
@@ -181,12 +182,12 @@ class ExtractionProduct(models.Model):
     )
     eve_type = models.ForeignKey(
         EveType,
-        on_delete=models.DO_NOTHING,
-        null=True,
-        default=None,
-        limit_choices_to=Q(eve_group__eve_category_id=25),
+        on_delete=models.CASCADE,
+        limit_choices_to=Q(
+            eve_group__eve_category_id=constants.EVE_CATEGORY_ID_ASTEROID
+        ),
     )
-    volume = models.FloatField()
+    volume = models.FloatField(validators=[MinValueValidator(0.0)])
 
     # class Meta:
     #     unique_together = (("extraction", "eve_type"),)

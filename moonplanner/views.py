@@ -5,11 +5,10 @@ from datetime import datetime, timezone
 from app_utils.messages import messages_plus
 
 from django.contrib.auth.decorators import login_required, permission_required
-from django.http import JsonResponse
+from django.http import HttpResponseForbidden, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
-from allianceauth.eveonline.evelinks import eveimageserver
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.decorators import token_required
 
@@ -61,72 +60,66 @@ def extractions(request):
 @login_required
 @permission_required("moonplanner.access_moonplanner")
 def moon_info(request, moonid):
-    if len(moonid) == 0 or not moonid:
-        messages_plus.warning(request, "You must specify a moon ID.")
-        return redirect("moonplanner:index")
-
     try:
-        moon = Moon.objects.get(moon_id=moonid)
+        moon = Moon.objects.select_related("eve_moon").get(pk=moonid)
+    except Moon.DoesNotExist:
+        return HttpResponseNotFound()
+    if not request.user.has_perm("moonplanner.access_all_moons") or (
+        moon.is_owned and not request.user.has_perm("moonplanner.access_our_moons")
+    ):
+        return HttpResponseForbidden()
 
-        # check for correct permission to view this moon
-        if request.user.has_perm("moonplanner.access_all_moons"):
-            has_permission = True
-        elif moon.is_owned and request.user.has_perm("moonplanner.access_our_moons"):
-            has_permission = True
-        else:
-            has_permission = False
-
-        if not has_permission:
-            messages_plus.error(request, "You do not have permission to view this moon")
-            return redirect("moonplanner:index")
-
+    income = moon.calc_income_estimate(
+        MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
+    )
+    product_rows = []
+    for product in MoonProduct.objects.select_related(
+        "eve_type", "eve_type__eve_group"
+    ).filter(moon=moon):
+        image_url = product.eve_type.icon_url(64)
+        amount = int(round(product.amount * 100))
         income = moon.calc_income_estimate(
-            MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
+            MOONPLANNER_VOLUME_PER_MONTH,
+            MOONPLANNER_REPROCESSING_YIELD,
+            product,
+        )
+        ore_type_url = "{}{}".format(URL_PROFILE_TYPE, product.eve_type_id)
+        product_rows.append(
+            {
+                "ore_type_name": product.eve_type.name,
+                "ore_type_url": ore_type_url,
+                "ore_group_name": product.eve_type.eve_group.name,
+                "image_url": image_url,
+                "amount": amount,
+                "income": None if income is None else income / 1000000000,
+            }
         )
 
-        products = MoonProduct.objects.filter(moon=moon)
-        product_rows = []
-        if len(products) > 0:
-            for product in products:
-                image_url = eveimageserver.type_icon_url(product.ore_type_id, 64)
-                amount = int(round(product.amount * 100))
-                income = moon.calc_income_estimate(
-                    MOONPLANNER_VOLUME_PER_MONTH,
-                    MOONPLANNER_REPROCESSING_YIELD,
-                    product,
-                )
-                ore_type_url = "{}{}".format(URL_PROFILE_TYPE, product.ore_type_id)
-                product_rows.append(
-                    {
-                        "ore_type_name": product.ore_type.type_name,
-                        "ore_type_url": ore_type_url,
-                        "ore_group_name": product.ore_type.group.group_name,
-                        "image_url": image_url,
-                        "amount": amount,
-                        "income": None if income is None else income / 1000000000,
-                    }
-                )
-
-        today = datetime.today().replace(tzinfo=timezone.utc)
-        if hasattr(moon, "refinery"):
-            next_pull = Extraction.objects.filter(
-                refinery=moon.refinery, ready_time__gte=today
-            ).first()
+    today = datetime.today().replace(tzinfo=timezone.utc)
+    next_pull_data = None
+    ppulls_data = None
+    if hasattr(moon, "refinery"):
+        next_pull = Extraction.objects.filter(
+            refinery=moon.refinery, ready_time__gte=today
+        ).first()
+        if next_pull:
             next_pull_product_rows = list()
             total_value = 0
             total_volume = 0
-            for product in next_pull.extractionproduct_set.all():
-                image_url = eveimageserver.type_icon_url(product.ore_type_id, 32)
+            for product in next_pull.products.select_related(
+                "eve_type", "eve_type__eve_group"
+            ):
+                image_url = product.eve_type.icon_url(32)
                 value = product.calc_value_estimate(MOONPLANNER_REPROCESSING_YIELD)
                 total_value += value
                 total_volume += product.volume
-                ore_type_url = "{}{}".format(URL_PROFILE_TYPE, product.ore_type_id)
+                ore_type_url = "{}{}".format(URL_PROFILE_TYPE, product.eve_type_id)
 
                 next_pull_product_rows.append(
                     {
-                        "ore_type_name": product.ore_type.type_name,
+                        "ore_type_name": product.eve_type.name,
                         "ore_type_url": ore_type_url,
-                        "ore_group_name": product.ore_type.group.group_name,
+                        "ore_group_name": product.eve_type.eve_group.name,
                         "image_url": image_url,
                         "volume": "{:,.0f}".format(product.volume),
                         "value": None if value is None else value / 1000000000,
@@ -144,25 +137,17 @@ def moon_info(request, moonid):
             ppulls_data = Extraction.objects.filter(
                 refinery=moon.refinery, ready_time__lt=today
             )
-        else:
-            next_pull_data = None
-            ppulls_data = None
 
-    except Moon.ObjectDoesNotExist:
-        messages_plus.warning(
-            request, "Moon {} does not exist in the database.".format(moonid)
-        )
-        return redirect("moonplanner:extractions")
-    else:
-        context = {
-            "moon": moon,
-            "moon_name": moon.name(),
-            "moon_income": None if income is None else income / 1000000000,
-            "product_rows": product_rows,
-            "next_pull": next_pull_data,
-            "ppulls": ppulls_data,
-        }
-        return render(request, "moonplanner/moon_info.html", context)
+    context = {
+        "moon": moon,
+        "solar_system": moon.eve_moon.eve_planet.eve_solar_system,
+        "moon_name": moon.eve_moon.name,
+        "moon_income": None if income is None else income / 1000000000,
+        "product_rows": product_rows,
+        "next_pull": next_pull_data,
+        "ppulls": ppulls_data,
+    }
+    return render(request, "moonplanner/moon_info.html", context)
 
 
 @permission_required(("moonplanner.access_moonplanner", "moonplanner.upload_moon_scan"))
