@@ -1,16 +1,16 @@
 from unittest.mock import Mock, patch
 
-from app_utils.testing import create_user_from_evecharacter
+from app_utils.testing import create_user_from_evecharacter, json_response_to_dict
 
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Token
+from eveuniverse.models import EveMoon
 
 from .. import views
-from ..models import MiningCorporation
+from ..models import Moon
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
 
@@ -53,9 +53,10 @@ class TestMoonListData(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.factory = RequestFactory()
         load_eveuniverse()
         load_allianceauth()
-        cls.user, cls.character_ownership = create_user_from_evecharacter(
+        cls.user, _ = create_user_from_evecharacter(
             1001,
             permissions=[
                 "moonplanner.access_moonplanner",
@@ -68,10 +69,23 @@ class TestMoonListData(TestCase):
                 "esi-corporations.read_structures.v1",
             ],
         )
-        cls.mining_corporation = MiningCorporation.objects.create(
-            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
-            character=EveCharacter.objects.get(character_id=1001),
-        )
+        Moon.objects.create(eve_moon=EveMoon.objects.get(id=40131695))
+        Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161708))
+        Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161709))
 
     def test_should_return_all_moons(self):
-        pass
+        # given
+        request = self.factory.get(
+            reverse("moonplanner:moon_list_data", args={"category": "all_moons"})
+        )
+        request.user = self.user
+        middleware = SessionMiddleware()
+        middleware.process_request(request)
+        # when
+        response = views.moon_list_data(request, category="all moons")
+        # then
+        self.assertEqual(response.status_code, 200)
+        data = json_response_to_dict(response)
+        self.assertSetEqual(set(data.keys()), {40131695, 40161708, 40161709})
+        obj = data[40161708]
+        self.assertEqual(obj["moon_name"], "Auga V - Moon 1")

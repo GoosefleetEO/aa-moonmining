@@ -10,7 +10,7 @@
         <h2> {{ title }} </h2>
 
         <div id="loader">
-			<img class="center-block" src="{% static "moonplanner/Spinner-1s-200px.gif" %}" alt="Spinner"/>
+			<img class="center-block" src="{% static 'moonplanner/Spinner-1s-200px.gif' %}" alt="Spinner"/>
 		</div>
 
         <div id="moon_table" style="display: none !important;">
@@ -42,14 +42,14 @@
     <!--load JS for filterDropDown plugin -->
     <script
         type="text/javascript"
-        src="{% static "moonplanner/filterDropDown.min.js" %}">
+        src="{% static 'moonplanner/filterDropDown.min.js' %}">
     </script>
 {% endblock %}
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}
 
     <link
-        href="{% static "moonplanner/moon_list.css" %}"
+        href="{% static 'moonplanner/moon_list.css' %}"
         type="text/css"
         rel="stylesheet"
     >

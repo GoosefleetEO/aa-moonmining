@@ -231,11 +231,13 @@ def moon_list_data(request, category):
         moon_query = [r.moon for r in Refinery.objects.select_related("moon")]
     else:
         moon_query = Moon.objects.select_related(
-            "solar_system__region", "moon__eveitemdenormalized", "refinery"
+            "eve_moon",
+            "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
+            "refinery",
         )
     for moon in moon_query:
-        moon_details_url = reverse("moonplanner:moon_info", args=[moon.moon_id])
-        solar_system_name = moon.solar_system.solar_system_name
+        moon_details_url = reverse("moonplanner:moon_info", args=[moon.pk])
+        solar_system_name = moon.eve_moon.eve_planet.eve_solar_system.name
         solar_system_link = '<a href="{}/{}" target="_blank">{}</a>'.format(
             URL_PROFILE_SOLAR_SYSTEM,
             urllib.parse.quote_plus(solar_system_name),
@@ -251,11 +253,12 @@ def moon_list_data(request, category):
         corporation = str(moon.refinery.corporation) if has_refinery else ""
 
         moon_data = {
-            "moon_name": moon.name(),
+            "id": moon.pk,
+            "moon_name": moon.eve_moon.name,
             "corporation": corporation,
             "solar_system_name": solar_system_name,
             "solar_system_link": solar_system_link,
-            "region_name": moon.solar_system.region.region_name,
+            "region_name": moon.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region.name,
             "income": income,
             "has_refinery": has_refinery,
             "has_refinery_str": "yes" if has_refinery else "no",
