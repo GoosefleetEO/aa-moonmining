@@ -35,7 +35,7 @@ class MiningCorporationAdmin(admin.ModelAdmin):
 
 @admin.register(Refinery)
 class RefineryAdmin(admin.ModelAdmin):
-    list_display = ("name", "eve_moon", "corporation", "eve_type")
+    list_display = ("name", "moon", "corporation", "eve_type")
     list_filter = (
         "corporation__corporation",
         ("type", admin.RelatedOnlyFieldListFilter),

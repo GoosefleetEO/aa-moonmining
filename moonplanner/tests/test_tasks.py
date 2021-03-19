@@ -53,7 +53,7 @@ class TestRunRefineriesUpdate(NoSocketsTestCase):
         # then
         refinery = Refinery.objects.get(id=1000000000001)
         self.assertEqual(refinery.name, "Auga - Paradise Alpha")
-        self.assertEqual(refinery.eve_moon, my_eve_moon)
+        self.assertEqual(refinery.moon.eve_moon, my_eve_moon)
 
     # TODO: test when refinery does not exist for notification
 

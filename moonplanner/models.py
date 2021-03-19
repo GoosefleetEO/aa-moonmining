@@ -5,6 +5,8 @@ from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Token
 from eveuniverse.models import EveMoon, EveType, EveTypeMaterial
 
+from . import constants
+
 
 class MoonPlanner(models.Model):
     """Meta model for global app permissions"""
@@ -21,8 +23,11 @@ class MoonPlanner(models.Model):
         )
 
 
-class MoonIncome(models.Model):
-    TYPE_MOON_ID = 14
+class Moon(models.Model):
+    """Known moon through either survey data or anchored refinery.
+
+    "Head" model for many of the other models
+    """
 
     eve_moon = models.OneToOneField(
         EveMoon, on_delete=models.CASCADE, primary_key=True, related_name="income"
@@ -79,9 +84,7 @@ class MoonIncome(models.Model):
 
 
 class MoonProduct(models.Model):
-    eve_moon = models.ForeignKey(
-        EveMoon, on_delete=models.CASCADE, related_name="products"
-    )
+    moon = models.ForeignKey(Moon, on_delete=models.CASCADE, related_name="products")
     eve_type = models.ForeignKey(
         EveType,
         on_delete=models.DO_NOTHING,
@@ -136,12 +139,11 @@ class MiningCorporation(models.Model):
 
 
 class Refinery(models.Model):
-    TYPE_REFINERY_ID = 1406
 
     id = models.BigIntegerField(primary_key=True)
     name = models.CharField(max_length=150)
-    eve_moon = models.OneToOneField(
-        EveMoon,
+    moon = models.OneToOneField(
+        Moon,
         on_delete=models.SET_DEFAULT,
         default=None,
         null=True,
@@ -151,7 +153,7 @@ class Refinery(models.Model):
     eve_type = models.ForeignKey(
         EveType,
         on_delete=models.CASCADE,
-        limit_choices_to={"id": TYPE_REFINERY_ID},
+        limit_choices_to={"eve_group_id": constants.EVE_GROUP_ID_REFINERY},
         related_name="+",
     )
 

@@ -8,7 +8,6 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
-from django.views.decorators.cache import cache_page
 
 from allianceauth.eveonline.evelinks import eveimageserver
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
@@ -16,8 +15,11 @@ from esi.decorators import token_required
 
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
 from .forms import MoonScanForm
-from .models import Extraction, MiningCorporation, MoonIncome, MoonProduct, Refinery
+from .models import Extraction, MiningCorporation, Moon, MoonProduct, Refinery
 from .tasks import process_survey_input, run_refineries_update
+
+# from django.views.decorators.cache import cache_page
+
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +66,7 @@ def moon_info(request, moonid):
         return redirect("moonplanner:index")
 
     try:
-        moon = MoonIncome.objects.get(moon_id=moonid)
+        moon = Moon.objects.get(moon_id=moonid)
 
         # check for correct permission to view this moon
         if request.user.has_perm("moonplanner.access_all_moons"):
@@ -146,7 +148,7 @@ def moon_info(request, moonid):
             next_pull_data = None
             ppulls_data = None
 
-    except MoonIncome.ObjectDoesNotExist:
+    except Moon.ObjectDoesNotExist:
         messages_plus.warning(
             request, "Moon {} does not exist in the database.".format(moonid)
         )
@@ -219,7 +221,7 @@ def moon_list_all(request):
     return render(request, "moonplanner/moon_list.html", context)
 
 
-@cache_page(60 * 5)
+# @cache_page(60 * 5) TODO: Remove for release
 @login_required()
 @permission_required("moonplanner.access_moonplanner")
 def moon_list_data(request, category):
@@ -228,7 +230,7 @@ def moon_list_data(request, category):
     if category == "our_moons":
         moon_query = [r.moon for r in Refinery.objects.select_related("moon")]
     else:
-        moon_query = MoonIncome.objects.select_related(
+        moon_query = Moon.objects.select_related(
             "solar_system__region", "moon__eveitemdenormalized", "refinery"
         )
     for moon in moon_query:

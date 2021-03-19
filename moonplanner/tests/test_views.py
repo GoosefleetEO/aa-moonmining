@@ -6,9 +6,11 @@ from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Token
 
 from .. import views
+from ..models import MiningCorporation
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
 
@@ -45,3 +47,31 @@ class TestAddMinningCorporation(TestCase):
         self.assertEqual(response.url, reverse("moonplanner:extractions"))
         self.assertTrue(mock_messages.success.called)
         self.assertTrue(mock_run_refineries_update.delay.called)
+
+
+class TestMoonListData(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        load_allianceauth()
+        cls.user, cls.character_ownership = create_user_from_evecharacter(
+            1001,
+            permissions=[
+                "moonplanner.access_moonplanner",
+                "moonplanner.access_our_moons",
+            ],
+            scopes=[
+                "esi-industry.read_corporation_mining.v1",
+                "esi-universe.read_structures.v1",
+                "esi-characters.read_notifications.v1",
+                "esi-corporations.read_structures.v1",
+            ],
+        )
+        cls.mining_corporation = MiningCorporation.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character=EveCharacter.objects.get(character_id=1001),
+        )
+
+    def test_should_return_all_moons(self):
+        pass

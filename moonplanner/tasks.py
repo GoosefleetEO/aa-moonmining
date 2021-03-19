@@ -12,13 +12,13 @@ from allianceauth.eveonline.models import EveCharacter
 from allianceauth.notifications import notify
 from eveuniverse.models import EveMarketPrice, EveSolarSystem, EveType
 
-from . import __title__
+from . import __title__, constants
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
 from .models import (  # MarketPrice,; Moon,
     Extraction,
     ExtractionProduct,
     MiningCorporation,
-    MoonIncome,
+    Moon,
     MoonProduct,
     Refinery,
 )
@@ -30,8 +30,7 @@ from .providers import esi
 # add custom tag to logger with name of this app
 logger = LoggerAddTag(logging.getLogger(__name__), __title__)
 
-REFINERY_GROUP_ID = 1406
-MOON_GROUP_ID = 8
+
 MAX_DISTANCE_TO_MOON_METERS = 3000000
 
 
@@ -109,7 +108,7 @@ def process_survey_input(scans, user_pk=None):
                     moon_name = survey[0][0]
                     solar_system_id = survey[1][4]
                     moon_id = survey[1][6]
-                    moon, _ = MoonIncome.objects.get_or_create(
+                    moon, _ = Moon.objects.get_or_create(
                         moon_id=moon_id,
                         defaults={"solar_system_id": solar_system_id, "income": None},
                     )
@@ -198,7 +197,7 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
         user_report = list()
         for refinery in all_structures:
             eve_type, _ = EveType.objects.get_or_create_esi(id=refinery["type_id"])
-            if eve_type.eve_group_id == REFINERY_GROUP_ID:
+            if eve_type.eve_group_id == constants.EVE_GROUP_ID_REFINERY:
                 # determine moon next to refinery
                 structure_info = (
                     esi.client.Universe.get_universe_structures_structure_id(
@@ -213,12 +212,16 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
                     structure_info["position"]["x"],
                     structure_info["position"]["y"],
                     structure_info["position"]["z"],
-                    group_id=MOON_GROUP_ID,
+                    group_id=constants.EVE_GROUP_ID_MOON,
                     max_distance=MAX_DISTANCE_TO_MOON_METERS,
                 )
 
-                if nearest_celestial and nearest_celestial.eve_type.id == 14:
+                if (
+                    nearest_celestial
+                    and nearest_celestial.eve_type.id == constants.EVE_TYPE_ID_MOON
+                ):
                     eve_moon = nearest_celestial.eve_object
+                    moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
                     eve_type, _ = EveType.objects.get_or_create_esi(
                         id=structure_info["type_id"]
                     )
@@ -227,7 +230,7 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
                         defaults={
                             "name": structure_info["name"],
                             "eve_type": eve_type,
-                            "eve_moon": eve_moon,
+                            "moon": moon,
                             "corporation": mining_corp,
                         },
                     )
@@ -342,11 +345,11 @@ def update_moon_income():
 
         logger.info(
             "Started re-calculating moon income for {:,} moons".format(
-                MoonIncome.objects.count()
+                Moon.objects.count()
             )
         )
         with transaction.atomic():
-            for moon in MoonIncome.objects.all():
+            for moon in Moon.objects.all():
                 moon.income = moon.calc_income_estimate(
                     MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
                 )
