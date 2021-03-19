@@ -90,6 +90,42 @@ class TestMoonListData(TestCase):
         self.assertEqual(obj["moon_name"], "Auga V - Moon 1")
 
 
+class TestMoonInfo(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.factory = RequestFactory()
+        load_eveuniverse()
+        load_allianceauth()
+        cls.user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=[
+                "moonplanner.access_moonplanner",
+                "moonplanner.access_our_moons",
+                "moonplanner.access_all_moons",
+                "moonplanner.upload_moon_scan",
+                "moonplanner.add_mining_corporation",
+            ],
+            scopes=[
+                "esi-industry.read_corporation_mining.v1",
+                "esi-universe.read_structures.v1",
+                "esi-characters.read_notifications.v1",
+                "esi-corporations.read_structures.v1",
+            ],
+        )
+        moon = helpers.create_moon()
+        helpers.add_refinery(moon)
+
+    def test_should_open_page(self):
+        # given
+        request = self.factory.get(reverse("moonplanner:moon_info", args=["40161708"]))
+        request.user = self.user
+        # when
+        response = views.moon_info(request, 40161708)
+        # then
+        self.assertEqual(response.status_code, 200)
+
+
 class TestViewsAreWorking(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -113,7 +149,8 @@ class TestViewsAreWorking(TestCase):
                 "esi-corporations.read_structures.v1",
             ],
         )
-        helpers.create_moons()
+        moon = helpers.create_moon()
+        helpers.add_refinery(moon)
 
     def test_should_open_extractions_page(self):
         # given
@@ -148,14 +185,5 @@ class TestViewsAreWorking(TestCase):
         request.user = self.user
         # when
         response = views.moon_list_ours(request)
-        # then
-        self.assertEqual(response.status_code, 200)
-
-    def test_should_open_moon_detail_page(self):
-        # given
-        request = self.factory.get(reverse("moonplanner:moon_info", args=["40161708"]))
-        request.user = self.user
-        # when
-        response = views.moon_info(request, 40161708)
         # then
         self.assertEqual(response.status_code, 200)

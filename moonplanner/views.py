@@ -111,7 +111,7 @@ def moon_info(request, moonid):
             ):
                 image_url = product.eve_type.icon_url(32)
                 value = product.calc_value_estimate(MOONPLANNER_REPROCESSING_YIELD)
-                total_value += value
+                total_value += value if value else 0
                 total_volume += product.volume
                 ore_type_url = "{}{}".format(URL_PROFILE_TYPE, product.eve_type_id)
 

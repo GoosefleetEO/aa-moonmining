@@ -6,7 +6,7 @@ from app_utils.logging import LoggerAddTag
 from celery import shared_task
 
 from django.contrib.auth.models import User
-from django.db import IntegrityError, transaction
+from django.db import transaction
 
 from allianceauth.eveonline.models import EveCharacter
 from allianceauth.notifications import notify
@@ -99,7 +99,7 @@ def process_survey_input(scans, user_pk=None):
         moon_name = None
         for survey in surveys:
             try:
-                with transaction.atomic():
+                with transaction.atomic():  # TODO: remove transaction
                     moon_name = survey[0][0]
                     moon_id = survey[1][6]
                     eve_moon, _ = EveMoon.objects.get_or_create_esi(id=moon_id)
@@ -110,7 +110,8 @@ def process_survey_input(scans, user_pk=None):
                         # Trim off the empty index at the front
                         product_data = product_data[1:]
                         eve_type, _ = EveType.objects.get_or_create_esi(
-                            id=product_data[2]
+                            id=product_data[2],
+                            enabled_sections=[EveType.Section.TYPE_MATERIALS],
                         )
                         MoonProduct.objects.create(
                             moon=moon, amount=product_data[1], eve_type=eve_type
@@ -262,7 +263,10 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
                 last_extraction_started[id] = extraction
                 ore_volume_by_type = parsed_text["oreVolumeByType"].items()
                 for ore_type_id, ore_volume in ore_volume_by_type:
-                    eve_type, _ = EveType.objects.get_or_create_esi(id=ore_type_id)
+                    eve_type, _ = EveType.objects.get_or_create_esi(
+                        id=ore_type_id,
+                        enabled_sections=[EveType.Section.TYPE_MATERIALS],
+                    )
                     ExtractionProduct.objects.get_or_create(
                         extraction=extraction,
                         eve_type=eve_type,
@@ -313,41 +317,10 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
 @shared_task
 def update_moon_income():
     """update the income for all moons"""
-    try:
-        logger.info("Starting ESI client...")
-        logger.info("Fetching market prices from ESI...")
-        market_data = esi.client.Market.get_markets_prices().result()
-        logger.info("Storing market prices...")
-        for row in market_data:
-            average_price = row["average_price"] if "average_price" in row else None
-            adjusted_price = row["adjusted_price"] if "adjusted_price" in row else None
-            try:
-                EveMarketPrice.objects.update_or_create(
-                    type_id=row["type_id"],
-                    defaults={
-                        "average_price": average_price,
-                        "adjusted_price": adjusted_price,
-                    },
-                )
-            except IntegrityError as error:
-                # ignore rows which no matching evetype in the DB
-                logger.info(
-                    "failed to add row for type ID {} due to "
-                    "IntegrityError: {}".format(row["type_id"], error)
-                )
-
-        logger.info(
-            "Started re-calculating moon income for {:,} moons".format(
-                Moon.objects.count()
-            )
+    EveMarketPrice.objects.update_from_esi()
+    logger.info("Re-calculating moon income for %d moons...", Moon.objects.count())
+    for moon in Moon.objects.all():
+        moon.income = moon.calc_income_estimate(
+            MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
         )
-        with transaction.atomic():
-            for moon in Moon.objects.all():
-                moon.income = moon.calc_income_estimate(
-                    MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
-                )
-                moon.save()
-        logger.info("Completed re-calculating moon income")
-
-    except Exception as ex:
-        logger.error("An unexpected error occurred: {}".format(ex))
+        moon.save()

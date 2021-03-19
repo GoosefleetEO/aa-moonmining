@@ -4,7 +4,7 @@ from django.db.models import Q
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from esi.models import Token
-from eveuniverse.models import EveMoon, EveType, EveTypeMaterial
+from eveuniverse.models import EveMoon, EveType
 
 from . import constants
 
@@ -67,12 +67,14 @@ class Moon(models.Model):
                     units = volume / volume_per_unit
                     r_units = units / 100
                     for type_material in product.eve_type.materials.all():
-                        income += (
-                            type_material.eve_type.market_price.average_price
-                            * type_material.quantity
-                            * r_units
-                            * reprocessing_yield
-                        )
+                        price = type_material.eve_type.market_price.average_price
+                        if price:
+                            income += (
+                                price
+                                * type_material.quantity
+                                * r_units
+                                * reprocessing_yield
+                            )
         except models.ObjectDoesNotExist:
             income = None
 
@@ -209,14 +211,12 @@ class ExtractionProduct(models.Model):
         r_units = units / 100
         value = 0
         try:
-            types_qs = EveTypeMaterial.objects.filter(type=self.eve_type)
-            for t in types_qs:
-                value += (
-                    t.material_type.marketprice.average_price
-                    * t.quantity
-                    * r_units
-                    * reprocessing_yield
-                )
+            for type_material in self.eve_type.materials.all():
+                price = type_material.eve_type.market_price.average_price
+                if price:
+                    value += (
+                        price * type_material.quantity * r_units * reprocessing_yield
+                    )
         except models.ObjectDoesNotExist:
             value = None
         else:

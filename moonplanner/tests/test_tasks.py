@@ -3,10 +3,11 @@ from unittest.mock import patch
 from app_utils.testing import NoSocketsTestCase, create_user_from_evecharacter
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-from eveuniverse.models import EveMoon, EveSolarSystem, EveType
+from eveuniverse.models import EveMarketPrice, EveMoon, EveSolarSystem, EveType
 
 from .. import tasks
 from ..models import MiningCorporation, Moon, Refinery
+from . import helpers
 from .testdata.esi_client_stub import esi_client_stub
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
@@ -101,24 +102,53 @@ class TestProcessSurveyInput(NoSocketsTestCase):
             self.assertEqual(m2.products.get(eve_type_id=46676).amount, 0.21)
             self.assertEqual(m2.products.get(eve_type_id=46678).amount, 0.29)
 
+    def test_process_resources_bad_data(self):
+        # when
+        result = tasks.process_survey_input(self.survey_data.get(3))
+        # then
+        self.assertFalse(result)
 
-#     def test_process_resources_bad_data(self):
-#         self.assertFalse(tasks.process_survey_input(self.survey_data.get(3)))
+    @patch(MODULE_PATH + ".notify")
+    def test_notification_on_success(self, mock_notify):
+        result = tasks.process_survey_input(self.survey_data.get(2), self.user.pk)
+        self.assertTrue(result)
+        self.assertTrue(mock_notify.called)
+        _, kwargs = mock_notify.call_args
+        self.assertEqual(kwargs["user"], self.user)
+        self.assertEqual(kwargs["level"], "success")
 
-#     @patch(MODULE_PATH + ".notify")
-#     def test_notification_on_success(self, mock_notify):
-#         result = tasks.process_survey_input(self.survey_data.get(2), self.user.pk)
-#         self.assertTrue(result)
-#         self.assertTrue(mock_notify.called)
-#         _, kwargs = mock_notify.call_args
-#         self.assertEqual(kwargs["user"], self.user)
-#         self.assertEqual(kwargs["level"], "success")
+    @patch(MODULE_PATH + ".notify")
+    def test_notification_on_error_1(self, mock_notify):
+        result = tasks.process_survey_input("invalid input", self.user.pk)
+        self.assertFalse(result)
+        self.assertTrue(mock_notify.called)
+        _, kwargs = mock_notify.call_args
+        self.assertEqual(kwargs["user"], self.user)
+        self.assertEqual(kwargs["level"], "danger")
 
-#     @patch(MODULE_PATH + ".notify")
-#     def test_notification_on_error_1(self, mock_notify):
-#         result = tasks.process_survey_input("invalid input", self.user.pk)
-#         self.assertFalse(result)
-#         self.assertTrue(mock_notify.called)
-#         _, kwargs = mock_notify.call_args
-#         self.assertEqual(kwargs["user"], self.user)
-#         self.assertEqual(kwargs["level"], "danger")
+
+@patch(MODULE_PATH + ".EveMarketPrice.objects.update_from_esi", new=lambda: None)
+class TestUpdateMoonIncome(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        cls.moon = helpers.create_moon()
+        EveMarketPrice.objects.create(
+            eve_type=EveType.objects.get(id=45506), average_price=1, adjusted_price=2
+        )
+        EveMarketPrice.objects.create(
+            eve_type=EveType.objects.get(id=46676), average_price=2, adjusted_price=3
+        )
+        EveMarketPrice.objects.create(
+            eve_type=EveType.objects.get(id=46678), average_price=3, adjusted_price=4
+        )
+        EveMarketPrice.objects.create(
+            eve_type=EveType.objects.get(id=46689), average_price=4, adjusted_price=5
+        )
+
+    def test_should_update_all(self):
+        # when
+        tasks.update_moon_income()
+        # then
+        ...  # TODO: add asserts

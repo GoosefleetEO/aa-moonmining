@@ -25,21 +25,31 @@ sys.path.insert(0, str(myauth_dir))
 
 import django
 from django.apps import apps
-from django.utils.timezone import now
 
 # init and setup django project
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myauth.settings.local")
 django.setup()
 
 """SCRIPT"""
+import datetime as dt
 import json
 import random
 from pathlib import Path
 
+from django.utils.timezone import now
+
 from allianceauth.eveonline.models import EveCorporationInfo
 from eveuniverse.models import EveMoon, EveType
 
-from moonplanner.models import MiningCorporation, Moon, MoonProduct, Refinery
+from moonplanner.app_settings import MOONPLANNER_VOLUME_PER_MONTH
+from moonplanner.models import (
+    Extraction,
+    ExtractionProduct,
+    MiningCorporation,
+    Moon,
+    MoonProduct,
+    Refinery,
+)
 
 MAX_MOONS = 5
 MAX_REFINERIES = 2
@@ -73,7 +83,9 @@ for moon_id in random.choices(moon_ids, k=MAX_MOONS):
     if created:
         percentages = random_percentages(4)
         for ore_type_id in random.choices(ore_type_ids, k=4):
-            eve_type, _ = EveType.objects.get_or_create_esi(id=ore_type_id)
+            eve_type, _ = EveType.objects.get_or_create_esi(
+                id=ore_type_id, enabled_sections=[EveType.Section.TYPE_MATERIALS]
+            )
             MoonProduct.objects.create(
                 moon=moon, eve_type=eve_type, amount=percentages.pop() / 100
             )
@@ -87,12 +99,25 @@ except EveCorporationInfo.DoesNotExist:
         corp_id=GURISTAS_CORPORATION_ID
     )
 corporation, _ = MiningCorporation.objects.get_or_create(corporation=eve_corporation)
+Refinery.objects.filter(corporation=corporation).delete()
 eve_type, _ = EveType.objects.get_or_create_esi(id=35835)
-for moon in Moon.objects.all()[:MAX_REFINERIES]:
+for moon in Moon.objects.order_by("?")[:MAX_REFINERIES]:
     if not hasattr(moon, "refinery"):
         print(f"Creating refinery for moon: {moon}")
-        Refinery.objects.create(
+        refinery = Refinery.objects.create(
             id=moon.eve_moon.id, moon=moon, corporation=corporation, eve_type=eve_type
         )
+        ready_days = random.randint(7, 30)
+        extraction = Extraction.objects.create(
+            refinery=refinery,
+            ready_time=now() + dt.timedelta(days=ready_days),
+            auto_time=now() + dt.timedelta(days=ready_days, hours=12),
+        )
+        for product in moon.products.all():
+            ExtractionProduct.objects.create(
+                extraction=extraction,
+                eve_type=product.eve_type,
+                volume=MOONPLANNER_VOLUME_PER_MONTH * product.amount,
+            )
 
 print("DONE")
