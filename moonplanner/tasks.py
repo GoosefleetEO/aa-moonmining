@@ -186,8 +186,6 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
             raise EveCharacter.DoesNotExist()
 
         token = mining_corp.fetch_token()
-        logger.info("%s: Using token from %s", mining_corp, mining_corp.character)
-
         logger.info("%s: Fetching corp structures from ESI", mining_corp)
         all_structures = (
             esi.client.Corporation.get_corporations_corporation_id_structures(
@@ -225,7 +223,7 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
                         id=structure_info["type_id"]
                     )
                     refinery, _ = Refinery.objects.update_or_create(
-                        structure_id=refinery["structure_id"],
+                        id=refinery["structure_id"],
                         defaults={
                             "name": structure_info["name"],
                             "eve_type": eve_type,
@@ -253,9 +251,9 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
         for notification in sorted(notifications, key=lambda k: k["timestamp"]):
             if notification["type"] == "MoonminingExtractionStarted":
                 parsed_text = yaml.safe_load(notification["text"])
-                structure_id = parsed_text["structureID"]
+                id = parsed_text["structureID"]
                 try:
-                    refinery = Refinery.objects.get(structure_id=structure_id)
+                    refinery = Refinery.objects.get(id=id)
                 except Refinery.DoesNotExist:
                     continue  # we ignore notifications for unknown refineries
                 extraction, _ = Extraction.objects.get_or_create(
@@ -265,7 +263,7 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
                         "auto_time": ldap_time_2_datetime(parsed_text["autoTime"])
                     },
                 )
-                last_extraction_started[structure_id] = extraction
+                last_extraction_started[id] = extraction
                 ore_volume_by_type = parsed_text["oreVolumeByType"].items()
                 for ore_type_id, ore_volume in ore_volume_by_type:
                     eve_type, _ = EveType.objects.get_or_create_esi(id=ore_type_id)
@@ -279,16 +277,16 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
             # and not finished
             if notification["type"] == "MoonminingExtractionCancelled":
                 parsed_text = yaml.safe_load(notification["text"])
-                structure_id = parsed_text["structureID"]
-                if structure_id in last_extraction_started:
-                    extraction = last_extraction_started[structure_id]
+                id = parsed_text["structureID"]
+                if id in last_extraction_started:
+                    extraction = last_extraction_started[id]
                     extraction.delete()
 
             if notification["type"] == "MoonminingExtractionFinished":
                 parsed_text = yaml.safe_load(notification["text"])
-                structure_id = parsed_text["structureID"]
-                if structure_id in last_extraction_started:
-                    del last_extraction_started[structure_id]
+                id = parsed_text["structureID"]
+                if id in last_extraction_started:
+                    del last_extraction_started[id]
 
     except Exception as ex:
         logger.error("%s: An unexpected error occurred", mining_corp, exc_info=True)

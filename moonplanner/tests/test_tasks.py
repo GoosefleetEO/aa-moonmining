@@ -51,7 +51,7 @@ class TestRunRefineriesUpdate(NoSocketsTestCase):
         # when
         tasks.run_refineries_update(self.mining_corporation.pk)
         # then
-        refinery = Refinery.objects.get(structure_id=1000000000001)
+        refinery = Refinery.objects.get(id=1000000000001)
         self.assertEqual(refinery.name, "Auga - Paradise Alpha")
         self.assertEqual(refinery.eve_moon, my_eve_moon)
 

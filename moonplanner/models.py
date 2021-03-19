@@ -138,7 +138,8 @@ class MiningCorporation(models.Model):
 class Refinery(models.Model):
     TYPE_REFINERY_ID = 1406
 
-    structure_id = models.BigIntegerField(primary_key=True)
+    id = models.BigIntegerField(primary_key=True)
+    name = models.CharField(max_length=150)
     eve_moon = models.OneToOneField(
         EveMoon,
         on_delete=models.SET_DEFAULT,
@@ -146,7 +147,6 @@ class Refinery(models.Model):
         null=True,
         related_name="refinery",
     )
-    name = models.CharField(max_length=150)
     corporation = models.ForeignKey(MiningCorporation, on_delete=models.CASCADE)
     eve_type = models.ForeignKey(
         EveType,
