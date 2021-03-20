@@ -212,7 +212,7 @@ class ExtractionProduct(models.Model):
     def __str__(self):
         return "{} - {}".format(self.extraction, self.eve_type)
 
-    def calc_value_estimate(self, reprocessing_yield):
+    def calc_value_estimate(self, reprocessing_yield=None):
         """returns calculated value estimate in ISK
 
         Args:
@@ -221,6 +221,8 @@ class ExtractionProduct(models.Model):
             value estimate or None if prices are missing
 
         """
+        if not reprocessing_yield:
+            reprocessing_yield = MOONPLANNER_REPROCESSING_YIELD
         volume_per_unit = self.eve_type.volume
         units = self.volume / volume_per_unit
         r_units = units / 100

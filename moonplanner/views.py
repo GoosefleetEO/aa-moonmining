@@ -14,7 +14,7 @@ from esi.decorators import token_required
 
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
 from .forms import MoonScanForm
-from .models import Extraction, MiningCorporation, Moon, MoonProduct, Refinery
+from .models import Extraction, MiningCorporation, Moon, MoonProduct
 from .tasks import process_survey_input, run_refineries_update
 
 # from django.views.decorators.cache import cache_page
@@ -73,9 +73,11 @@ def moon_info(request, moonid):
         MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
     )
     product_rows = []
-    for product in MoonProduct.objects.select_related(
-        "eve_type", "eve_type__eve_group"
-    ).filter(moon=moon):
+    for product in (
+        MoonProduct.objects.select_related("eve_type", "eve_type__eve_group")
+        .filter(moon=moon)
+        .order_by("eve_type__name")
+    ):
         image_url = product.eve_type.icon_url(64)
         amount = int(round(product.amount * 100))
         income = moon.calc_income_estimate(
@@ -108,13 +110,12 @@ def moon_info(request, moonid):
             total_volume = 0
             for product in next_pull.products.select_related(
                 "eve_type", "eve_type__eve_group"
-            ):
+            ).order_by("eve_type__name"):
                 image_url = product.eve_type.icon_url(32)
-                value = product.calc_value_estimate(MOONPLANNER_REPROCESSING_YIELD)
+                value = product.calc_value_estimate()
                 total_value += value if value else 0
                 total_volume += product.volume
                 ore_type_url = "{}{}".format(URL_PROFILE_TYPE, product.eve_type_id)
-
                 next_pull_product_rows.append(
                     {
                         "ore_type_name": product.eve_type.name,
@@ -212,14 +213,14 @@ def moon_list_all(request):
 def moon_list_data(request, category):
     """returns moon list in JSON for DataTables AJAX"""
     data = list()
+    moon_query = Moon.objects.select_related(
+        "eve_moon",
+        "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
+        "refinery",
+    )
     if category == "our_moons":
-        moon_query = [r.moon for r in Refinery.objects.select_related("moon")]
-    else:
-        moon_query = Moon.objects.select_related(
-            "eve_moon",
-            "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
-            "refinery",
-        )
+        moon_query = moon_query.filter(refinery__isnull=False)
+
     for moon in moon_query:
         moon_details_url = reverse("moonplanner:moon_info", args=[moon.pk])
         solar_system_name = moon.eve_moon.eve_planet.eve_solar_system.name

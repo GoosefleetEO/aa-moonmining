@@ -74,6 +74,6 @@ class TestExtractionProduct(NoSocketsTestCase):
         )
         obj = ExtractionProduct.objects.first()
         # when
-        result = obj.calc_value_estimate(0.7)
+        result = obj.calc_value_estimate()
         # then
         self.assertIsNotNone(result)

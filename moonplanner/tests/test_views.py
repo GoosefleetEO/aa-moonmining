@@ -1,3 +1,4 @@
+import datetime as dt
 from unittest.mock import Mock, patch
 
 from app_utils.testing import create_user_from_evecharacter, json_response_to_dict
@@ -5,12 +6,13 @@ from app_utils.testing import create_user_from_evecharacter, json_response_to_di
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
+from django.utils.timezone import now
 
 from esi.models import Token
 from eveuniverse.models import EveMoon
 
 from .. import views
-from ..models import Moon
+from ..models import Extraction, Moon, Refinery
 from . import helpers
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
@@ -81,13 +83,49 @@ class TestMoonListData(TestCase):
         )
         request.user = self.user
         # when
-        response = views.moon_list_data(request, category="all moons")
+        response = views.moon_list_data(request, category="all_moons")
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
         self.assertSetEqual(set(data.keys()), {40131695, 40161708, 40161709})
         obj = data[40161708]
         self.assertEqual(obj["moon_name"], "Auga V - Moon 1")
+
+    def test_should_return_our_moons_only(self):
+        # given
+        request = self.factory.get(
+            reverse("moonplanner:moon_list_data", args={"category": "our_moons"})
+        )
+        request.user = self.user
+        moon = Moon.objects.get(pk=40131695)
+        helpers.add_refinery(moon)
+        # when
+        response = views.moon_list_data(request, category="our_moons")
+        # then
+        self.assertEqual(response.status_code, 200)
+        data = json_response_to_dict(response)
+        self.assertSetEqual(set(data.keys()), {40131695})
+
+    def test_should_handle_empty_refineries(self):
+        # given
+        request = self.factory.get(
+            reverse("moonplanner:moon_list_data", args={"category": "our_moons"})
+        )
+        request.user = self.user
+        moon = Moon.objects.get(pk=40131695)
+        refinery = helpers.add_refinery(moon)
+        Refinery.objects.create(
+            id=99,
+            name="Empty refinery",
+            corporation=refinery.corporation,
+            eve_type_id=35835,
+        )
+        # when
+        response = views.moon_list_data(request, category="our_moons")
+        # then
+        self.assertEqual(response.status_code, 200)
+        data = json_response_to_dict(response)
+        self.assertSetEqual(set(data.keys()), {40131695})
 
 
 class TestMoonInfo(TestCase):
@@ -149,8 +187,8 @@ class TestViewsAreWorking(TestCase):
                 "esi-corporations.read_structures.v1",
             ],
         )
-        moon = helpers.create_moon()
-        helpers.add_refinery(moon)
+        cls.moon = helpers.create_moon()
+        cls.refinery = helpers.add_refinery(cls.moon)
 
     def test_should_open_extractions_page(self):
         # given
@@ -185,5 +223,25 @@ class TestViewsAreWorking(TestCase):
         request.user = self.user
         # when
         response = views.moon_list_ours(request)
+        # then
+        self.assertEqual(response.status_code, 200)
+
+    def test_should_handle_empty_refineries_extractions_page(self):
+        # given
+        request = self.factory.get(reverse("moonplanner:extractions"))
+        request.user = self.user
+        refinery = Refinery.objects.create(
+            id=99,
+            name="Empty refinery",
+            corporation=self.refinery.corporation,
+            eve_type_id=35835,
+        )
+        Extraction.objects.create(
+            refinery=refinery,
+            ready_time=now() + dt.timedelta(days=1),
+            auto_time=now() + dt.timedelta(days=1),
+        )
+        # when
+        response = views.extractions(request)
         # then
         self.assertEqual(response.status_code, 200)

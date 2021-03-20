@@ -19,9 +19,11 @@
                         <td class="text-center">{{ extraction.refinery.moon.eve_moon.name }}</td>
                         <td class="text-center">{{ extraction.refinery.corporation }}</td>
                         <td class="text-center">
-                            <a class="btn btn-primary btn-sm" href="{% url 'moonplanner:moon_info' extraction.refinery.moon.pk %}">
-                                <i class="fas fa-eye"></i>
-                            </a>
+                            {% if extraction.refinery.moon.pk %}
+                                <a class="btn btn-primary btn-sm" href="{% url 'moonplanner:moon_info' extraction.refinery.moon.pk %}">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            {% endif %}
                         </td>
                     </tr>
                 {% endfor %}
