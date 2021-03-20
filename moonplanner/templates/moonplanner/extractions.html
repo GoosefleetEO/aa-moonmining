@@ -28,51 +28,52 @@
     </div>
 
 {% endblock %}
+
 {% block extra_javascript %}
     {% include 'bundles/datatables-js.html' %}
-    <script
-        type="text/javascript"
-        src="{% static 'moonplanner/filterDropDown.min.js' %}">
+    <script type="text/javascript" src="{% static 'js/filterDropDown/filterDropDown.min.js' %}"></script>
+    <script type="text/javascript">
+        $(function() {
+            $('#tab_upcoming').DataTable({
+                order: [ [0, "asc"], [1, "asc"] ],
+
+                columnDefs: [
+                    { "orderable": false, "targets": [ 3 ] }
+                ],
+                filterDropDown: {
+                    columns: [
+                        {
+                            idx: 2
+                        }
+                    ],
+                    bootstrap: true,
+                    autoSize: false
+                }
+            });
+            $('#tab_recent').DataTable({
+                order: [ [0, "asc"], [1, "asc"] ],
+
+                columnDefs: [
+                    { "orderable": false, "targets": [ 3 ] }
+                ],
+                filterDropDown: {
+                    columns: [
+                        {
+                            idx: 2
+                        }
+                    ],
+                    bootstrap: true,
+                    autoSize: false
+                }
+            });
+        });
+
     </script>
 {% endblock %}
+
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}
 {% endblock %}
 
 {% block extra_script %}
-
-    $(function() {
-        $('#tab_upcoming').DataTable({
-            order: [ [0, "asc"], [1, "asc"] ],
-
-            columnDefs: [
-                { "orderable": false, "targets": [ 3 ] }
-            ],
-            filterDropDown: {
-                columns: [
-                    {
-                        idx: 2
-                    }
-                ],
-                bootstrap: true,
-                autoSize: false
-            }
-        });
-        $('#tab_recent').DataTable({
-            order: [ [0, "asc"], [1, "asc"] ],
-
-            columnDefs: [
-                { "orderable": false, "targets": [ 3 ] }
-            ],
-            filterDropDown: {
-                columns: [
-                    {
-                        idx: 2
-                    }
-                ],
-                bootstrap: true,
-                autoSize: false
-            }
-        });
-    });
 {% endblock %}
