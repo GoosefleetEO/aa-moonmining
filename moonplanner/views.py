@@ -94,6 +94,7 @@ def moon_info(request, moonid):
                 "image_url": image_url,
                 "amount": amount,
                 "income": None if income is None else income / 1000000000,
+                "updated_at": product.updated_at,
             }
         )
 

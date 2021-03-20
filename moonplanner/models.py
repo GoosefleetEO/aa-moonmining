@@ -135,6 +135,7 @@ class MoonProduct(models.Model):
     amount = models.FloatField(
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
     )
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return "{} - {}".format(self.eve_type.type_name, self.amount)
