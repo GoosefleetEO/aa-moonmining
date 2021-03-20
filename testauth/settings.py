@@ -255,7 +255,7 @@ SITE_NAME = "testauth"
 DEBUG = False
 
 # Add any additional apps to this list.
-INSTALLED_APPS += ["evesde", "moonplanner"]
+INSTALLED_APPS += ["eveuniverse", "moonplanner"]
 
 # Enter credentials to use MySQL/MariaDB. Comment out to use sqlite3
 """
