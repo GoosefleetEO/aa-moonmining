@@ -7,6 +7,7 @@ from esi.models import Token
 from eveuniverse.models import EveMoon, EveType
 
 from . import constants
+from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
 
 
 class MoonPlanner(models.Model):
@@ -40,8 +41,18 @@ class Moon(models.Model):
     def __str__(self):
         return self.eve_moon.name
 
-    def calc_income_estimate(self, total_volume, reprocessing_yield, moon_product=None):
-        """Return newly calculated income estimate for given volume in ISK.
+    def update_income_estimate(self, total_volume=None, reprocessing_yield=None):
+        """Update income for this moon."""
+        income = self.calc_income_estimate(
+            total_volume=total_volume, reprocessing_yield=reprocessing_yield
+        )
+        self.income = income
+        self.save()
+
+    def calc_income_estimate(
+        self, total_volume=None, reprocessing_yield=None, moon_product=None
+    ):
+        """Return calculated income estimate for given parameters.
 
         Args:
             total_volume: total excepted ore volume for this moon
@@ -51,6 +62,10 @@ class Moon(models.Model):
         Returns:
             income estimate for moon or None if prices or products are missing
         """
+        if not total_volume:
+            total_volume = MOONPLANNER_VOLUME_PER_MONTH
+        if not reprocessing_yield:
+            reprocessing_yield = MOONPLANNER_REPROCESSING_YIELD
         income = 0
         if moon_product is None:
             moon_products = self.products.select_related("eve_type")

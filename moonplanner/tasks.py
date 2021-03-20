@@ -12,7 +12,6 @@ from allianceauth.notifications import notify
 from eveuniverse.models import EveMarketPrice, EveMoon, EveSolarSystem, EveType
 
 from . import __title__, constants
-from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
 from .models import (
     Extraction,
     ExtractionProduct,
@@ -115,10 +114,7 @@ def process_survey_input(scans, user_pk=None):
                         MoonProduct.objects.create(
                             moon=moon, amount=product_data[1], eve_type=eve_type
                         )
-                    moon.income = moon.calc_income_estimate(
-                        MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
-                    )
-                    moon.save()
+                    moon.update_income_estimate()
                     logger.info("Added moon survey for %s", moon.eve_moon.name)
 
             except Exception as ex:
@@ -313,7 +309,4 @@ def update_moon_income():
     EveMarketPrice.objects.update_from_esi()
     logger.info("Re-calculating moon income for %d moons...", Moon.objects.count())
     for moon in Moon.objects.all():
-        moon.income = moon.calc_income_estimate(
-            MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
-        )
-        moon.save()
+        moon.update_income_estimate()
