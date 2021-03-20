@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from . import tasks
-from .models import Extraction, MiningCorporation, MoonProduct, Refinery
+from .models import Extraction, MiningCorporation, Moon, Refinery
 
 
 @admin.register(Extraction)
@@ -14,6 +14,12 @@ class ExtractionAdmin(admin.ModelAdmin):
     )
 
     search_fields = ("eve_moon__name",)
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_add_permission(self, request):
+        return False
 
 
 @admin.register(MiningCorporation)
@@ -32,17 +38,34 @@ class MiningCorporationAdmin(admin.ModelAdmin):
 
             self.message_user(request, text)
 
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_add_permission(self, request):
+        return False
+
 
 @admin.register(Refinery)
 class RefineryAdmin(admin.ModelAdmin):
     list_display = ("name", "moon", "corporation", "eve_type")
     list_filter = (
+        ("eve_type", admin.RelatedOnlyFieldListFilter),
         "corporation__corporation",
-        ("type", admin.RelatedOnlyFieldListFilter),
     )
 
+    def has_change_permission(self, request, obj=None):
+        return False
 
-#  admin.site.register(Moon)
+    def has_add_permission(self, request):
+        return False
 
 
-admin.site.register(MoonProduct)
+@admin.register(Moon)
+class MoonAdmin(admin.ModelAdmin):
+    list_display = ("eve_moon",)
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_add_permission(self, request):
+        return False

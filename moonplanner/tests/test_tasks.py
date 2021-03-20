@@ -57,7 +57,22 @@ class TestRunRefineriesUpdate(NoSocketsTestCase):
         self.assertEqual(refinery.name, "Auga - Paradise Alpha")
         self.assertEqual(refinery.moon.eve_moon, my_eve_moon)
 
+    def test_should_update_refinery_with_moon_from_notification_if_not_found(
+        self, mock_esi, mock_nearest_celestial
+    ):
+        # given
+        mock_esi.client = esi_client_stub
+        my_eve_moon = EveMoon.objects.get(id=40161708)
+        mock_nearest_celestial.return_value = None
+        # when
+        tasks.run_refineries_update(self.mining_corporation.pk)
+        # then
+        refinery = Refinery.objects.get(id=1000000000001)
+        self.assertEqual(refinery.name, "Auga - Paradise Alpha")
+        self.assertEqual(refinery.moon.eve_moon, my_eve_moon)
+
     # TODO: test when refinery does not exist for notification
+    # TODO: tests for extractions
 
 
 class TestProcessSurveyInput(NoSocketsTestCase):

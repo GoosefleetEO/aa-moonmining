@@ -282,10 +282,6 @@ def add_mining_corporation(request, token):
     mining_corporation, _ = MiningCorporation.objects.get_or_create(
         corporation=corporation, defaults={"character": character}
     )
-    run_refineries_update.delay(mining_corporation.pk, request.user.pk)
-    messages_plus.success(
-        request,
-        "Update of refineres started for {}. ".format(corporation)
-        + "You will receive a notifications with results shortly.",
-    )
+    run_refineries_update.delay(mining_corporation.pk)
+    messages_plus.success(request, f"Update of refineres started for {corporation}.")
     return redirect("moonplanner:extractions")

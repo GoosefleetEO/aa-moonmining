@@ -105,7 +105,11 @@ for moon in Moon.objects.order_by("?")[:MAX_REFINERIES]:
     if not hasattr(moon, "refinery"):
         print(f"Creating refinery for moon: {moon}")
         refinery = Refinery.objects.create(
-            id=moon.eve_moon.id, moon=moon, corporation=corporation, eve_type=eve_type
+            id=moon.eve_moon.id,
+            name=f"Test Refinery #{moon.eve_moon.id}",
+            moon=moon,
+            corporation=corporation,
+            eve_type=eve_type,
         )
         ready_days = random.randint(7, 30)
         extraction = Extraction.objects.create(

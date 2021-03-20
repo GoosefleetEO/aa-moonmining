@@ -8,7 +8,6 @@ from celery import shared_task
 from django.contrib.auth.models import User
 from django.db import transaction
 
-from allianceauth.eveonline.models import EveCharacter
 from allianceauth.notifications import notify
 from eveuniverse.models import EveMarketPrice, EveMoon, EveSolarSystem, EveType
 
@@ -170,88 +169,109 @@ def process_survey_input(scans, user_pk=None):
 
 
 @shared_task
-def run_refineries_update(mining_corp_pk, user_pk=None):
+def run_refineries_update(mining_corp_pk):
     """update list of refineries with extractions for a mining corporation"""
-    try:
-        mining_corp = MiningCorporation.objects.get(pk=mining_corp_pk)
-        if mining_corp.character is None:
-            logger.error("%s: Missing character", mining_corp)
-            raise EveCharacter.DoesNotExist()
+    mining_corp = MiningCorporation.objects.get(pk=mining_corp_pk)
+    if mining_corp.character is None:
+        logger.error("%s: Mining corporation has no character. Aborting", mining_corp)
+        return
 
-        token = mining_corp.fetch_token()
-        logger.info("%s: Fetching corp structures from ESI", mining_corp)
-        all_structures = (
-            esi.client.Corporation.get_corporations_corporation_id_structures(
-                corporation_id=mining_corp.corporation.corporation_id,
+    token = mining_corp.fetch_token()
+    logger.info("%s: Fetching corp structures from ESI", mining_corp)
+    all_structures = esi.client.Corporation.get_corporations_corporation_id_structures(
+        corporation_id=mining_corp.corporation.corporation_id,
+        token=token.valid_access_token(),
+    ).result()
+
+    logger.info("%s: Updating refineries", mining_corp)
+    user_report = list()
+    for refinery in all_structures:
+        eve_type, _ = EveType.objects.get_or_create_esi(id=refinery["type_id"])
+        if eve_type.eve_group_id == constants.EVE_GROUP_ID_REFINERY:
+            # determine moon next to refinery
+            structure_info = esi.client.Universe.get_universe_structures_structure_id(
+                structure_id=refinery["structure_id"],
                 token=token.valid_access_token(),
             ).result()
-        )
+            solar_system, _ = EveSolarSystem.objects.get_or_create_esi(
+                id=structure_info["solar_system_id"]
+            )
+            nearest_celestial = solar_system.nearest_celestial(
+                structure_info["position"]["x"],
+                structure_info["position"]["y"],
+                structure_info["position"]["z"],
+                group_id=constants.EVE_GROUP_ID_MOON,
+                max_distance=MAX_DISTANCE_TO_MOON_METERS,
+            )
+            if (
+                nearest_celestial
+                and nearest_celestial.eve_type.id == constants.EVE_TYPE_ID_MOON
+            ):
+                eve_moon = nearest_celestial.eve_object
+                moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
+            else:
+                moon = None
 
-        logger.info("%s: Updating refineries", mining_corp)
-        user_report = list()
-        for refinery in all_structures:
-            eve_type, _ = EveType.objects.get_or_create_esi(id=refinery["type_id"])
-            if eve_type.eve_group_id == constants.EVE_GROUP_ID_REFINERY:
-                # determine moon next to refinery
-                structure_info = (
-                    esi.client.Universe.get_universe_structures_structure_id(
-                        structure_id=refinery["structure_id"],
-                        token=token.valid_access_token(),
-                    ).result()
+            eve_type, _ = EveType.objects.get_or_create_esi(
+                id=structure_info["type_id"]
+            )
+            refinery, _ = Refinery.objects.update_or_create(
+                id=refinery["structure_id"],
+                defaults={
+                    "name": structure_info["name"],
+                    "eve_type": eve_type,
+                    "moon": moon,
+                    "corporation": mining_corp,
+                },
+            )
+            user_report.append(
+                {
+                    "moon_name": moon.eve_moon.name if moon else "(none found)",
+                    "refinery_name": refinery.name,
+                }
+            )
+
+    logger.info("%s: Fetching notifications", mining_corp)
+    notifications = esi.client.Character.get_characters_character_id_notifications(
+        character_id=mining_corp.character.character_id,
+        token=token.valid_access_token(),
+    ).result()
+
+    # add extractions for refineries if any are found
+    logger.info(
+        "%s: Process extraction events from %d notifications",
+        mining_corp,
+        len(notifications),
+    )
+    last_extraction_started = dict()
+    moon_updated = False
+    for notification in sorted(notifications, key=lambda k: k["timestamp"]):
+        parsed_text = yaml.safe_load(notification["text"])
+        if notification["type"] in [
+            "MoonminingAutomaticFracture",
+            "MoonminingExtractionCancelled",
+            "MoonminingExtractionFinished",
+            "MoonminingExtractionStarted",
+            "MoonminingLaserFired",
+        ]:
+            structure_id = parsed_text["structureID"]
+            try:
+                refinery = Refinery.objects.get(id=structure_id)
+            except Refinery.DoesNotExist:
+                refinery = None
+            # update the refinery's moon in case it was not found by nearest_celestial
+            if refinery and not moon_updated:
+                moon_updated = True
+                eve_moon, _ = EveMoon.objects.get_or_create_esi(
+                    id=parsed_text["moonID"]
                 )
-                solar_system, _ = EveSolarSystem.objects.get_or_create_esi(
-                    id=structure_info["solar_system_id"]
-                )
-                nearest_celestial = solar_system.nearest_celestial(
-                    structure_info["position"]["x"],
-                    structure_info["position"]["y"],
-                    structure_info["position"]["z"],
-                    group_id=constants.EVE_GROUP_ID_MOON,
-                    max_distance=MAX_DISTANCE_TO_MOON_METERS,
-                )
+                moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
+                if refinery.moon != moon:
+                    refinery.moon = moon
+                    refinery.save()
 
-                if (
-                    nearest_celestial
-                    and nearest_celestial.eve_type.id == constants.EVE_TYPE_ID_MOON
-                ):
-                    eve_moon = nearest_celestial.eve_object
-                    moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
-                    eve_type, _ = EveType.objects.get_or_create_esi(
-                        id=structure_info["type_id"]
-                    )
-                    refinery, _ = Refinery.objects.update_or_create(
-                        id=refinery["structure_id"],
-                        defaults={
-                            "name": structure_info["name"],
-                            "eve_type": eve_type,
-                            "moon": moon,
-                            "corporation": mining_corp,
-                        },
-                    )
-                    user_report.append(
-                        {"moon_name": eve_moon.name, "refinery_name": refinery.name}
-                    )
-
-        logger.info("%s: Fetching notifications", mining_corp)
-        notifications = esi.client.Character.get_characters_character_id_notifications(
-            character_id=mining_corp.character.character_id,
-            token=token.valid_access_token(),
-        ).result()
-
-        # add extractions for refineries if any are found
-        logger.info(
-            "%s: Process extraction events from %d notifications",
-            mining_corp,
-            len(notifications),
-        )
-        last_extraction_started = dict()
-        for notification in sorted(notifications, key=lambda k: k["timestamp"]):
             if notification["type"] == "MoonminingExtractionStarted":
-                parsed_text = yaml.safe_load(notification["text"])
-                id = parsed_text["structureID"]
-                try:
-                    refinery = Refinery.objects.get(id=id)
-                except Refinery.DoesNotExist:
+                if not refinery:
                     continue  # we ignore notifications for unknown refineries
                 extraction, _ = Extraction.objects.get_or_create(
                     refinery=refinery,
@@ -276,42 +296,15 @@ def run_refineries_update(mining_corp_pk, user_pk=None):
             # remove latest started extraction if it was canceled
             # and not finished
             if notification["type"] == "MoonminingExtractionCancelled":
-                parsed_text = yaml.safe_load(notification["text"])
-                id = parsed_text["structureID"]
-                if id in last_extraction_started:
-                    extraction = last_extraction_started[id]
+                if structure_id in last_extraction_started:
+                    extraction = last_extraction_started[structure_id]
                     extraction.delete()
 
             if notification["type"] == "MoonminingExtractionFinished":
-                parsed_text = yaml.safe_load(notification["text"])
-                id = parsed_text["structureID"]
-                if id in last_extraction_started:
-                    del last_extraction_started[id]
+                if structure_id in last_extraction_started:
+                    del last_extraction_started[structure_id]
 
-    except Exception as ex:
-        logger.error("%s: An unexpected error occurred", mining_corp, exc_info=True)
-        success = False
-        raise ex
-    else:
-        success = True
-
-    if user_pk:
-        message = (
-            "The following refineries from {} have been added "
-            "or updated:\n\n".format(mining_corp)
-        )
-        for report in user_report:
-            message += "{} @ {}\n".format(
-                report["moon_name"],
-                report["refinery_name"],
-            )
-
-        notify(
-            user=User.objects.get(pk=user_pk),
-            title="Adding refinery report: {}".format("OK" if success else "FAILED"),
-            message=message,
-            level="success" if success else "danger",
-        )
+            # TODO: add logic to handle canceled extractions
 
 
 @shared_task
