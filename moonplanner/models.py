@@ -1,3 +1,6 @@
+from typing import Optional
+
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
@@ -8,6 +11,25 @@ from eveuniverse.models import EveMoon, EveType
 
 from . import constants
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
+
+
+def calc_refined_value(
+    eve_type: EveType, volume: float, reprocessing_yield: float
+) -> Optional[float]:
+    volume_per_unit = eve_type.volume
+    units = volume / volume_per_unit
+    r_units = units / 100
+    value = None
+    for type_material in eve_type.materials.all():
+        try:
+            price = type_material.eve_type.market_price.average_price
+        except (ObjectDoesNotExist, AttributeError):
+            continue
+        if price:
+            if value is None:
+                value = 0
+            value += price * type_material.quantity * r_units * reprocessing_yield
+    return value
 
 
 class MoonPlanner(models.Model):
@@ -66,7 +88,7 @@ class Moon(models.Model):
             total_volume = MOONPLANNER_VOLUME_PER_MONTH
         if not reprocessing_yield:
             reprocessing_yield = MOONPLANNER_REPROCESSING_YIELD
-        income = 0
+        income = None
         if moon_product is None:
             moon_products = self.products.select_related("eve_type")
             if moon_products.count() == 0:
@@ -74,24 +96,25 @@ class Moon(models.Model):
         else:
             moon_products = [moon_product]
 
-        try:
-            for product in moon_products:
-                if product.eve_type.volume:
-                    volume_per_unit = product.eve_type.volume
-                    volume = total_volume * product.amount
-                    units = volume / volume_per_unit
-                    r_units = units / 100
-                    for type_material in product.eve_type.materials.all():
-                        price = type_material.eve_type.market_price.average_price
-                        if price:
-                            income += (
-                                price
-                                * type_material.quantity
-                                * r_units
-                                * reprocessing_yield
-                            )
-        except models.ObjectDoesNotExist:
-            income = None
+        for product in moon_products:
+            if product.eve_type.volume:
+                income = calc_refined_value(
+                    eve_type=product.eve_type,
+                    volume=total_volume * product.amount,
+                    reprocessing_yield=reprocessing_yield,
+                )
+                # volume_per_unit = product.eve_type.volume
+                # volume = total_volume * product.amount
+                # units = volume / volume_per_unit
+                # r_units = units / 100
+                # for type_material in product.eve_type.materials.all():
+                #     price = type_material.eve_type.market_price.average_price
+                #     if price:
+                #         income += (
+                #             price
+                #             * type_material.quantity
+                #             * r_units
+                #             * reprocessing_yield
 
         return income
 
@@ -223,18 +246,24 @@ class ExtractionProduct(models.Model):
         """
         if not reprocessing_yield:
             reprocessing_yield = MOONPLANNER_REPROCESSING_YIELD
-        volume_per_unit = self.eve_type.volume
-        units = self.volume / volume_per_unit
-        r_units = units / 100
-        value = 0
-        try:
-            for type_material in self.eve_type.materials.all():
-                price = type_material.eve_type.market_price.average_price
-                if price:
-                    value += (
-                        price * type_material.quantity * r_units * reprocessing_yield
-                    )
-        except models.ObjectDoesNotExist:
-            value = None
-        else:
-            return value
+
+        return calc_refined_value(
+            eve_type=self.eve_type,
+            volume=self.volume,
+            reprocessing_yield=reprocessing_yield,
+        )
+        # volume_per_unit = self.eve_type.volume
+        # units = self.volume / volume_per_unit
+        # r_units = units / 100
+        # value = 0
+        # try:
+        #     for type_material in self.eve_type.materials.all():
+        #         price = type_material.eve_type.market_price.average_price
+        #         if price:
+        #             value += (
+        #                 price * type_material.quantity * r_units * reprocessing_yield
+        #             )
+        # except models.ObjectDoesNotExist:
+        #     value = None
+        # else:
+        #     return value
