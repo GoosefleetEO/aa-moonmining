@@ -7,11 +7,12 @@ from django.test import TestCase
 from django.utils.timezone import now
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-from eveuniverse.models import EveMarketPrice, EveMoon, EveSolarSystem, EveType
+from eveuniverse.models import EveMoon, EveSolarSystem, EveType
 
 from .. import tasks
 from ..models import MiningCorporation, Moon, Refinery
-from . import helpers
+
+# from . import helpers
 from .testdata.esi_client_stub import esi_client_stub
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
@@ -149,28 +150,28 @@ class TestProcessSurveyInput(TestCase):
         self.assertEqual(kwargs["level"], "danger")
 
 
-@patch(MODULE_PATH + ".EveMarketPrice.objects.update_from_esi", new=lambda: None)
-class TestUpdateMoonIncome(NoSocketsTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        load_eveuniverse()
-        cls.moon = helpers.create_moon()
-        EveMarketPrice.objects.create(
-            eve_type=EveType.objects.get(id=45506), average_price=1, adjusted_price=2
-        )
-        EveMarketPrice.objects.create(
-            eve_type=EveType.objects.get(id=46676), average_price=2, adjusted_price=3
-        )
-        EveMarketPrice.objects.create(
-            eve_type=EveType.objects.get(id=46678), average_price=3, adjusted_price=4
-        )
-        EveMarketPrice.objects.create(
-            eve_type=EveType.objects.get(id=46689), average_price=4, adjusted_price=5
-        )
+# @patch(MODULE_PATH + ".EveMarketPrice.objects.update_from_esi", new=lambda: None)
+# class TestUpdateMoonIncome(NoSocketsTestCase):
+#     @classmethod
+#     def setUpClass(cls):
+#         super().setUpClass()
+#         load_eveuniverse()
+#         cls.moon = helpers.create_moon()
+#         EveMarketPrice.objects.create(
+#             eve_type=EveType.objects.get(id=45506), average_price=1, adjusted_price=2
+#         )
+#         EveMarketPrice.objects.create(
+#             eve_type=EveType.objects.get(id=46676), average_price=2, adjusted_price=3
+#         )
+#         EveMarketPrice.objects.create(
+#             eve_type=EveType.objects.get(id=46678), average_price=3, adjusted_price=4
+#         )
+#         EveMarketPrice.objects.create(
+#             eve_type=EveType.objects.get(id=46689), average_price=4, adjusted_price=5
+#         )
 
-    def test_should_update_all(self):
-        # when
-        tasks.update_moon_income()
-        # then
-        ...  # TODO: add asserts
+#     def test_should_update_all(self):
+#         # when
+#         tasks.update_all_moon_income()
+#         # then
+#         ...  # TODO: add asserts

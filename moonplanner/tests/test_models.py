@@ -4,12 +4,33 @@ from app_utils.testing import NoSocketsTestCase
 
 from eveuniverse.models import EveMarketPrice, EveType
 
-from ..models import ExtractionProduct
+from ..models import ExtractionProduct, calc_refined_value
 from . import helpers
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
 
 MODULE_PATH = "moonplanner.models"
+
+
+class TestCalcRefinedValue(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+
+    def test_should_return_correct_value(self):
+        # given
+        cinnebar = EveType.objects.get(id=45506)
+        tungsten = EveType.objects.get(id=16637)
+        mercury = EveType.objects.get(id=16646)
+        evaporite_deposits = EveType.objects.get(id=16635)
+        EveMarketPrice.objects.create(eve_type=tungsten, average_price=7000)
+        EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
+        EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
+        # when
+        result = calc_refined_value(cinnebar, 1000000, 0.7)
+        # then
+        self.assertEqual(result, 400225000.0)  # TOD: verify calculation by hand
 
 
 class TestMoonCalcIncome(NoSocketsTestCase):
@@ -21,18 +42,12 @@ class TestMoonCalcIncome(NoSocketsTestCase):
 
     def test_should_calc_income(self):
         # given
-        EveMarketPrice.objects.create(
-            eve_type=EveType.objects.get(id=45506), average_price=1, adjusted_price=2
-        )
-        EveMarketPrice.objects.create(
-            eve_type=EveType.objects.get(id=46676), average_price=2, adjusted_price=3
-        )
-        EveMarketPrice.objects.create(
-            eve_type=EveType.objects.get(id=46678), average_price=3, adjusted_price=4
-        )
-        EveMarketPrice.objects.create(
-            eve_type=EveType.objects.get(id=46689), average_price=4, adjusted_price=5
-        )
+        tungsten = EveType.objects.get(id=16637)
+        mercury = EveType.objects.get(id=16646)
+        evaporite_deposits = EveType.objects.get(id=16635)
+        EveMarketPrice.objects.create(eve_type=tungsten, average_price=7000)
+        EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
+        EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
         # when
         result = self.moon.calc_income_estimate(
             total_volume=1000000, reprocessing_yield=0.7

@@ -15,6 +15,7 @@ from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER
 def calc_refined_value(
     eve_type: EveType, volume: float, reprocessing_yield: float
 ) -> float:
+    """Calculate the refined total value of given eve_type and return it."""
     volume_per_unit = eve_type.volume
     units = volume / volume_per_unit
     r_units = units / 100
@@ -74,15 +75,12 @@ class Moon(models.Model):
         self.income = income
         self.save()
 
-    def calc_income_estimate(
-        self, total_volume=None, reprocessing_yield=None, moon_product=None
-    ) -> float:
+    def calc_income_estimate(self, total_volume=None, reprocessing_yield=None) -> float:
         """Return calculated income estimate for given parameters.
 
         Args:
             total_volume: total excepted ore volume for this moon
             reprocessing_yield: expected average yield for ore reprocessing
-            moon_product(optional): restrict estimation to given moon product
 
         Returns:
             income estimate for moon or None if prices or products are missing
@@ -91,33 +89,14 @@ class Moon(models.Model):
             total_volume = MOONPLANNER_VOLUME_PER_MONTH
         if not reprocessing_yield:
             reprocessing_yield = MOONPLANNER_REPROCESSING_YIELD
-        moon_products = self.products.select_related("eve_type")
-        if moon_product is not None:
-            moon_products = moon_products.filter(pk=moon_product.pk)
-        if moon_products.count() == 0:
-            return None
-
         income = 0
-        for product in moon_products:
+        for product in self.products.select_related("eve_type"):
             if product.eve_type.volume:
                 income += calc_refined_value(
                     eve_type=product.eve_type,
                     volume=total_volume * product.amount,
                     reprocessing_yield=reprocessing_yield,
                 )
-                # volume_per_unit = product.eve_type.volume
-                # volume = total_volume * product.amount
-                # units = volume / volume_per_unit
-                # r_units = units / 100
-                # for type_material in product.eve_type.materials.all():
-                #     price = type_material.eve_type.market_price.average_price
-                #     if price:
-                #         income += (
-                #             price
-                #             * type_material.quantity
-                #             * r_units
-                #             * reprocessing_yield
-
         return income if income else None
 
     def is_owned(self):
@@ -146,6 +125,28 @@ class MoonProduct(models.Model):
     #     indexes = [
     #         models.Index(fields=["eve_moon"]),
     #     ]
+
+    def calc_income_estimate(self, total_volume=None, reprocessing_yield=None) -> float:
+        """Return calculated income estimate for given parameters.
+
+        Args:
+            total_volume: total excepted ore volume for this moon
+            reprocessing_yield: expected average yield for ore reprocessing
+
+        Returns:
+            income estimate for moon or None if prices or products are missing
+        """
+        if not total_volume:
+            total_volume = MOONPLANNER_VOLUME_PER_MONTH
+        if not reprocessing_yield:
+            reprocessing_yield = MOONPLANNER_REPROCESSING_YIELD
+        if not self.eve_type.volume:
+            return None
+        return calc_refined_value(
+            eve_type=self.eve_type,
+            volume=total_volume * self.amount,
+            reprocessing_yield=reprocessing_yield,
+        )
 
 
 class MiningCorporation(models.Model):

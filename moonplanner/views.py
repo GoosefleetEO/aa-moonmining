@@ -69,9 +69,6 @@ def moon_info(request, moonid):
     ):
         return HttpResponseForbidden()
 
-    income = moon.calc_income_estimate(
-        MOONPLANNER_VOLUME_PER_MONTH, MOONPLANNER_REPROCESSING_YIELD
-    )
     product_rows = []
     for product in (
         MoonProduct.objects.select_related("eve_type", "eve_type__eve_group")
@@ -80,11 +77,7 @@ def moon_info(request, moonid):
     ):
         image_url = product.eve_type.icon_url(64)
         amount = int(round(product.amount * 100))
-        income = moon.calc_income_estimate(
-            MOONPLANNER_VOLUME_PER_MONTH,
-            MOONPLANNER_REPROCESSING_YIELD,
-            product,
-        )
+        income = product.calc_income_estimate()
         ore_type_url = "{}{}".format(URL_PROFILE_TYPE, product.eve_type_id)
         product_rows.append(
             {
@@ -143,7 +136,7 @@ def moon_info(request, moonid):
         "moon": moon,
         "solar_system": moon.eve_moon.eve_planet.eve_solar_system,
         "moon_name": moon.eve_moon.name,
-        "moon_income": None if income is None else income / 1000000000,
+        "moon_income": None if moon.income is None else moon.income / 1000000000,
         "product_rows": product_rows,
         "next_pull": next_pull_data,
         "ppulls": ppulls_data,
