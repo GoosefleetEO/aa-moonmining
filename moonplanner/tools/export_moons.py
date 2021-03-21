@@ -11,7 +11,10 @@ parser = argparse.ArgumentParser(
     )
 )
 parser.add_argument(
-    "path_to_myauth", help="path to myauth root folder (where manage.py is located)"
+    "-a",
+    "--path-to-myauth",
+    help="REQUIRED: path to myauth root folder (where manage.py is located)",
+    required=True,
 )
 args = parser.parse_args()
 myauth_path = Path(args.path_to_myauth)
