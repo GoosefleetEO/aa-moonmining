@@ -30,7 +30,7 @@ class TestCalcRefinedValue(NoSocketsTestCase):
         # when
         result = calc_refined_value(cinnebar, 1000000, 0.7)
         # then
-        self.assertEqual(result, 400225000.0)  # TOD: verify calculation by hand
+        self.assertEqual(result, 400225000.0)
 
 
 class TestMoonCalcIncome(NoSocketsTestCase):
@@ -43,17 +43,27 @@ class TestMoonCalcIncome(NoSocketsTestCase):
     def test_should_calc_income(self):
         # given
         tungsten = EveType.objects.get(id=16637)
-        mercury = EveType.objects.get(id=16646)
-        evaporite_deposits = EveType.objects.get(id=16635)
         EveMarketPrice.objects.create(eve_type=tungsten, average_price=7000)
+        mercury = EveType.objects.get(id=16646)
         EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
+        evaporite_deposits = EveType.objects.get(id=16635)
         EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
+        pyerite = EveType.objects.get(id=35)
+        EveMarketPrice.objects.create(eve_type=pyerite, average_price=10)
+        zydrine = EveType.objects.get(id=39)
+        EveMarketPrice.objects.create(eve_type=zydrine, average_price=1.7)
+        megacyte = EveType.objects.get(id=40)
+        EveMarketPrice.objects.create(eve_type=megacyte, average_price=640)
+        tritanium = EveType.objects.get(id=34)
+        EveMarketPrice.objects.create(eve_type=tritanium, average_price=5)
+        mexallon = EveType.objects.get(id=36)
+        EveMarketPrice.objects.create(eve_type=mexallon, average_price=117)
         # when
         result = self.moon.calc_income_estimate(
             total_volume=1000000, reprocessing_yield=0.7
         )
         # then
-        self.assertIsNotNone(result)
+        self.assertEqual(result, 180498825.5)
 
     def test_should_return_none_if_prices_are_missing(self):
         # given
