@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -18,7 +19,9 @@ def calc_refined_value(
     units = volume / volume_per_unit
     r_units = units / 100
     value = 0
-    for type_material in eve_type.materials.all().order_by("material_eve_type_id"):
+    for type_material in eve_type.materials.select_related(
+        "material_eve_type__market_price"
+    ):
         try:
             price = type_material.material_eve_type.market_price.average_price
         except (ObjectDoesNotExist, AttributeError):
@@ -55,6 +58,10 @@ class Moon(models.Model):
     income = models.FloatField(
         null=True, default=None, validators=[MinValueValidator(0.0)]
     )
+    products_updated_at = models.DateTimeField(null=True, default=None)
+    products_updated_by = models.ForeignKey(
+        User, on_delete=models.SET_DEFAULT, null=True, default=None
+    )
 
     def __str__(self):
         return self.eve_moon.name
@@ -84,14 +91,11 @@ class Moon(models.Model):
             total_volume = MOONPLANNER_VOLUME_PER_MONTH
         if not reprocessing_yield:
             reprocessing_yield = MOONPLANNER_REPROCESSING_YIELD
-        if moon_product is None:
-            moon_products = self.products.select_related("eve_type").order_by(
-                "eve_type_id"
-            )
-            if moon_products.count() == 0:
-                return None
-        else:
-            moon_products = [moon_product]
+        moon_products = self.products.select_related("eve_type")
+        if moon_product is not None:
+            moon_products = moon_products.filter(pk=moon_product.pk)
+        if moon_products.count() == 0:
+            return None
 
         income = 0
         for product in moon_products:
@@ -133,7 +137,6 @@ class MoonProduct(models.Model):
     amount = models.FloatField(
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
     )
-    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return "{} - {}".format(self.eve_type.name, self.amount)

@@ -7,6 +7,7 @@ from celery import shared_task
 
 from django.contrib.auth.models import User
 from django.db import transaction
+from django.utils.timezone import now
 
 from allianceauth.notifications import notify
 from eveuniverse.models import EveMarketPrice, EveMoon, EveSolarSystem, EveType
@@ -49,6 +50,7 @@ def process_survey_input(scans, user_pk=None):
         scans: raw text input from user containing moon survey data
         user_pk: (optional) id of user who submitted the data
     """
+    user = User.objects.get(pk=user_pk) if user_pk else None
     process_results = list()
     try:
         lines = scans.split("\n")
@@ -97,11 +99,13 @@ def process_survey_input(scans, user_pk=None):
         moon_name = None
         for survey in surveys:
             try:
+                moon_name = survey[0][0]
+                moon_id = survey[1][6]
+                eve_moon, _ = EveMoon.objects.get_or_create_esi(id=moon_id)
                 with transaction.atomic():  # TODO: remove transaction
-                    moon_name = survey[0][0]
-                    moon_id = survey[1][6]
-                    eve_moon, _ = EveMoon.objects.get_or_create_esi(id=moon_id)
                     moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
+                    moon.products_updated_by = user
+                    moon.products_updated_at = now()
                     moon.products.all().delete()
                     survey = survey[1:]
                     for product_data in survey:
@@ -114,13 +118,13 @@ def process_survey_input(scans, user_pk=None):
                         MoonProduct.objects.create(
                             moon=moon, amount=product_data[1], eve_type=eve_type
                         )
-                    moon.update_income_estimate()
-                    logger.info("Added moon survey for %s", moon.eve_moon.name)
+                moon.update_income_estimate()
+                logger.info("Added moon survey for %s", moon.eve_moon.name)
 
             except Exception as ex:
                 logger.warning(
-                    "An issue occurred while processing the following moon survey: "
-                    f"{survey}",
+                    "An issue occurred while processing the following moon survey: %s",
+                    survey,
                     exc_info=True,
                 )
                 error_name = type(ex).__name__
@@ -134,7 +138,7 @@ def process_survey_input(scans, user_pk=None):
             )
 
     # send result notification to user
-    if user_pk:
+    if user:
         message = "We have completed processing your moon survey input:\n\n"
         if process_results:
             n = 0
@@ -153,7 +157,7 @@ def process_survey_input(scans, user_pk=None):
             message += f"\nProcessing failed: {error_name}"
 
         notify(
-            user=User.objects.get(pk=user_pk),
+            user=user,
             title="Moon survey input processing results: {}".format(
                 "OK" if success else "FAILED"
             ),

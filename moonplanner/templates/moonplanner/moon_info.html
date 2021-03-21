@@ -109,7 +109,7 @@
                                 </div>
                             {% endfor %}
                         {% endif %}
-                        <p class="text-muted">Last updated at: {{product_rows.0.updated_at|date:"DATE_FORMAT"}}<p>
+                        <p class="text-muted">Last updated on {{moon.products_updated_at|date:"DATE_FORMAT"|default:"?"}} by {{moon.products_updated_by.profile.main_character|default:"?"}}<p>
                     </div>
                 </div>
             </div>
@@ -209,19 +209,20 @@
     </div>
 
 {% endblock %}
+
 {% block extra_javascript %}
     {% include 'bundles/datatables-js.html' %}
+    <script>
+        $(document).ready(function(){
+            $('#past-events').DataTable();
+        });
+    </script>
 {% endblock %}
+
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}
-     <link
-        href="{% static "moonplanner/moon_info.css" %}"
-        type="text/css"
-        rel="stylesheet"
-    >
+     <link href="{% static 'moonplanner/moon_info.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}
+
 {% block extra_script %}
-    $(document).ready(function(){
-        $('#past-events').DataTable();
-    });
 {% endblock %}
