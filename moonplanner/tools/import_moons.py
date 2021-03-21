@@ -12,7 +12,10 @@ parser.add_argument(
     help="name of CSV file in the current working directory to be imported",
 )
 parser.add_argument(
-    "path_to_myauth", help="path to myauth root folder (where manage.py is located)"
+    "-a",
+    "--path-to-myauth",
+    help="REQUIRED: path to myauth root folder (where manage.py is located)",
+    required=True,
 )
 parser.add_argument(
     "--force-refetch",
@@ -34,6 +37,13 @@ parser.add_argument(
     const=True,
     default=False,
     help="When set will always re-calculate income",
+)
+parser.add_argument(
+    "--disable-esi-check",
+    action="store_const",
+    const=False,
+    default=False,
+    help="When set script will not check if ESI is online",
 )
 args = parser.parse_args()
 myauth_path = Path(args.path_to_myauth)
@@ -126,6 +136,9 @@ def thread_update_moon_income(moon_id):
 
 
 def main():
+    if not args.disable_esi_check and not is_esi_online():
+        logger.error("ESI if offline. Aborting")
+
     input_file = Path().cwd() / args.input_file
     logger.info("Importing moons from: %s ...", input_file)
 
@@ -133,27 +146,17 @@ def main():
     moons = dict()
     ore_types = set()
     with input_file.open("r", encoding="utf-8") as fp:
-        csv_reader = csv.reader(fp)
-        line_count = 0
+        csv_reader = csv.DictReader(fp)
         for row in csv_reader:
-            # ignore first line
-            if line_count == 0:
-                line_count += 1
-                continue
-
-            moon_id = int(row[0])
-            ore_type_id = int(row[1])
-            amount = float(row[2])
+            moon_id = int(row["moon_id"])
+            ore_type_id = int(row["ore_type_id"])
+            amount = float(row["amount"])
             if not moon_id in moons:
                 moons[moon_id] = list()
             moons[moon_id].append((ore_type_id, amount))
             ore_types.add(ore_type_id)
 
-    logger.error("Input file contains %d moons.", len(moons.keys()))
-
-    # get list of moons
-    if not is_esi_online():
-        logger.error("ESI if offline. Aborting")
+    logger.info("Input file contains %d moons.", len(moons.keys()))
 
     # fetch missing eve objects from ESI
     fetch_missing_eve_objects(

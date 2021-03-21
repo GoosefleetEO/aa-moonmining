@@ -304,9 +304,15 @@ def run_refineries_update(mining_corp_pk):
 
 
 @shared_task
-def update_moon_income():
+def update_all_moon_income():
     """update the income for all moons"""
     EveMarketPrice.objects.update_from_esi()
     logger.info("Re-calculating moon income for %d moons...", Moon.objects.count())
     for moon in Moon.objects.all():
-        moon.update_income_estimate()
+        update_moon_income.delay(moon.pk)
+
+
+@shared_task
+def update_moon_income(moon_pk):
+    moon = Moon.objects.get(pk=moon_pk)
+    moon.update_income_estimate()

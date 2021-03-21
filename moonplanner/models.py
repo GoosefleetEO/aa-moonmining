@@ -1,5 +1,3 @@
-from typing import Optional
-
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -15,19 +13,17 @@ from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER
 
 def calc_refined_value(
     eve_type: EveType, volume: float, reprocessing_yield: float
-) -> Optional[float]:
+) -> float:
     volume_per_unit = eve_type.volume
     units = volume / volume_per_unit
     r_units = units / 100
-    value = None
-    for type_material in eve_type.materials.all():
+    value = 0
+    for type_material in eve_type.materials.all().order_by("material_eve_type_id"):
         try:
-            price = type_material.eve_type.market_price.average_price
+            price = type_material.material_eve_type.market_price.average_price
         except (ObjectDoesNotExist, AttributeError):
             continue
         if price:
-            if value is None:
-                value = 0
             value += price * type_material.quantity * r_units * reprocessing_yield
     return value
 
@@ -73,7 +69,7 @@ class Moon(models.Model):
 
     def calc_income_estimate(
         self, total_volume=None, reprocessing_yield=None, moon_product=None
-    ):
+    ) -> float:
         """Return calculated income estimate for given parameters.
 
         Args:
@@ -88,17 +84,19 @@ class Moon(models.Model):
             total_volume = MOONPLANNER_VOLUME_PER_MONTH
         if not reprocessing_yield:
             reprocessing_yield = MOONPLANNER_REPROCESSING_YIELD
-        income = None
         if moon_product is None:
-            moon_products = self.products.select_related("eve_type")
+            moon_products = self.products.select_related("eve_type").order_by(
+                "eve_type_id"
+            )
             if moon_products.count() == 0:
                 return None
         else:
             moon_products = [moon_product]
 
+        income = 0
         for product in moon_products:
             if product.eve_type.volume:
-                income = calc_refined_value(
+                income += calc_refined_value(
                     eve_type=product.eve_type,
                     volume=total_volume * product.amount,
                     reprocessing_yield=reprocessing_yield,
@@ -116,7 +114,7 @@ class Moon(models.Model):
                 #             * r_units
                 #             * reprocessing_yield
 
-        return income
+        return income if income else None
 
     def is_owned(self):
         return hasattr(self, "refinery")
@@ -138,7 +136,7 @@ class MoonProduct(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return "{} - {}".format(self.eve_type.type_name, self.amount)
+        return "{} - {}".format(self.eve_type.name, self.amount)
 
     # class Meta:
     #     unique_together = (("eve_moon", "eve_type"),)
@@ -236,7 +234,7 @@ class ExtractionProduct(models.Model):
     def __str__(self):
         return "{} - {}".format(self.extraction, self.eve_type)
 
-    def calc_value_estimate(self, reprocessing_yield=None):
+    def calc_value_estimate(self, reprocessing_yield=None) -> float:
         """returns calculated value estimate in ISK
 
         Args:
