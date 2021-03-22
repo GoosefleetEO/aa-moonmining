@@ -202,19 +202,21 @@ class MiningCorporation(models.Model):
         for refinery_info in all_structures:
             eve_type, _ = EveType.objects.get_or_create_esi(id=refinery_info["type_id"])
             if eve_type.eve_group_id == constants.EVE_GROUP_ID_REFINERY:
-                logger.info(
-                    "%s: Fetching details for refinery #%d",
-                    self,
-                    refinery_info["structure_id"],
-                )
-                structure_info = (
-                    esi.client.Universe.get_universe_structures_structure_id(
-                        structure_id=refinery_info["structure_id"],
-                        token=token.valid_access_token(),
-                    ).result()
-                )
+                structure_id = refinery_info["structure_id"]
+                logger.info("%s: Fetching details for refinery #%d", self, structure_id)
+                try:
+                    structure_info = (
+                        esi.client.Universe.get_universe_structures_structure_id(
+                            structure_id=structure_id, token=token.valid_access_token()
+                        ).result()
+                    )
+                except OSError:
+                    logger.exception(
+                        "%s: Failed to fetch refinery #%d", self, structure_id
+                    )
+                    continue
                 refinery, _ = Refinery.objects.update_or_create(
-                    id=refinery_info["structure_id"],
+                    id=structure_id,
                     defaults={
                         "name": structure_info["name"],
                         "eve_type": eve_type,
@@ -226,19 +228,28 @@ class MiningCorporation(models.Model):
                     solar_system, _ = EveSolarSystem.objects.get_or_create_esi(
                         id=structure_info["solar_system_id"]
                     )
-                    nearest_celestial = solar_system.nearest_celestial(
-                        structure_info["position"]["x"],
-                        structure_info["position"]["y"],
-                        structure_info["position"]["z"],
-                    )
-                    if (
-                        nearest_celestial
-                        and nearest_celestial.eve_type.id == constants.EVE_TYPE_ID_MOON
-                    ):
-                        eve_moon = nearest_celestial.eve_object
-                        moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
-                        refinery.moon = moon
-                        refinery.save()
+                    try:
+                        nearest_celestial = solar_system.nearest_celestial(
+                            structure_info["position"]["x"],
+                            structure_info["position"]["y"],
+                            structure_info["position"]["z"],
+                        )
+                    except OSError:
+                        logger.exception(
+                            "%s: Failed to fetch nearest celestial for refinery #%d",
+                            self,
+                            structure_id,
+                        )
+                    else:
+                        if (
+                            nearest_celestial
+                            and nearest_celestial.eve_type.id
+                            == constants.EVE_TYPE_ID_MOON
+                        ):
+                            eve_moon = nearest_celestial.eve_object
+                            moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
+                            refinery.moon = moon
+                            refinery.save()
 
     def update_extractions_from_esi(self):
         """Update all extractions from ESI."""
