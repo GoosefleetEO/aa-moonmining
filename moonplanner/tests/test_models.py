@@ -1,11 +1,13 @@
-#  from unittest.mock import patch
+from unittest.mock import patch
 
-from app_utils.testing import NoSocketsTestCase
+from app_utils.testing import NoSocketsTestCase, create_user_from_evecharacter
 
-from eveuniverse.models import EveMarketPrice, EveType
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 
-from ..models import ExtractionProduct, calc_refined_value
+from ..models import ExtractionProduct, MiningCorporation, Refinery, calc_refined_value
 from . import helpers
+from .testdata.esi_client_stub import esi_client_stub
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
 
@@ -102,3 +104,77 @@ class TestExtractionProduct(NoSocketsTestCase):
         result = obj.calc_value_estimate()
         # then
         self.assertIsNotNone(result)
+
+
+def nearest_celestial_stub(eve_solar_system, x, y, z):
+    eve_type = EveType.objects.get(id=14)
+    if (x, y, z) == (55028384780, 7310316270, -163686684205):
+        return eve_solar_system.NearestCelestial(
+            eve_type=eve_type,
+            eve_object=EveMoon.objects.get(id=40161708),  # Auga V - Moon 1
+            distance=123,
+        )
+    elif (x, y, z) == (45028384780, 6310316270, -163686684205):
+        return eve_solar_system.NearestCelestial(
+            eve_type=eve_type,
+            eve_object=EveMoon.objects.get(id=40161709),  # Auga V - Moon 2
+            distance=123,
+        )
+    else:
+        return None
+
+
+@patch(MODULE_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub)
+@patch(MODULE_PATH + ".esi")
+class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        load_allianceauth()
+        cls.user, cls.character_ownership = create_user_from_evecharacter(
+            1001,
+            permissions=[
+                "moonplanner.access_moonplanner",
+                "moonplanner.access_our_moons",
+                "moonplanner.add_mining_corporation",
+            ],
+            scopes=[
+                "esi-industry.read_corporation_mining.v1",
+                "esi-universe.read_structures.v1",
+                "esi-characters.read_notifications.v1",
+                "esi-corporations.read_structures.v1",
+            ],
+        )
+        cls.mining_corporation = MiningCorporation.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character=EveCharacter.objects.get(character_id=1001),
+        )
+
+    def test_should_create_two_new_refineries(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        my_eve_moon = EveMoon.objects.get(id=40161708)
+        # when
+        self.mining_corporation.update_refineries_from_esi()
+        # then
+        refinery = Refinery.objects.get(id=1000000000001)
+        self.assertEqual(refinery.name, "Auga - Paradise Alpha")
+        self.assertEqual(refinery.moon.eve_moon, my_eve_moon)
+
+    # def test_should_update_refinery_with_moon_from_notification_if_not_found(
+    #     self, mock_esi, mock_nearest_celestial
+    # ):
+    #     # given
+    #     mock_esi.client = esi_client_stub
+    #     my_eve_moon = EveMoon.objects.get(id=40161708)
+    #     mock_nearest_celestial.return_value = None
+    #     # when
+    #     self.mining_corporation.update_refineries_from_esi()
+    #     # then
+    #     refinery = Refinery.objects.get(id=1000000000001)
+    #     self.assertEqual(refinery.name, "Auga - Paradise Alpha")
+    #     self.assertEqual(refinery.moon.eve_moon, my_eve_moon)
+
+    # TODO: test when refinery does not exist for notification
+    # TODO: tests for extractions

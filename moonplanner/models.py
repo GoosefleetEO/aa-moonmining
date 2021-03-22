@@ -1,3 +1,7 @@
+import yaml
+from app_utils.datetime import ldap_time_2_datetime
+from app_utils.logging import LoggerAddTag
+
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -5,11 +9,16 @@ from django.db import models
 from django.db.models import Q
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.services.hooks import get_extension_logger
 from esi.models import Token
-from eveuniverse.models import EveMoon, EveType
+from eveuniverse.models import EveMoon, EveSolarSystem, EveType
 
-from . import constants
+from . import __title__, constants
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
+from .providers import esi
+
+logger = LoggerAddTag(get_extension_logger(__name__), __title__)
+# MAX_DISTANCE_TO_MOON_METERS = 3000000
 
 
 def calc_refined_value(
@@ -104,6 +113,8 @@ class Moon(models.Model):
 
 
 class MoonProduct(models.Model):
+    """A product of a moon, i.e. a specifc ore."""
+
     moon = models.ForeignKey(Moon, on_delete=models.CASCADE, related_name="products")
     eve_type = models.ForeignKey(
         EveType,
@@ -150,6 +161,8 @@ class MoonProduct(models.Model):
 
 
 class MiningCorporation(models.Model):
+    """An EVE Online corporation running mining operations."""
+
     corporation = models.OneToOneField(
         EveCorporationInfo,
         on_delete=models.CASCADE,
@@ -163,15 +176,6 @@ class MiningCorporation(models.Model):
     def __str__(self):
         return self.corporation.corporation_name
 
-    @classmethod
-    def get_esi_scopes(cls):
-        return [
-            "esi-industry.read_corporation_mining.v1",
-            "esi-universe.read_structures.v1",
-            "esi-characters.read_notifications.v1",
-            "esi-corporations.read_structures.v1",
-        ]
-
     def fetch_token(self):
         """Fetch token for this mining corp and return it..."""
         return (
@@ -181,8 +185,147 @@ class MiningCorporation(models.Model):
             .first()
         )
 
+    def update_refineries_from_esi(self):
+        """Update all refineries from ESI."""
+        logger.info("%s: Fetching corp structures from ESI...", self)
+        token = self.fetch_token()
+        all_structures = (
+            esi.client.Corporation.get_corporations_corporation_id_structures(
+                corporation_id=self.corporation.corporation_id,
+                token=token.valid_access_token(),
+            ).result()
+        )
+        for refinery_info in all_structures:
+            eve_type, _ = EveType.objects.get_or_create_esi(id=refinery_info["type_id"])
+            if eve_type.eve_group_id == constants.EVE_GROUP_ID_REFINERY:
+                logger.info(
+                    "%s: Fetching details for refinery #%d",
+                    self,
+                    refinery_info["structure_id"],
+                )
+                structure_info = (
+                    esi.client.Universe.get_universe_structures_structure_id(
+                        structure_id=refinery_info["structure_id"],
+                        token=token.valid_access_token(),
+                    ).result()
+                )
+                refinery, _ = Refinery.objects.update_or_create(
+                    id=refinery_info["structure_id"],
+                    defaults={
+                        "name": structure_info["name"],
+                        "eve_type": eve_type,
+                        "corporation": self,
+                    },
+                )
+                if not refinery.moon:
+                    # determine moon next to refinery
+                    solar_system, _ = EveSolarSystem.objects.get_or_create_esi(
+                        id=structure_info["solar_system_id"]
+                    )
+                    nearest_celestial = solar_system.nearest_celestial(
+                        structure_info["position"]["x"],
+                        structure_info["position"]["y"],
+                        structure_info["position"]["z"],
+                    )
+                    if (
+                        nearest_celestial
+                        and nearest_celestial.eve_type.id == constants.EVE_TYPE_ID_MOON
+                    ):
+                        eve_moon = nearest_celestial.eve_object
+                        moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
+                        refinery.moon = moon
+                        refinery.save()
+
+    def update_extractions_from_esi(self):
+        """Update all extractions from ESI."""
+        logger.info("%s: Updating extractions from ESI...", self)
+        token = self.fetch_token()
+        notifications = esi.client.Character.get_characters_character_id_notifications(
+            character_id=self.character.character_id,
+            token=token.valid_access_token(),
+        ).result()
+
+        # add extractions for refineries if any are found
+        logger.info(
+            "%s: Process extraction events from %d notifications",
+            self,
+            len(notifications),
+        )
+        last_extraction_started = dict()
+        moon_updated = False
+        for notification in sorted(notifications, key=lambda k: k["timestamp"]):
+            parsed_text = yaml.safe_load(notification["text"])
+            if notification["type"] in [
+                "MoonminingAutomaticFracture",
+                "MoonminingExtractionCancelled",
+                "MoonminingExtractionFinished",
+                "MoonminingExtractionStarted",
+                "MoonminingLaserFired",
+            ]:
+                structure_id = parsed_text["structureID"]
+                try:
+                    refinery = Refinery.objects.get(id=structure_id)
+                except Refinery.DoesNotExist:
+                    refinery = None
+                # update the refinery's moon in case it was not found by nearest_celestial
+                if refinery and not moon_updated:
+                    moon_updated = True
+                    eve_moon, _ = EveMoon.objects.get_or_create_esi(
+                        id=parsed_text["moonID"]
+                    )
+                    moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
+                    if refinery.moon != moon:
+                        refinery.moon = moon
+                        refinery.save()
+
+                if notification["type"] == "MoonminingExtractionStarted":
+                    if not refinery:
+                        continue  # we ignore notifications for unknown refineries
+                    extraction, _ = Extraction.objects.get_or_create(
+                        refinery=refinery,
+                        ready_time=ldap_time_2_datetime(parsed_text["readyTime"]),
+                        defaults={
+                            "auto_time": ldap_time_2_datetime(parsed_text["autoTime"])
+                        },
+                    )
+                    last_extraction_started[id] = extraction
+                    ore_volume_by_type = parsed_text["oreVolumeByType"].items()
+                    for ore_type_id, ore_volume in ore_volume_by_type:
+                        eve_type, _ = EveType.objects.get_or_create_esi(
+                            id=ore_type_id,
+                            enabled_sections=[EveType.Section.TYPE_MATERIALS],
+                        )
+                        ExtractionProduct.objects.get_or_create(
+                            extraction=extraction,
+                            eve_type=eve_type,
+                            defaults={"volume": ore_volume},
+                        )
+
+                # remove latest started extraction if it was canceled
+                # and not finished
+                if notification["type"] == "MoonminingExtractionCancelled":
+                    if structure_id in last_extraction_started:
+                        extraction = last_extraction_started[structure_id]
+                        extraction.delete()
+
+                if notification["type"] == "MoonminingExtractionFinished":
+                    if structure_id in last_extraction_started:
+                        del last_extraction_started[structure_id]
+
+            # TODO: add logic to handle canceled extractions
+
+    @classmethod
+    def get_esi_scopes(cls):
+        return [
+            "esi-industry.read_corporation_mining.v1",
+            "esi-universe.read_structures.v1",
+            "esi-characters.read_notifications.v1",
+            "esi-corporations.read_structures.v1",
+        ]
+
 
 class Refinery(models.Model):
+    """An Eve Online refinery structure."""
 
     id = models.BigIntegerField(primary_key=True)
     name = models.CharField(max_length=150)
@@ -206,6 +349,8 @@ class Refinery(models.Model):
 
 
 class Extraction(models.Model):
+    """A mining extraction."""
+
     refinery = models.ForeignKey(
         Refinery, on_delete=models.CASCADE, related_name="extractions"
     )
@@ -220,6 +365,8 @@ class Extraction(models.Model):
 
 
 class ExtractionProduct(models.Model):
+    """A product within a mining extraction."""
+
     extraction = models.ForeignKey(
         Extraction, on_delete=models.CASCADE, related_name="products"
     )
@@ -255,18 +402,3 @@ class ExtractionProduct(models.Model):
             volume=self.volume,
             reprocessing_yield=reprocessing_yield,
         )
-        # volume_per_unit = self.eve_type.volume
-        # units = self.volume / volume_per_unit
-        # r_units = units / 100
-        # value = 0
-        # try:
-        #     for type_material in self.eve_type.materials.all():
-        #         price = type_material.eve_type.market_price.average_price
-        #         if price:
-        #             value += (
-        #                 price * type_material.quantity * r_units * reprocessing_yield
-        #             )
-        # except models.ObjectDoesNotExist:
-        #     value = None
-        # else:
-        #     return value

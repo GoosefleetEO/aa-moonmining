@@ -23,7 +23,8 @@ class CreateEveUniverseTestData(TestCase):
             ModelSpec(
                 "EveType",
                 ids=[
-                    35835,  # Athanor
+                    35834,  # Keepstar
+                    35835,  # Athanor,
                 ],
             ),
             ModelSpec(
