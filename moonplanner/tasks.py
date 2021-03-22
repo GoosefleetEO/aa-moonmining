@@ -1,13 +1,13 @@
-from app_utils.logging import LoggerAddTag
 from celery import shared_task
 
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.utils.timezone import now
+from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 
 from allianceauth.notifications import notify
 from allianceauth.services.hooks import get_extension_logger
-from eveuniverse.models import EveMarketPrice, EveMoon, EveType
+from app_utils.logging import LoggerAddTag
 
 from . import __title__
 from .models import MiningCorporation, Moon, MoonProduct
@@ -142,7 +142,7 @@ def process_survey_input(scans, user_pk=None):
 
 
 @shared_task
-def run_refineries_update(mining_corp_pk):
+def update_refineries(mining_corp_pk):
     """update list of refineries with extractions for a mining corporation"""
     mining_corp = MiningCorporation.objects.get(pk=mining_corp_pk)
     mining_corp.update_refineries_from_esi()

@@ -1,5 +1,4 @@
 from django.test import TestCase
-
 from eveuniverse.models import EveType
 from eveuniverse.tools.testdata import ModelSpec, create_testdata
 

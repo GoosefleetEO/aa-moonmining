@@ -69,7 +69,6 @@ from pathlib import Path
 from bravado.exception import HTTPBadGateway, HTTPGatewayTimeout, HTTPServiceUnavailable
 
 from django.db import transaction
-
 from eveuniverse.core.esitools import is_esi_online
 from eveuniverse.models import EveMoon, EveType
 

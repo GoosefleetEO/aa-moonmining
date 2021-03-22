@@ -25,18 +25,27 @@ class ExtractionAdmin(admin.ModelAdmin):
 @admin.register(MiningCorporation)
 class MiningCorporationAdmin(admin.ModelAdmin):
     list_display = ("corporation", "character")
-    actions = ["run_refineries_update"]
+    actions = ["update_refineries", "update_extractions"]
 
-    def run_refineries_update(self, request, queryset):
-
+    def update_refineries(self, request, queryset):
         for obj in queryset:
-            tasks.run_refineries_update.delay(
-                mining_corp_pk=obj.pk, user_pk=request.user.pk
-            )
-            text = "Started updating refineries for: {} ".format(obj)
-            text += ". You will receive a report once it is completed."
-
+            tasks.update_refineries.delay(mining_corp_pk=obj.pk)
+            text = f"Started updating refineries for: {obj}. "
             self.message_user(request, text)
+
+    update_refineries.short_description = (
+        "Update refineres from ESI for selected mining corporations"
+    )
+
+    def update_extractions(self, request, queryset):
+        for obj in queryset:
+            tasks.update_refineries.delay(mining_corp_pk=obj.pk)
+            text = f"Started updating extractions for: {obj}. "
+            self.message_user(request, text)
+
+    update_extractions.short_description = (
+        "Update extractions from ESI for selected mining corporations"
+    )
 
     def has_change_permission(self, request, obj=None):
         return False

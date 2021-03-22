@@ -1,9 +1,9 @@
 import datetime as dt
 
 from django.utils.timezone import now
+from eveuniverse.models import EveMoon, EveType
 
 from allianceauth.eveonline.models import EveCorporationInfo
-from eveuniverse.models import EveMoon, EveType
 
 from ..app_settings import MOONPLANNER_VOLUME_PER_MONTH
 from ..models import (

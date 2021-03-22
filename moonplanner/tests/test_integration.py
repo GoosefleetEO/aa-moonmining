@@ -1,8 +1,9 @@
-from app_utils.testing import create_user_from_evecharacter
 from django_webtest import WebTest
 
 from django.test import override_settings
 from django.urls import reverse
+
+from app_utils.testing import create_user_from_evecharacter
 
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse

@@ -1,17 +1,17 @@
 import yaml
-from app_utils.datetime import ldap_time_2_datetime
-from app_utils.logging import LoggerAddTag
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
+from esi.models import Token
+from eveuniverse.models import EveMoon, EveSolarSystem, EveType
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from allianceauth.services.hooks import get_extension_logger
-from esi.models import Token
-from eveuniverse.models import EveMoon, EveSolarSystem, EveType
+from app_utils.datetime import ldap_time_2_datetime
+from app_utils.logging import LoggerAddTag
 
 from . import __title__, constants
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
@@ -255,14 +255,31 @@ class MiningCorporation(models.Model):
         """Update all extractions from ESI."""
         logger.info("%s: Updating extractions from ESI...", self)
         token = self.fetch_token()
-        notifications = esi.client.Character.get_characters_character_id_notifications(
-            character_id=self.character.character_id,
-            token=token.valid_access_token(),
-        ).result()
+        all_notifications = (
+            esi.client.Character.get_characters_character_id_notifications(
+                character_id=self.character.character_id,
+                token=token.valid_access_token(),
+            ).result()
+        )
+        notifications = [
+            notif
+            for notif in all_notifications
+            if notif["type"]
+            in {
+                "MoonminingAutomaticFracture",
+                "MoonminingExtractionCancelled",
+                "MoonminingExtractionFinished",
+                "MoonminingExtractionStarted",
+                "MoonminingLaserFired",
+            }
+        ]
+        if not notifications:
+            logger.info("%s: No moon notifications received", self)
+            return
 
         # add extractions for refineries if any are found
         logger.info(
-            "%s: Process extraction events from %d notifications",
+            "%s: Process extraction events from %d moon notifications",
             self,
             len(notifications),
         )
@@ -270,64 +287,57 @@ class MiningCorporation(models.Model):
         moon_updated = False
         for notification in sorted(notifications, key=lambda k: k["timestamp"]):
             parsed_text = yaml.safe_load(notification["text"])
-            if notification["type"] in [
-                "MoonminingAutomaticFracture",
-                "MoonminingExtractionCancelled",
-                "MoonminingExtractionFinished",
-                "MoonminingExtractionStarted",
-                "MoonminingLaserFired",
-            ]:
-                structure_id = parsed_text["structureID"]
-                try:
-                    refinery = Refinery.objects.get(id=structure_id)
-                except Refinery.DoesNotExist:
-                    refinery = None
-                # update the refinery's moon in case it was not found by nearest_celestial
-                if refinery and not moon_updated:
-                    moon_updated = True
-                    eve_moon, _ = EveMoon.objects.get_or_create_esi(
-                        id=parsed_text["moonID"]
+            structure_id = parsed_text["structureID"]
+            try:
+                refinery = Refinery.objects.get(id=structure_id)
+            except Refinery.DoesNotExist:
+                refinery = None
+            # update the refinery's moon in case it was not found by nearest_celestial
+            if refinery and not moon_updated:
+                moon_updated = True
+                eve_moon, _ = EveMoon.objects.get_or_create_esi(
+                    id=parsed_text["moonID"]
+                )
+                moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
+                if refinery.moon != moon:
+                    refinery.moon = moon
+                    refinery.save()
+
+            if notification["type"] == "MoonminingExtractionStarted":
+                if not refinery:
+                    continue  # we ignore notifications for unknown refineries
+                extraction, _ = Extraction.objects.get_or_create(
+                    refinery=refinery,
+                    ready_time=ldap_time_2_datetime(parsed_text["readyTime"]),
+                    defaults={
+                        "auto_time": ldap_time_2_datetime(parsed_text["autoTime"])
+                    },
+                )
+                last_extraction_started[id] = extraction
+                ore_volume_by_type = parsed_text["oreVolumeByType"].items()
+                for ore_type_id, ore_volume in ore_volume_by_type:
+                    eve_type, _ = EveType.objects.get_or_create_esi(
+                        id=ore_type_id,
+                        enabled_sections=[EveType.Section.TYPE_MATERIALS],
                     )
-                    moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
-                    if refinery.moon != moon:
-                        refinery.moon = moon
-                        refinery.save()
-
-                if notification["type"] == "MoonminingExtractionStarted":
-                    if not refinery:
-                        continue  # we ignore notifications for unknown refineries
-                    extraction, _ = Extraction.objects.get_or_create(
-                        refinery=refinery,
-                        ready_time=ldap_time_2_datetime(parsed_text["readyTime"]),
-                        defaults={
-                            "auto_time": ldap_time_2_datetime(parsed_text["autoTime"])
-                        },
+                    ExtractionProduct.objects.get_or_create(
+                        extraction=extraction,
+                        eve_type=eve_type,
+                        defaults={"volume": ore_volume},
                     )
-                    last_extraction_started[id] = extraction
-                    ore_volume_by_type = parsed_text["oreVolumeByType"].items()
-                    for ore_type_id, ore_volume in ore_volume_by_type:
-                        eve_type, _ = EveType.objects.get_or_create_esi(
-                            id=ore_type_id,
-                            enabled_sections=[EveType.Section.TYPE_MATERIALS],
-                        )
-                        ExtractionProduct.objects.get_or_create(
-                            extraction=extraction,
-                            eve_type=eve_type,
-                            defaults={"volume": ore_volume},
-                        )
 
-                # remove latest started extraction if it was canceled
-                # and not finished
-                if notification["type"] == "MoonminingExtractionCancelled":
-                    if structure_id in last_extraction_started:
-                        extraction = last_extraction_started[structure_id]
-                        extraction.delete()
+            # remove latest started extraction if it was canceled
+            # and not finished
+            if notification["type"] == "MoonminingExtractionCancelled":
+                if structure_id in last_extraction_started:
+                    extraction = last_extraction_started[structure_id]
+                    extraction.delete()
 
-                if notification["type"] == "MoonminingExtractionFinished":
-                    if structure_id in last_extraction_started:
-                        del last_extraction_started[structure_id]
+            if notification["type"] == "MoonminingExtractionFinished":
+                if structure_id in last_extraction_started:
+                    del last_extraction_started[structure_id]
 
-            # TODO: add logic to handle canceled extractions
+            # TODO: test logic to handle canceled extractions
 
     @classmethod
     def get_esi_scopes(cls):

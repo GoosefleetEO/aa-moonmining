@@ -1,15 +1,14 @@
 import datetime as dt
 from unittest.mock import Mock, patch
 
-from app_utils.testing import create_user_from_evecharacter, json_response_to_dict
-
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils.timezone import now
-
 from esi.models import Token
 from eveuniverse.models import EveMoon
+
+from app_utils.testing import create_user_from_evecharacter, json_response_to_dict
 
 from .. import views
 from ..models import Extraction, Moon, Refinery
@@ -32,7 +31,7 @@ class TestAddMinningCorporation(TestCase):
         )
         cls.character = cls.character_ownership.character
 
-    @patch(MODULE_PATH + ".run_refineries_update")
+    @patch(MODULE_PATH + ".update_refineries")
     @patch(MODULE_PATH + ".messages_plus")
     def test_view_add_structure_owner_normal(
         self, mock_messages, mock_run_refineries_update

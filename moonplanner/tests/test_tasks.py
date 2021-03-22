@@ -1,10 +1,10 @@
 import datetime as dt
 from unittest.mock import patch
 
-from app_utils.testing import create_user_from_evecharacter
-
 from django.test import TestCase
 from django.utils.timezone import now
+
+from app_utils.testing import create_user_from_evecharacter
 
 from .. import tasks
 from ..models import Moon

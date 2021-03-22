@@ -2,20 +2,19 @@ import logging
 import urllib
 from datetime import datetime, timezone
 
-from app_utils.messages import messages_plus
-
 from django.contrib.auth.decorators import login_required, permission_required
 from django.http import HttpResponseForbidden, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from esi.decorators import token_required
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-from esi.decorators import token_required
+from app_utils.messages import messages_plus
 
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
 from .forms import MoonScanForm
 from .models import Extraction, MiningCorporation, Moon, MoonProduct
-from .tasks import process_survey_input, run_refineries_update
+from .tasks import process_survey_input, update_refineries
 
 # from django.views.decorators.cache import cache_page
 
@@ -276,6 +275,6 @@ def add_mining_corporation(request, token):
     mining_corporation, _ = MiningCorporation.objects.get_or_create(
         corporation=corporation, defaults={"character": character}
     )
-    run_refineries_update.delay(mining_corporation.pk)
+    update_refineries.delay(mining_corporation.pk)
     messages_plus.success(request, f"Update of refineres started for {corporation}.")
     return redirect("moonplanner:extractions")

@@ -1,8 +1,8 @@
 import logging
 
-from app_utils.logging import LoggerAddTag
-
 from esi.clients import EsiClientProvider
+
+from app_utils.logging import LoggerAddTag
 
 from . import __title__, __version__
 

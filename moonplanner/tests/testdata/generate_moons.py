@@ -37,9 +37,9 @@ import random
 from pathlib import Path
 
 from django.utils.timezone import now
+from eveuniverse.models import EveMoon, EveType
 
 from allianceauth.eveonline.models import EveCorporationInfo
-from eveuniverse.models import EveMoon, EveType
 
 from moonplanner.app_settings import MOONPLANNER_VOLUME_PER_MONTH
 from moonplanner.models import (

@@ -2,11 +2,12 @@ import datetime as dt
 from unittest.mock import patch
 
 import pytz
-from app_utils.esi_testing import BravadoOperationStub
-from app_utils.testing import NoSocketsTestCase, create_user_from_evecharacter
+
+from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-from eveuniverse.models import EveMarketPrice, EveMoon, EveType
+from app_utils.esi_testing import BravadoOperationStub
+from app_utils.testing import NoSocketsTestCase, create_user_from_evecharacter
 
 from ..models import ExtractionProduct, MiningCorporation, Refinery, calc_refined_value
 from . import helpers
