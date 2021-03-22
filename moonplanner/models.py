@@ -169,8 +169,12 @@ class MiningCorporation(models.Model):
         primary_key=True,
         related_name="mining_corporations",
     )
-    character = models.OneToOneField(
-        EveCharacter, on_delete=models.DO_NOTHING, default=None, null=True
+    character = models.ForeignKey(
+        EveCharacter,
+        on_delete=models.SET_DEFAULT,
+        default=None,
+        null=True,
+        help_text="eve character used to sync this corporation from ESI",
     )
 
     def __str__(self):
