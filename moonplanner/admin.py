@@ -1,19 +1,23 @@
 from django.contrib import admin
 
 from . import tasks
-from .models import Extraction, MiningCorporation, Moon, Refinery
+from .models import Extraction, MiningCorporation, Refinery
 
 
 @admin.register(Extraction)
 class ExtractionAdmin(admin.ModelAdmin):
-    list_display = ("refinery", "ready_time")
-    ordering = ("ready_time",)
+    list_display = ("ready_time", "_corporation", "refinery")
+    ordering = ("-ready_time",)
     list_filter = (
-        "refinery",
         "ready_time",
+        "refinery__corporation",
+        "refinery",
     )
 
-    search_fields = ("eve_moon__name",)
+    search_fields = ("refinery__moon__eve_moon__name",)
+
+    def _corporation(self, obj):
+        return obj.refinery.corporation
 
     def has_change_permission(self, request, obj=None):
         return False
@@ -25,6 +29,7 @@ class ExtractionAdmin(admin.ModelAdmin):
 @admin.register(MiningCorporation)
 class MiningCorporationAdmin(admin.ModelAdmin):
     list_display = ("corporation", "character")
+    ordering = ["corporation"]
     actions = ["update_refineries", "update_extractions"]
 
     def update_refineries(self, request, queryset):
@@ -57,6 +62,7 @@ class MiningCorporationAdmin(admin.ModelAdmin):
 @admin.register(Refinery)
 class RefineryAdmin(admin.ModelAdmin):
     list_display = ("name", "moon", "corporation", "eve_type")
+    ordering = ["name"]
     list_filter = (
         ("eve_type", admin.RelatedOnlyFieldListFilter),
         "corporation__corporation",
@@ -69,12 +75,12 @@ class RefineryAdmin(admin.ModelAdmin):
         return False
 
 
-@admin.register(Moon)
-class MoonAdmin(admin.ModelAdmin):
-    list_display = ("eve_moon",)
+# @admin.register(Moon)
+# class MoonAdmin(admin.ModelAdmin):
+#     list_display = ("eve_moon",)
 
-    def has_change_permission(self, request, obj=None):
-        return False
+#     def has_change_permission(self, request, obj=None):
+#         return False
 
-    def has_add_permission(self, request):
-        return False
+#     def has_add_permission(self, request):
+#         return False

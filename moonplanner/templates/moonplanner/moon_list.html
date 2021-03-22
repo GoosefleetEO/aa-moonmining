@@ -50,7 +50,6 @@
                     dataSrc: '',
                     cache: true
                 },
-
                 columns: [
                     { data: 'moon_name' },
                     { data: 'corporation' },
@@ -62,16 +61,13 @@
                     { data: 'solar_system_name' },
                     { data: 'has_refinery_str' },
                 ],
-
-                lengthMenu: [[8, 15, 25, 50, -1], [8, 15, 25, 50, "All"]],
-
+                lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                pageLength: 10,
                 order: [ [0, "asc"] ],
-
                 columnDefs: [
                     { "orderable": false, "targets": [ 5 ] },
                     { "visible": false, "targets": [ 6, 7 ] },
                 ],
-
                 filterDropDown: {
                     columns: [
                         {
@@ -83,8 +79,7 @@
                         {
                             idx: 6,
                             title: "System"
-                        }
-                        ,
+                        },
                         {
                             idx: 7,
                             title: "Our moon"
@@ -93,7 +88,6 @@
                     bootstrap: true,
                     autoSize: false
                 },
-
                 createdRow: function( row, data, dataIndex )
                 {
                     if (data['has_refinery'])
@@ -101,7 +95,6 @@
                         $(row).addClass('success');
                     }
                 }
-
             });
 
             /* show table after loading from AJAX source is complete */
