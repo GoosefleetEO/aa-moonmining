@@ -22,7 +22,7 @@ from . import __title__
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
 from .forms import MoonScanForm
 from .models import Extraction, MiningCorporation, Moon, MoonProduct
-from .tasks import process_survey_input, update_refineries
+from .tasks import process_survey_input, update_mining_corporation
 
 # from django.views.decorators.cache import cache_page
 
@@ -304,7 +304,7 @@ def add_mining_corporation(request, token):
         eve_corporation=eve_corporation,
         defaults={"character_ownership": character_ownership},
     )
-    update_refineries.delay(corporation.pk)
+    update_mining_corporation.delay(corporation.pk)
     messages_plus.success(
         request, f"Update of refineres started for {eve_corporation}."
     )

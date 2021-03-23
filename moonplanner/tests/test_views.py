@@ -31,10 +31,10 @@ class TestAddMinningCorporation(TestCase):
             1001, permissions=["moonplanner.add_mining_corporation"]
         )
 
-    @patch(MODULE_PATH + ".update_refineries")
+    @patch(MODULE_PATH + ".update_mining_corporation")
     @patch(MODULE_PATH + ".messages_plus")
     def test_should_add_new_corporation(
-        self, mock_messages, mock_run_refineries_update
+        self, mock_messages, mock_update_mining_corporation
     ):
         # given
         token = Mock(spec=Token)
@@ -51,14 +51,14 @@ class TestAddMinningCorporation(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse("moonplanner:extractions"))
         self.assertTrue(mock_messages.success.called)
-        self.assertTrue(mock_run_refineries_update.delay.called)
+        self.assertTrue(mock_update_mining_corporation.delay.called)
         obj = MiningCorporation.objects.get(eve_corporation__corporation_id=2001)
         self.assertEqual(obj.character_ownership, self.character_ownership)
 
-    @patch(MODULE_PATH + ".update_refineries")
+    @patch(MODULE_PATH + ".update_mining_corporation")
     @patch(MODULE_PATH + ".messages_plus")
     def test_should_update_existing_corporation(
-        self, mock_messages, mock_run_refineries_update
+        self, mock_messages, mock_update_mining_corporation
     ):
         # given
         MiningCorporation.objects.create(
@@ -79,14 +79,14 @@ class TestAddMinningCorporation(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse("moonplanner:extractions"))
         self.assertTrue(mock_messages.success.called)
-        self.assertTrue(mock_run_refineries_update.delay.called)
+        self.assertTrue(mock_update_mining_corporation.delay.called)
         obj = MiningCorporation.objects.get(eve_corporation__corporation_id=2001)
         self.assertEqual(obj.character_ownership, self.character_ownership)
 
-    @patch(MODULE_PATH + ".update_refineries")
+    @patch(MODULE_PATH + ".update_mining_corporation")
     @patch(MODULE_PATH + ".messages_plus")
     def test_should_raise_404_if_character_ownership_not_found(
-        self, mock_messages, mock_run_refineries_update
+        self, mock_messages, mock_update_mining_corporation
     ):
         # given
         token = Mock(spec=Token)

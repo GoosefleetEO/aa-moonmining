@@ -19,7 +19,7 @@ from ..models import (
 from . import helpers
 from .testdata.esi_client_stub import esi_client_stub
 from .testdata.load_allianceauth import load_allianceauth
-from .testdata.load_eveuniverse import load_eveuniverse
+from .testdata.load_eveuniverse import load_eveuniverse, nearest_celestial_stub
 
 MODULE_PATH = "moonplanner.models"
 
@@ -114,24 +114,6 @@ class TestExtractionProduct(NoSocketsTestCase):
         result = obj.calc_value_estimate()
         # then
         self.assertIsNotNone(result)
-
-
-def nearest_celestial_stub(eve_solar_system, x, y, z):
-    eve_type = EveType.objects.get(id=14)
-    if (x, y, z) == (55028384780, 7310316270, -163686684205):
-        return eve_solar_system.NearestCelestial(
-            eve_type=eve_type,
-            eve_object=EveMoon.objects.get(id=40161708),  # Auga V - Moon 1
-            distance=123,
-        )
-    elif (x, y, z) == (45028384780, 6310316270, -163686684205):
-        return eve_solar_system.NearestCelestial(
-            eve_type=eve_type,
-            eve_object=EveMoon.objects.get(id=40161709),  # Auga V - Moon 2
-            distance=123,
-        )
-    else:
-        return None
 
 
 @patch(MODULE_PATH + ".esi")

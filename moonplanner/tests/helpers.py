@@ -1,5 +1,6 @@
 import datetime as dt
 
+from django.db import models
 from django.utils.timezone import now
 from eveuniverse.models import EveMoon, EveType
 
@@ -33,6 +34,16 @@ def create_moon_40161708() -> EveMoon:
         moon=moon, eve_type=EveType.objects.get(id=46689), amount=0.33
     )
     return moon
+
+
+def create_corporation_from_character_ownership(character_ownership):
+    corporation, _ = MiningCorporation.objects.get_or_create(
+        eve_corporation=EveCorporationInfo.objects.get(
+            corporation_id=character_ownership.character.corporation_id
+        ),
+        character_ownership=character_ownership,
+    )
+    return corporation
 
 
 def add_refinery(moon: Moon, corporation: MiningCorporation = None) -> Refinery:
@@ -79,3 +90,8 @@ def create_default_user_1001():
 
 def eve_type_athanor():
     return EveType.objects.get(id=35835)
+
+
+def model_ids(MyModel: models.Model, key="pk") -> set:
+    """Return all ids of given model as set."""
+    return set(MyModel.objects.values_list(key, flat=True))

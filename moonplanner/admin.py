@@ -30,26 +30,16 @@ class ExtractionAdmin(admin.ModelAdmin):
 class MiningCorporationAdmin(admin.ModelAdmin):
     list_display = ("eve_corporation", "character_ownership")
     ordering = ["eve_corporation"]
-    actions = ["update_refineries", "update_extractions"]
+    actions = ["update_mining_corporation"]
 
-    def update_refineries(self, request, queryset):
+    def update_mining_corporation(self, request, queryset):
         for obj in queryset:
-            tasks.update_refineries.delay(mining_corp_pk=obj.pk)
-            text = f"Started updating refineries for: {obj}. "
+            tasks.update_mining_corporation.delay(mining_corp_pk=obj.pk)
+            text = f"Started updating mining corporation: {obj}. "
             self.message_user(request, text)
 
-    update_refineries.short_description = (
+    update_mining_corporation.short_description = (
         "Update refineres from ESI for selected mining corporations"
-    )
-
-    def update_extractions(self, request, queryset):
-        for obj in queryset:
-            tasks.update_refineries.delay(mining_corp_pk=obj.pk)
-            text = f"Started updating extractions for: {obj}. "
-            self.message_user(request, text)
-
-    update_extractions.short_description = (
-        "Update extractions from ESI for selected mining corporations"
     )
 
     def has_change_permission(self, request, obj=None):
