@@ -5,7 +5,7 @@ import pytz
 
 from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.eveonline.models import EveCorporationInfo
 from app_utils.esi_testing import BravadoOperationStub
 from app_utils.testing import NoSocketsTestCase, create_user_from_evecharacter
 
@@ -135,7 +135,7 @@ class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
         super().setUpClass()
         load_eveuniverse()
         load_allianceauth()
-        cls.user, cls.character_ownership = create_user_from_evecharacter(
+        cls.user, character_ownership = create_user_from_evecharacter(
             1001,
             permissions=[
                 "moonplanner.access_moonplanner",
@@ -151,7 +151,7 @@ class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
         )
         cls.mining_corporation = MiningCorporation.objects.create(
             corporation=EveCorporationInfo.objects.get(corporation_id=2001),
-            character=EveCharacter.objects.get(character_id=1001),
+            character_ownership=character_ownership,
         )
 
     @patch(
@@ -228,7 +228,12 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
         super().setUpClass()
         load_eveuniverse()
         load_allianceauth()
-        cls.user, cls.character_ownership = create_user_from_evecharacter(
+        cls.moon = helpers.create_moon()
+
+    def test_should_create_new_extraction_with_products(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = create_user_from_evecharacter(
             1001,
             permissions=[
                 "moonplanner.access_moonplanner",
@@ -242,23 +247,18 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
                 "esi-corporations.read_structures.v1",
             ],
         )
-        cls.mining_corporation = MiningCorporation.objects.create(
+        mining_corporation = MiningCorporation.objects.create(
             corporation=EveCorporationInfo.objects.get(corporation_id=2001),
-            character=EveCharacter.objects.get(character_id=1001),
+            character_ownership=character_ownership,
         )
-        cls.moon = helpers.create_moon()
-
-    def test_should_create_new_extraction_with_products(self, mock_esi):
-        # given
-        mock_esi.client = esi_client_stub
         refinery = Refinery.objects.create(
             id=1000000000001,
             moon=self.moon,
-            corporation=self.mining_corporation,
+            corporation=mining_corporation,
             eve_type=EveType.objects.get(id=35835),
         )
         # when
-        self.mining_corporation.update_extractions_from_esi()
+        mining_corporation.update_extractions_from_esi()
         # then
         self.assertEqual(refinery.extractions.count(), 1)
         extraction = refinery.extractions.first()

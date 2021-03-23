@@ -28,7 +28,7 @@ class ExtractionAdmin(admin.ModelAdmin):
 
 @admin.register(MiningCorporation)
 class MiningCorporationAdmin(admin.ModelAdmin):
-    list_display = ("corporation", "character")
+    list_display = ("corporation", "character_ownership")
     ordering = ["corporation"]
     actions = ["update_refineries", "update_extractions"]
 

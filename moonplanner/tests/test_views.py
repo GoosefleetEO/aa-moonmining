@@ -8,10 +8,11 @@ from django.utils.timezone import now
 from esi.models import Token
 from eveuniverse.models import EveMoon
 
+from allianceauth.eveonline.models import EveCorporationInfo
 from app_utils.testing import create_user_from_evecharacter, json_response_to_dict
 
 from .. import views
-from ..models import Extraction, Moon, Refinery
+from ..models import Extraction, MiningCorporation, Moon, Refinery
 from . import helpers
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
@@ -29,26 +30,77 @@ class TestAddMinningCorporation(TestCase):
         cls.user, cls.character_ownership = create_user_from_evecharacter(
             1001, permissions=["moonplanner.add_mining_corporation"]
         )
-        cls.character = cls.character_ownership.character
 
     @patch(MODULE_PATH + ".update_refineries")
     @patch(MODULE_PATH + ".messages_plus")
-    def test_view_add_structure_owner_normal(
+    def test_should_add_new_corporation(
         self, mock_messages, mock_run_refineries_update
     ):
+        # given
         token = Mock(spec=Token)
-        token.character_id = self.character.character_id
+        token.character_id = self.character_ownership.character.character_id
         request = self.factory.get(reverse("moonplanner:add_mining_corporation"))
         request.user = self.user
         request.token = token
         middleware = SessionMiddleware()
         middleware.process_request(request)
         orig_view = views.add_mining_corporation.__wrapped__.__wrapped__.__wrapped__
+        # when
         response = orig_view(request, token)
+        # then
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse("moonplanner:extractions"))
         self.assertTrue(mock_messages.success.called)
         self.assertTrue(mock_run_refineries_update.delay.called)
+        obj = MiningCorporation.objects.get(corporation__corporation_id=2001)
+        self.assertEqual(obj.character_ownership, self.character_ownership)
+
+    @patch(MODULE_PATH + ".update_refineries")
+    @patch(MODULE_PATH + ".messages_plus")
+    def test_should_update_existing_corporation(
+        self, mock_messages, mock_run_refineries_update
+    ):
+        # given
+        MiningCorporation.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=None,
+        )
+        token = Mock(spec=Token)
+        token.character_id = self.character_ownership.character.character_id
+        request = self.factory.get(reverse("moonplanner:add_mining_corporation"))
+        request.user = self.user
+        request.token = token
+        middleware = SessionMiddleware()
+        middleware.process_request(request)
+        orig_view = views.add_mining_corporation.__wrapped__.__wrapped__.__wrapped__
+        # when
+        response = orig_view(request, token)
+        # then
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("moonplanner:extractions"))
+        self.assertTrue(mock_messages.success.called)
+        self.assertTrue(mock_run_refineries_update.delay.called)
+        obj = MiningCorporation.objects.get(corporation__corporation_id=2001)
+        self.assertEqual(obj.character_ownership, self.character_ownership)
+
+    @patch(MODULE_PATH + ".update_refineries")
+    @patch(MODULE_PATH + ".messages_plus")
+    def test_should_raise_404_if_character_ownership_not_found(
+        self, mock_messages, mock_run_refineries_update
+    ):
+        # given
+        token = Mock(spec=Token)
+        token.character_id = 1099
+        request = self.factory.get(reverse("moonplanner:add_mining_corporation"))
+        request.user = self.user
+        request.token = token
+        middleware = SessionMiddleware()
+        middleware.process_request(request)
+        orig_view = views.add_mining_corporation.__wrapped__.__wrapped__.__wrapped__
+        # when
+        response = orig_view(request, token)
+        # then
+        self.assertEqual(response.status_code, 404)
 
 
 class TestMoonListData(TestCase):

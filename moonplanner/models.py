@@ -8,7 +8,8 @@ from django.db.models import Q
 from esi.models import Token
 from eveuniverse.models import EveMoon, EveSolarSystem, EveType
 
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.authentication.models import CharacterOwnership
+from allianceauth.eveonline.models import EveCorporationInfo
 from allianceauth.services.hooks import get_extension_logger
 from app_utils.datetime import ldap_time_2_datetime
 from app_utils.logging import LoggerAddTag
@@ -169,12 +170,12 @@ class MiningCorporation(models.Model):
         primary_key=True,
         related_name="mining_corporations",
     )
-    character = models.ForeignKey(
-        EveCharacter,
+    character_ownership = models.ForeignKey(
+        CharacterOwnership,
         on_delete=models.SET_DEFAULT,
         default=None,
         null=True,
-        help_text="eve character used to sync this corporation from ESI",
+        help_text="character used to sync this corporation from ESI",
     )
 
     def __str__(self):
@@ -183,7 +184,9 @@ class MiningCorporation(models.Model):
     def fetch_token(self):
         """Fetch token for this mining corp and return it..."""
         return (
-            Token.objects.filter(character_id=self.character.character_id)
+            Token.objects.filter(
+                character_id=self.character_ownership.character.character_id
+            )
             .require_scopes(self.get_esi_scopes())
             .require_valid()
             .first()
@@ -257,7 +260,7 @@ class MiningCorporation(models.Model):
         token = self.fetch_token()
         all_notifications = (
             esi.client.Character.get_characters_character_id_notifications(
-                character_id=self.character.character_id,
+                character_id=self.character_ownership.character.character_id,
                 token=token.valid_access_token(),
             ).result()
         )

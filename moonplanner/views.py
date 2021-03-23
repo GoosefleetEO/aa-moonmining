@@ -1,4 +1,3 @@
-import logging
 import urllib
 from datetime import datetime, timezone
 
@@ -8,9 +7,13 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from esi.decorators import token_required
 
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.authentication.models import CharacterOwnership
+from allianceauth.eveonline.models import EveCorporationInfo
+from allianceauth.services.hooks import get_extension_logger
+from app_utils.logging import LoggerAddTag
 from app_utils.messages import messages_plus
 
+from . import __title__
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
 from .forms import MoonScanForm
 from .models import Extraction, MiningCorporation, Moon, MoonProduct
@@ -19,7 +22,7 @@ from .tasks import process_survey_input, update_refineries
 # from django.views.decorators.cache import cache_page
 
 
-logger = logging.getLogger(__name__)
+logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
 
 URL_PROFILE_SOLAR_SYSTEM = "https://evemaps.dotlan.net/system"
@@ -261,19 +264,24 @@ def moon_list_data(request, category):
 @token_required(scopes=MiningCorporation.get_esi_scopes())
 @login_required
 def add_mining_corporation(request, token):
-    character = EveCharacter.objects.get(character_id=token.character_id)
+    try:
+        character_ownership = request.user.character_ownerships.select_related(
+            "character"
+        ).get(character__character_id=token.character_id)
+    except CharacterOwnership.DoesNotExist:
+        return HttpResponseNotFound()
     try:
         corporation = EveCorporationInfo.objects.get(
-            corporation_id=character.corporation_id
+            corporation_id=character_ownership.character.corporation_id
         )
     except EveCorporationInfo.DoesNotExist:
         corporation = EveCorporationInfo.objects.create_corporation(
-            corp_id=character.corporation_id
+            corp_id=character_ownership.character.corporation_id
         )
         corporation.save()
 
-    mining_corporation, _ = MiningCorporation.objects.get_or_create(
-        corporation=corporation, defaults={"character": character}
+    mining_corporation, _ = MiningCorporation.objects.update_or_create(
+        corporation=corporation, defaults={"character_ownership": character_ownership}
     )
     update_refineries.delay(mining_corporation.pk)
     messages_plus.success(request, f"Update of refineres started for {corporation}.")

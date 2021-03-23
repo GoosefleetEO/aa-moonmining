@@ -67,6 +67,20 @@ def random_percentages(parts) -> list:
     return percentages
 
 
+def generate_extraction(refinery, ready_time):
+    extraction = Extraction.objects.create(
+        refinery=refinery,
+        ready_time=ready_time,
+        auto_time=ready_time + dt.timedelta(hours=4),
+    )
+    for product in moon.products.all():
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            eve_type=product.eve_type,
+            volume=MOONPLANNER_VOLUME_PER_MONTH * product.amount,
+        )
+
+
 data_path = Path(__file__).parent / "generate_moons.json"
 with data_path.open("r", encoding="utf-8") as fp:
     data = json.load(fp)
@@ -111,17 +125,17 @@ for moon in Moon.objects.order_by("?")[:MAX_REFINERIES]:
             corporation=corporation,
             eve_type=eve_type,
         )
-        ready_days = random.randint(7, 30)
-        extraction = Extraction.objects.create(
+        generate_extraction(
             refinery=refinery,
-            ready_time=now() + dt.timedelta(days=ready_days),
-            auto_time=now() + dt.timedelta(days=ready_days, hours=12),
+            ready_time=now() + dt.timedelta(days=random.randint(7, 30)),
         )
-        for product in moon.products.all():
-            ExtractionProduct.objects.create(
-                extraction=extraction,
-                eve_type=product.eve_type,
-                volume=MOONPLANNER_VOLUME_PER_MONTH * product.amount,
-            )
+        generate_extraction(
+            refinery=refinery,
+            ready_time=now() + dt.timedelta(days=-random.randint(7, 30)),
+        )
+        generate_extraction(
+            refinery=refinery,
+            ready_time=now() + dt.timedelta(days=-random.randint(7, 30)),
+        )
 
 print("DONE")
