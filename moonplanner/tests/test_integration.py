@@ -1,9 +1,9 @@
 from unittest.mock import patch
 
-from django_webtest import WebTest
-
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django_webtest import WebTest
+from eveuniverse.models import EveMarketPrice, EveType
 
 from app_utils.testing import create_user_from_evecharacter
 
@@ -15,6 +15,7 @@ from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse, nearest_celestial_stub
 
 MODELS_PATH = "moonplanner.models"
+TASKS_PATH = "moonplanner.tasks"
 VIEWS_PATH = "moonplanner.views"
 
 
@@ -44,8 +45,6 @@ class TestUI(WebTest):
 
 
 @override_settings(CELERY_ALWAYS_EAGER=True)
-@patch(MODELS_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub)
-@patch(MODELS_PATH + ".esi")
 class TestMainTasks(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -54,13 +53,17 @@ class TestMainTasks(TestCase):
         load_allianceauth()
         _, cls.character_ownership = helpers.create_default_user_1001()
 
+    @patch(
+        MODELS_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub
+    )
+    @patch(MODELS_PATH + ".esi")
     def test_should_update_all_mining_corporations(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
         moon = helpers.create_moon_40161708()
         helpers.create_corporation_from_character_ownership(self.character_ownership)
         # when
-        tasks.update_all_mining_corporations()
+        tasks.update_all_mining_corporations.delay()
         # then
         moon.refresh_from_db()
         self.assertSetEqual(
@@ -70,3 +73,20 @@ class TestMainTasks(TestCase):
         self.assertSetEqual(helpers.model_ids(Refinery), {1000000000001, 1000000000002})
         self.assertEqual(Refinery.objects.first().extractions.count(), 1)
         # TODO: add more tests
+
+    @patch(TASKS_PATH + ".EveMarketPrice.objects.update_from_esi")
+    def test_should_update_income_for_all_moons(self, mock_update_prices):
+        # given
+        mock_update_prices.return_value = None
+        moon = helpers.create_moon_40161708()
+        tungsten = EveType.objects.get(id=16637)
+        mercury = EveType.objects.get(id=16646)
+        evaporite_deposits = EveType.objects.get(id=16635)
+        EveMarketPrice.objects.create(eve_type=tungsten, average_price=7000)
+        EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
+        EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
+        # when
+        tasks.update_all_moon_income.delay()
+        # then
+        moon.refresh_from_db()
+        self.assertIsNotNone(moon.income)

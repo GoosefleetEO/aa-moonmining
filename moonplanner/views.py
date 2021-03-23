@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from django.contrib.auth.decorators import login_required, permission_required
-from django.http import HttpResponseForbidden, HttpResponseNotFound, JsonResponse
+from django.http import HttpResponse, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from esi.decorators import token_required
@@ -31,6 +31,10 @@ logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
 
 URL_PROFILE_TYPE = "https://www.kalkoken.org/apps/eveitems/?typeId="
+
+
+class HttpResponseUnauthorized(HttpResponse):
+    status_code = 401
 
 
 @login_required
@@ -73,7 +77,7 @@ def moon_info(request, moonid):
     if not request.user.has_perm("moonplanner.access_all_moons") or (
         moon.is_owned and not request.user.has_perm("moonplanner.access_our_moons")
     ):
-        return HttpResponseForbidden()
+        return HttpResponseUnauthorized()
 
     product_rows = []
     for product in (
@@ -223,6 +227,11 @@ def moon_list_data(request, category):
     )
     if category == "our_moons":
         moon_query = moon_query.filter(refinery__isnull=False)
+        if not request.user.has_perm("moonplanner.access_our_moons"):
+            return HttpResponseUnauthorized()
+    else:
+        if not request.user.has_perm("moonplanner.access_all_moons"):
+            return HttpResponseUnauthorized()
 
     for moon in moon_query:
         moon_details_url = reverse("moonplanner:moon_info", args=[moon.pk])

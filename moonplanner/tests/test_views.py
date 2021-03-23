@@ -110,29 +110,24 @@ class TestMoonListData(TestCase):
         cls.factory = RequestFactory()
         load_eveuniverse()
         load_allianceauth()
-        cls.user, _ = create_user_from_evecharacter(
-            1001,
-            permissions=[
-                "moonplanner.access_moonplanner",
-                "moonplanner.access_our_moons",
-            ],
-            scopes=[
-                "esi-industry.read_corporation_mining.v1",
-                "esi-universe.read_structures.v1",
-                "esi-characters.read_notifications.v1",
-                "esi-corporations.read_structures.v1",
-            ],
-        )
         Moon.objects.create(eve_moon=EveMoon.objects.get(id=40131695))
         Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161708))
         Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161709))
 
     def test_should_return_all_moons(self):
         # given
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=[
+                "moonplanner.access_moonplanner",
+                "moonplanner.access_all_moons",
+            ],
+            scopes=MiningCorporation.esi_scopes(),
+        )
         request = self.factory.get(
             reverse("moonplanner:moon_list_data", args={"category": "all_moons"})
         )
-        request.user = self.user
+        request.user = user
         # when
         response = views.moon_list_data(request, category="all_moons")
         # then
@@ -147,7 +142,15 @@ class TestMoonListData(TestCase):
         request = self.factory.get(
             reverse("moonplanner:moon_list_data", args={"category": "our_moons"})
         )
-        request.user = self.user
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=[
+                "moonplanner.access_moonplanner",
+                "moonplanner.access_our_moons",
+            ],
+            scopes=MiningCorporation.esi_scopes(),
+        )
+        request.user = user
         moon = Moon.objects.get(pk=40131695)
         helpers.add_refinery(moon)
         # when
@@ -162,7 +165,15 @@ class TestMoonListData(TestCase):
         request = self.factory.get(
             reverse("moonplanner:moon_list_data", args={"category": "our_moons"})
         )
-        request.user = self.user
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=[
+                "moonplanner.access_moonplanner",
+                "moonplanner.access_our_moons",
+            ],
+            scopes=MiningCorporation.esi_scopes(),
+        )
+        request.user = user
         moon = Moon.objects.get(pk=40131695)
         refinery = helpers.add_refinery(moon)
         Refinery.objects.create(
@@ -177,6 +188,41 @@ class TestMoonListData(TestCase):
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
         self.assertSetEqual(set(data.keys()), {40131695})
+
+    def test_should_raise_error_when_mission_permission_for_all_moons(self):
+        # given
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=[
+                "moonplanner.access_moonplanner",
+                "moonplanner.access_our_moons",
+            ],
+            scopes=MiningCorporation.esi_scopes(),
+        )
+        request = self.factory.get(
+            reverse("moonplanner:moon_list_data", args={"category": "all_moons"})
+        )
+        request.user = user
+        # when
+        response = views.moon_list_data(request, category="all_moons")
+        # then
+        self.assertEqual(response.status_code, 401)
+
+    def test_should_raise_error_when_mission_permission_for_our_moons(self):
+        # given
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=["moonplanner.access_moonplanner"],
+            scopes=MiningCorporation.esi_scopes(),
+        )
+        request = self.factory.get(
+            reverse("moonplanner:moon_list_data", args={"category": "our_moons"})
+        )
+        request.user = user
+        # when
+        response = views.moon_list_data(request, category="our_moons")
+        # then
+        self.assertEqual(response.status_code, 401)
 
 
 class TestMoonInfo(TestCase):
