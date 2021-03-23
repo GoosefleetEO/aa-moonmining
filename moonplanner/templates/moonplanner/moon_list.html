@@ -60,18 +60,25 @@
 
                     { data: 'solar_system_name' },
                     { data: 'has_refinery_str' },
+                    { data: 'corporation_name' },
+                    { data: 'alliance_name' },
                 ],
                 lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
                 pageLength: 10,
                 order: [ [0, "asc"] ],
                 columnDefs: [
                     { "orderable": false, "targets": [ 5 ] },
-                    { "visible": false, "targets": [ 6, 7 ] },
+                    { "visible": false, "targets": [ 6, 7, 8, 9 ] },
                 ],
                 filterDropDown: {
                     columns: [
                         {
-                            idx: 1
+                            idx: 9,
+                            title: "Alliance"
+                        },
+                        {
+                            idx: 8,
+                            title: "Corporation"
                         },
                         {
                             idx: 3

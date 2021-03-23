@@ -1,3 +1,3 @@
 /* Moon list */
-#moon_table thead th { text-align: center; vertical-align: center;}
-#moon_table tbody td { text-align: center; vertical-align: center;}
+#moon-list thead th { text-align: left; vertical-align: middle;}
+#moon-list tbody td { text-align: left; vertical-align: middle;}

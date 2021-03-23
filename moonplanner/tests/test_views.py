@@ -52,7 +52,7 @@ class TestAddMinningCorporation(TestCase):
         self.assertEqual(response.url, reverse("moonplanner:extractions"))
         self.assertTrue(mock_messages.success.called)
         self.assertTrue(mock_run_refineries_update.delay.called)
-        obj = MiningCorporation.objects.get(corporation__corporation_id=2001)
+        obj = MiningCorporation.objects.get(eve_corporation__corporation_id=2001)
         self.assertEqual(obj.character_ownership, self.character_ownership)
 
     @patch(MODULE_PATH + ".update_refineries")
@@ -62,7 +62,7 @@ class TestAddMinningCorporation(TestCase):
     ):
         # given
         MiningCorporation.objects.create(
-            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            eve_corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=None,
         )
         token = Mock(spec=Token)
@@ -80,7 +80,7 @@ class TestAddMinningCorporation(TestCase):
         self.assertEqual(response.url, reverse("moonplanner:extractions"))
         self.assertTrue(mock_messages.success.called)
         self.assertTrue(mock_run_refineries_update.delay.called)
-        obj = MiningCorporation.objects.get(corporation__corporation_id=2001)
+        obj = MiningCorporation.objects.get(eve_corporation__corporation_id=2001)
         self.assertEqual(obj.character_ownership, self.character_ownership)
 
     @patch(MODULE_PATH + ".update_refineries")

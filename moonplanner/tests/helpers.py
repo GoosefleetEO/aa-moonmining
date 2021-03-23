@@ -38,7 +38,7 @@ def create_moon_40161708() -> EveMoon:
 def add_refinery(moon: Moon, corporation: MiningCorporation = None) -> Refinery:
     if not corporation:
         corporation, _ = MiningCorporation.objects.get_or_create(
-            corporation=EveCorporationInfo.objects.get(corporation_id=2001)
+            eve_corporation=EveCorporationInfo.objects.get(corporation_id=2001)
         )
     refinery = Refinery.objects.create(
         id=moon.eve_moon_id,

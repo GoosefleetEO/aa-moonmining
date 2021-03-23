@@ -1,4 +1,3 @@
-import urllib
 from datetime import datetime, timezone
 
 from django.contrib.auth.decorators import login_required, permission_required
@@ -8,10 +7,16 @@ from django.urls import reverse
 from esi.decorators import token_required
 
 from allianceauth.authentication.models import CharacterOwnership
+from allianceauth.eveonline.evelinks import dotlan
 from allianceauth.eveonline.models import EveCorporationInfo
 from allianceauth.services.hooks import get_extension_logger
 from app_utils.logging import LoggerAddTag
 from app_utils.messages import messages_plus
+from app_utils.views import (
+    bootstrap_icon_plus_name_html,
+    fontawesome_link_button_html,
+    link_html,
+)
 
 from . import __title__
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
@@ -25,7 +30,6 @@ from .tasks import process_survey_input, update_refineries
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
 
-URL_PROFILE_SOLAR_SYSTEM = "https://evemaps.dotlan.net/system"
 URL_PROFILE_TYPE = "https://www.kalkoken.org/apps/eveitems/?typeId="
 
 
@@ -210,8 +214,12 @@ def moon_list_data(request, category):
     data = list()
     moon_query = Moon.objects.select_related(
         "eve_moon",
+        "eve_moon__eve_planet__eve_solar_system",
         "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
         "refinery",
+        "refinery__corporation",
+        "refinery__corporation__eve_corporation",
+        "refinery__corporation__eve_corporation__alliance",
     )
     if category == "our_moons":
         moon_query = moon_query.filter(refinery__isnull=False)
@@ -219,40 +227,52 @@ def moon_list_data(request, category):
     for moon in moon_query:
         moon_details_url = reverse("moonplanner:moon_info", args=[moon.pk])
         solar_system_name = moon.eve_moon.eve_planet.eve_solar_system.name
-        solar_system_link = '<a href="{}/{}" target="_blank">{}</a>'.format(
-            URL_PROFILE_SOLAR_SYSTEM,
-            urllib.parse.quote_plus(solar_system_name),
-            solar_system_name,
+        solar_system_link = link_html(
+            dotlan.solar_system_url(solar_system_name), solar_system_name
         )
-
         if moon.income is not None:
             income = "{:.1f}".format(moon.income / 1000000000)
         else:
             income = "(no data)"
 
         has_refinery = hasattr(moon, "refinery")
-        corporation = str(moon.refinery.corporation) if has_refinery else ""
-
+        if has_refinery:
+            eve_corporation = moon.refinery.corporation.eve_corporation
+            corporation_name = str(moon.refinery.corporation)
+            corporation_html = bootstrap_icon_plus_name_html(
+                eve_corporation.logo_url(size=64),
+                corporation_name,
+                size=40,
+            )
+            alliance_name = (
+                eve_corporation.alliance.alliance_name
+                if eve_corporation.alliance
+                else ""
+            )
+        else:
+            alliance_name = corporation_name = corporation_html = ""
+        region_name = (
+            moon.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region.name
+        )
+        details_button = fontawesome_link_button_html(
+            url=moon_details_url,
+            fa_code="fas fa-eye",
+            tooltip="Show details in current window",
+            button_type="default",
+        )
         moon_data = {
             "id": moon.pk,
             "moon_name": moon.eve_moon.name,
-            "corporation": corporation,
-            "solar_system_name": solar_system_name,
+            "corporation": corporation_html,
             "solar_system_link": solar_system_link,
-            "region_name": moon.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region.name,
+            "region_name": region_name,
             "income": income,
-            "has_refinery": has_refinery,
+            "details": details_button,
             "has_refinery_str": "yes" if has_refinery else "no",
-            "details": (
-                f'<a class="btn btn-primary btn-sm" href="{moon_details_url}" '
-                'data-toggle="tooltip" data-placement="top" '
-                'title="Show details in current window">'
-                '<i class="fas fa-eye"></i></a>&nbsp;&nbsp;'
-                f'<a class="btn btn-default btn-sm" href="{moon_details_url}" '
-                'target="_blank" data-toggle="tooltip" data-placement="top" '
-                'title="Open details in new window">'
-                '<i class="fas fa-window-restore"></i></a>'
-            ),
+            "solar_system_name": solar_system_name,
+            "corporation_name": corporation_name,
+            "alliance_name": alliance_name,
+            "has_refinery": has_refinery,
         }
         data.append(moon_data)
     return JsonResponse(data, safe=False)
@@ -271,18 +291,21 @@ def add_mining_corporation(request, token):
     except CharacterOwnership.DoesNotExist:
         return HttpResponseNotFound()
     try:
-        corporation = EveCorporationInfo.objects.get(
+        eve_corporation = EveCorporationInfo.objects.get(
             corporation_id=character_ownership.character.corporation_id
         )
     except EveCorporationInfo.DoesNotExist:
-        corporation = EveCorporationInfo.objects.create_corporation(
+        eve_corporation = EveCorporationInfo.objects.create_corporation(
             corp_id=character_ownership.character.corporation_id
         )
-        corporation.save()
+        eve_corporation.save()
 
-    mining_corporation, _ = MiningCorporation.objects.update_or_create(
-        corporation=corporation, defaults={"character_ownership": character_ownership}
+    corporation, _ = MiningCorporation.objects.update_or_create(
+        eve_corporation=eve_corporation,
+        defaults={"character_ownership": character_ownership},
     )
-    update_refineries.delay(mining_corporation.pk)
-    messages_plus.success(request, f"Update of refineres started for {corporation}.")
+    update_refineries.delay(corporation.pk)
+    messages_plus.success(
+        request, f"Update of refineres started for {eve_corporation}."
+    )
     return redirect("moonplanner:extractions")

@@ -164,7 +164,7 @@ class MoonProduct(models.Model):
 class MiningCorporation(models.Model):
     """An EVE Online corporation running mining operations."""
 
-    corporation = models.OneToOneField(
+    eve_corporation = models.OneToOneField(
         EveCorporationInfo,
         on_delete=models.CASCADE,
         primary_key=True,
@@ -179,7 +179,12 @@ class MiningCorporation(models.Model):
     )
 
     def __str__(self):
-        return self.corporation.corporation_name
+        alliance_ticker_str = (
+            f" [{self.eve_corporation.alliance.alliance_ticker}]"
+            if self.eve_corporation.alliance
+            else ""
+        )
+        return f"{self.eve_corporation}{alliance_ticker_str}"
 
     def fetch_token(self):
         """Fetch token for this mining corp and return it..."""
@@ -205,7 +210,7 @@ class MiningCorporation(models.Model):
     def _fetch_refineries_from_esi(self, token: Token) -> dict:
         logger.info("%s: Fetching refineries from ESI...", self)
         structures = esi.client.Corporation.get_corporations_corporation_id_structures(
-            corporation_id=self.corporation.corporation_id,
+            corporation_id=self.eve_corporation.corporation_id,
             token=token.valid_access_token(),
         ).result()
         refineries = dict()
@@ -383,7 +388,7 @@ class Refinery(models.Model):
                 return True
         return False
 
-    def update_moon_from_eve_id(self, eve_moon_id):
+    def update_moon_from_eve_id(self, eve_moon_id: int):
         eve_moon, _ = EveMoon.objects.get_or_create_esi(id=eve_moon_id)
         moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
         self.moon = moon

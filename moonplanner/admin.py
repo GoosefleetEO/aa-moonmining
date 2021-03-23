@@ -28,8 +28,8 @@ class ExtractionAdmin(admin.ModelAdmin):
 
 @admin.register(MiningCorporation)
 class MiningCorporationAdmin(admin.ModelAdmin):
-    list_display = ("corporation", "character_ownership")
-    ordering = ["corporation"]
+    list_display = ("eve_corporation", "character_ownership")
+    ordering = ["eve_corporation"]
     actions = ["update_refineries", "update_extractions"]
 
     def update_refineries(self, request, queryset):
@@ -65,7 +65,7 @@ class RefineryAdmin(admin.ModelAdmin):
     ordering = ["name"]
     list_filter = (
         ("eve_type", admin.RelatedOnlyFieldListFilter),
-        "corporation__corporation",
+        "corporation__eve_corporation",
     )
 
     def has_change_permission(self, request, obj=None):

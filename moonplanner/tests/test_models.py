@@ -143,7 +143,7 @@ class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
         load_allianceauth()
         _, character_ownership = helpers.create_default_user_1001()
         cls.mining_corporation = MiningCorporation.objects.create(
-            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            eve_corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
 
@@ -231,7 +231,7 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
         mock_esi.client = esi_client_stub
         _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
         mining_corporation = MiningCorporation.objects.create(
-            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            eve_corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
         refinery = Refinery.objects.create(
@@ -268,7 +268,7 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
         mock_esi.client = esi_client_stub
         _, character_ownership = helpers.create_default_user_from_evecharacter(1002)
         mining_corporation = MiningCorporation.objects.create(
-            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            eve_corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
         refinery = Refinery.objects.create(
@@ -287,7 +287,7 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
         mock_esi.client = esi_client_stub
         _, character_ownership = helpers.create_default_user_from_evecharacter(1004)
         mining_corporation = MiningCorporation.objects.create(
-            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            eve_corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
         refinery = Refinery.objects.create(
@@ -313,7 +313,7 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
         mock_esi.client = esi_client_stub
         _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
         mining_corporation = MiningCorporation.objects.create(
-            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            eve_corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
         Refinery.objects.create(
