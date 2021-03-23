@@ -261,7 +261,7 @@ def moon_list_data(request, category):
 @permission_required(
     ("moonplanner.add_mining_corporation", "moonplanner.access_moonplanner")
 )
-@token_required(scopes=MiningCorporation.get_esi_scopes())
+@token_required(scopes=MiningCorporation.esi_scopes())
 @login_required
 def add_mining_corporation(request, token):
     try:

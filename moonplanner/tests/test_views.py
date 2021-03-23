@@ -202,7 +202,7 @@ class TestMoonInfo(TestCase):
                 "esi-corporations.read_structures.v1",
             ],
         )
-        moon = helpers.create_moon()
+        moon = helpers.create_moon_40161708()
         helpers.add_refinery(moon)
 
     def test_should_open_page(self):
@@ -238,7 +238,7 @@ class TestViewsAreWorking(TestCase):
                 "esi-corporations.read_structures.v1",
             ],
         )
-        cls.moon = helpers.create_moon()
+        cls.moon = helpers.create_moon_40161708()
         cls.refinery = helpers.add_refinery(cls.moon)
 
     def test_should_open_extractions_page(self):

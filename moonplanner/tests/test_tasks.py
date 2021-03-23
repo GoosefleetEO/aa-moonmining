@@ -93,7 +93,7 @@ class TestProcessSurveyInput(TestCase):
 #     def setUpClass(cls):
 #         super().setUpClass()
 #         load_eveuniverse()
-#         cls.moon = helpers.create_moon()
+#         cls.moon = helpers.create_moon_40161708()
 #         EveMarketPrice.objects.create(
 #             eve_type=EveType.objects.get(id=45506), average_price=1, adjusted_price=2
 #         )

@@ -4,6 +4,7 @@ from django.utils.timezone import now
 from eveuniverse.models import EveMoon, EveType
 
 from allianceauth.eveonline.models import EveCorporationInfo
+from app_utils.testing import create_user_from_evecharacter
 
 from ..app_settings import MOONPLANNER_VOLUME_PER_MONTH
 from ..models import (
@@ -16,7 +17,7 @@ from ..models import (
 )
 
 
-def create_moon() -> EveMoon:
+def create_moon_40161708() -> EveMoon:
     Moon.objects.filter(pk=40161708).delete()
     moon = Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161708))
     MoonProduct.objects.create(
@@ -57,3 +58,24 @@ def add_refinery(moon: Moon, corporation: MiningCorporation = None) -> Refinery:
             volume=MOONPLANNER_VOLUME_PER_MONTH * product.amount,
         )
     return refinery
+
+
+def create_default_user_from_evecharacter(character_id):
+    return create_user_from_evecharacter(
+        character_id,
+        permissions=[
+            "moonplanner.access_moonplanner",
+            "moonplanner.upload_moon_scan",
+            "moonplanner.access_our_moons",
+            "moonplanner.add_mining_corporation",
+        ],
+        scopes=MiningCorporation.esi_scopes(),
+    )
+
+
+def create_default_user_1001():
+    return create_default_user_from_evecharacter(1001)
+
+
+def eve_type_athanor():
+    return EveType.objects.get(id=35835)

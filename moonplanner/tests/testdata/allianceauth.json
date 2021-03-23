@@ -31,6 +31,16 @@
             "alliance_ticker": "WYN"
         },
         {
+            "character_id": 1004,
+            "character_name": "Barry Allen",
+            "corporation_id": 2001,
+            "corporation_name": "Wayne Technologies",
+            "corporation_ticker": "WYT",
+            "alliance_id": 3001,
+            "alliance_name": "Wayne Enterprises",
+            "alliance_ticker": "WYN"
+        },
+        {
             "character_id": 1101,
             "character_name": "Lex Luther",
             "corporation_id": 2101,

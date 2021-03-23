@@ -187,95 +187,60 @@ class MiningCorporation(models.Model):
             Token.objects.filter(
                 character_id=self.character_ownership.character.character_id
             )
-            .require_scopes(self.get_esi_scopes())
+            .require_scopes(self.esi_scopes())
             .require_valid()
             .first()
         )
 
     def update_refineries_from_esi(self):
         """Update all refineries from ESI."""
-        logger.info("%s: Fetching corp structures from ESI...", self)
         token = self.fetch_token()
-        all_structures = (
-            esi.client.Corporation.get_corporations_corporation_id_structures(
-                corporation_id=self.corporation.corporation_id,
-                token=token.valid_access_token(),
-            ).result()
-        )
-        for refinery_info in all_structures:
-            eve_type, _ = EveType.objects.get_or_create_esi(id=refinery_info["type_id"])
+        refineries = self._fetch_refineries_from_esi(token)
+        for structure_id, _ in refineries.items():
+            self._update_or_create_refinery_from_esi(structure_id, token)
+
+        # remove refineries that no longer exist
+        self.refineries.exclude(id__in=refineries).delete()
+
+    def _fetch_refineries_from_esi(self, token: Token) -> dict:
+        logger.info("%s: Fetching refineries from ESI...", self)
+        structures = esi.client.Corporation.get_corporations_corporation_id_structures(
+            corporation_id=self.corporation.corporation_id,
+            token=token.valid_access_token(),
+        ).result()
+        refineries = dict()
+        for structure_info in structures:
+            eve_type, _ = EveType.objects.get_or_create_esi(
+                id=structure_info["type_id"]
+            )
+            structure_info["_eve_type"] = eve_type
             if eve_type.eve_group_id == constants.EVE_GROUP_ID_REFINERY:
-                structure_id = refinery_info["structure_id"]
-                logger.info("%s: Fetching details for refinery #%d", self, structure_id)
-                try:
-                    structure_info = (
-                        esi.client.Universe.get_universe_structures_structure_id(
-                            structure_id=structure_id, token=token.valid_access_token()
-                        ).result()
-                    )
-                except OSError:
-                    logger.exception(
-                        "%s: Failed to fetch refinery #%d", self, structure_id
-                    )
-                    continue
-                refinery, _ = Refinery.objects.update_or_create(
-                    id=structure_id,
-                    defaults={
-                        "name": structure_info["name"],
-                        "eve_type": eve_type,
-                        "corporation": self,
-                    },
-                )
-                if not refinery.moon:
-                    # determine moon next to refinery
-                    solar_system, _ = EveSolarSystem.objects.get_or_create_esi(
-                        id=structure_info["solar_system_id"]
-                    )
-                    try:
-                        nearest_celestial = solar_system.nearest_celestial(
-                            structure_info["position"]["x"],
-                            structure_info["position"]["y"],
-                            structure_info["position"]["z"],
-                        )
-                    except OSError:
-                        logger.exception(
-                            "%s: Failed to fetch nearest celestial for refinery #%d",
-                            self,
-                            structure_id,
-                        )
-                    else:
-                        if (
-                            nearest_celestial
-                            and nearest_celestial.eve_type.id
-                            == constants.EVE_TYPE_ID_MOON
-                        ):
-                            eve_moon = nearest_celestial.eve_object
-                            moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
-                            refinery.moon = moon
-                            refinery.save()
+                refineries[structure_info["structure_id"]] = structure_info
+        return refineries
+
+    def _update_or_create_refinery_from_esi(self, structure_id: int, token: Token):
+        logger.info("%s: Fetching details for refinery #%d", self, structure_id)
+        try:
+            structure_info = esi.client.Universe.get_universe_structures_structure_id(
+                structure_id=structure_id, token=token.valid_access_token()
+            ).result()
+        except OSError:
+            logger.exception("%s: Failed to fetch refinery #%d", self, structure_id)
+            return
+        refinery, _ = Refinery.objects.update_or_create(
+            id=structure_id,
+            defaults={
+                "name": structure_info["name"],
+                "eve_type": EveType.objects.get(id=structure_info["type_id"]),
+                "corporation": self,
+            },
+        )
+        if not refinery.moon:
+            refinery.update_moon_from_structure_info(structure_info)
 
     def update_extractions_from_esi(self):
         """Update all extractions from ESI."""
-        logger.info("%s: Updating extractions from ESI...", self)
-        token = self.fetch_token()
-        all_notifications = (
-            esi.client.Character.get_characters_character_id_notifications(
-                character_id=self.character_ownership.character.character_id,
-                token=token.valid_access_token(),
-            ).result()
-        )
-        notifications = [
-            notif
-            for notif in all_notifications
-            if notif["type"]
-            in {
-                "MoonminingAutomaticFracture",
-                "MoonminingExtractionCancelled",
-                "MoonminingExtractionFinished",
-                "MoonminingExtractionStarted",
-                "MoonminingLaserFired",
-            }
-        ]
+        notifications = self._fetch_moon_notifications_from_esi()
         if not notifications:
             logger.info("%s: No moon notifications received", self)
             return
@@ -287,7 +252,6 @@ class MiningCorporation(models.Model):
             len(notifications),
         )
         last_extraction_started = dict()
-        moon_updated = False
         for notification in sorted(notifications, key=lambda k: k["timestamp"]):
             parsed_text = yaml.safe_load(notification["text"])
             structure_id = parsed_text["structureID"]
@@ -295,16 +259,10 @@ class MiningCorporation(models.Model):
                 refinery = Refinery.objects.get(id=structure_id)
             except Refinery.DoesNotExist:
                 refinery = None
-            # update the refinery's moon in case it was not found by nearest_celestial
-            if refinery and not moon_updated:
-                moon_updated = True
-                eve_moon, _ = EveMoon.objects.get_or_create_esi(
-                    id=parsed_text["moonID"]
-                )
-                moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
-                if refinery.moon != moon:
-                    refinery.moon = moon
-                    refinery.save()
+            # update the refinery's moon from notification
+            # in case it was not found by nearest_celestial
+            if refinery and not refinery.moon:
+                refinery.update_moon_from_eve_id(parsed_text["moonID"])
 
             if notification["type"] == "MoonminingExtractionStarted":
                 if not refinery:
@@ -316,7 +274,7 @@ class MiningCorporation(models.Model):
                         "auto_time": ldap_time_2_datetime(parsed_text["autoTime"])
                     },
                 )
-                last_extraction_started[id] = extraction
+                last_extraction_started[structure_id] = extraction
                 ore_volume_by_type = parsed_text["oreVolumeByType"].items()
                 for ore_type_id, ore_volume in ore_volume_by_type:
                     eve_type, _ = EveType.objects.get_or_create_esi(
@@ -340,10 +298,31 @@ class MiningCorporation(models.Model):
                 if structure_id in last_extraction_started:
                     del last_extraction_started[structure_id]
 
-            # TODO: test logic to handle canceled extractions
+    def _fetch_moon_notifications_from_esi(self):
+        logger.info("%s: Fetching moon notifications from ESI...", self)
+        token = self.fetch_token()
+        all_notifications = (
+            esi.client.Character.get_characters_character_id_notifications(
+                character_id=self.character_ownership.character.character_id,
+                token=token.valid_access_token(),
+            ).result()
+        )
+        return [
+            notif
+            for notif in all_notifications
+            if notif["type"]
+            in {
+                "MoonminingAutomaticFracture",
+                "MoonminingExtractionCancelled",
+                "MoonminingExtractionFinished",
+                "MoonminingExtractionStarted",
+                "MoonminingLaserFired",
+            }
+        ]
 
     @classmethod
-    def get_esi_scopes(cls):
+    def esi_scopes(cls):
+        """Return list of all required esi scopes."""
         return [
             "esi-industry.read_corporation_mining.v1",
             "esi-universe.read_structures.v1",
@@ -364,7 +343,9 @@ class Refinery(models.Model):
         null=True,
         related_name="refinery",
     )
-    corporation = models.ForeignKey(MiningCorporation, on_delete=models.CASCADE)
+    corporation = models.ForeignKey(
+        MiningCorporation, on_delete=models.CASCADE, related_name="refineries"
+    )
     eve_type = models.ForeignKey(
         EveType,
         on_delete=models.CASCADE,
@@ -374,6 +355,39 @@ class Refinery(models.Model):
 
     def __str__(self):
         return self.name
+
+    def update_moon_from_structure_info(self, structure_info: dict) -> bool:
+        """Find moon based on location in space and update the object.
+        Returns True when successful, else false
+        """
+        solar_system, _ = EveSolarSystem.objects.get_or_create_esi(
+            id=structure_info["solar_system_id"]
+        )
+        try:
+            nearest_celestial = solar_system.nearest_celestial(
+                structure_info["position"]["x"],
+                structure_info["position"]["y"],
+                structure_info["position"]["z"],
+            )
+        except OSError:
+            logger.exception("%s: Failed to fetch nearest celestial ", self)
+        else:
+            if (
+                nearest_celestial
+                and nearest_celestial.eve_type.id == constants.EVE_TYPE_ID_MOON
+            ):
+                eve_moon = nearest_celestial.eve_object
+                moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
+                self.moon = moon
+                self.save()
+                return True
+        return False
+
+    def update_moon_from_eve_id(self, eve_moon_id):
+        eve_moon, _ = EveMoon.objects.get_or_create_esi(id=eve_moon_id)
+        moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
+        self.moon = moon
+        self.save()
 
 
 class Extraction(models.Model):

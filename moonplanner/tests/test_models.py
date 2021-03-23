@@ -7,9 +7,15 @@ from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 
 from allianceauth.eveonline.models import EveCorporationInfo
 from app_utils.esi_testing import BravadoOperationStub
-from app_utils.testing import NoSocketsTestCase, create_user_from_evecharacter
+from app_utils.testing import NoSocketsTestCase
 
-from ..models import ExtractionProduct, MiningCorporation, Refinery, calc_refined_value
+from ..models import (
+    Extraction,
+    ExtractionProduct,
+    MiningCorporation,
+    Refinery,
+    calc_refined_value,
+)
 from . import helpers
 from .testdata.esi_client_stub import esi_client_stub
 from .testdata.load_allianceauth import load_allianceauth
@@ -44,7 +50,7 @@ class TestMoonCalcIncome(NoSocketsTestCase):
     def setUpClass(cls):
         super().setUpClass()
         load_eveuniverse()
-        cls.moon = helpers.create_moon()
+        cls.moon = helpers.create_moon_40161708()
 
     def test_should_calc_income(self):
         # given
@@ -89,7 +95,7 @@ class TestExtractionProduct(NoSocketsTestCase):
         # given
         load_eveuniverse()
         load_allianceauth()
-        moon = helpers.create_moon()
+        moon = helpers.create_moon_40161708()
         helpers.add_refinery(moon)
         EveMarketPrice.objects.create(
             eve_type=EveType.objects.get(id=45506), average_price=1, adjusted_price=2
@@ -135,20 +141,7 @@ class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
         super().setUpClass()
         load_eveuniverse()
         load_allianceauth()
-        cls.user, character_ownership = create_user_from_evecharacter(
-            1001,
-            permissions=[
-                "moonplanner.access_moonplanner",
-                "moonplanner.access_our_moons",
-                "moonplanner.add_mining_corporation",
-            ],
-            scopes=[
-                "esi-industry.read_corporation_mining.v1",
-                "esi-universe.read_structures.v1",
-                "esi-characters.read_notifications.v1",
-                "esi-corporations.read_structures.v1",
-            ],
-        )
+        _, character_ownership = helpers.create_default_user_1001()
         cls.mining_corporation = MiningCorporation.objects.create(
             corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
@@ -203,22 +196,25 @@ class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
         self.assertIsNone(refinery.moon)
         self.assertEqual(mock_nearest_celestial.call_count, 2)
 
-    # def test_should_update_refinery_with_moon_from_notification_if_not_found(
-    #     self, mock_esi, mock_nearest_celestial
-    # ):
-    #     # given
-    #     mock_esi.client = esi_client_stub
-    #     my_eve_moon = EveMoon.objects.get(id=40161708)
-    #     mock_nearest_celestial.return_value = None
-    #     # when
-    #     self.mining_corporation.update_refineries_from_esi()
-    #     # then
-    #     refinery = Refinery.objects.get(id=1000000000001)
-    #     self.assertEqual(refinery.name, "Auga - Paradise Alpha")
-    #     self.assertEqual(refinery.moon.eve_moon, my_eve_moon)
-
-    # TODO: test when refinery does not exist for notification
-    # TODO: tests for extractions
+    @patch(
+        MODULE_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub
+    )
+    def test_should_remove_refineries_that_no_longer_exist(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        Refinery.objects.create(
+            id=1990000000001,
+            moon=None,
+            corporation=self.mining_corporation,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        # when
+        self.mining_corporation.update_refineries_from_esi()
+        # then
+        self.assertSetEqual(
+            set(self.mining_corporation.refineries.values_list("id", flat=True)),
+            {1000000000001, 1000000000002},
+        )
 
 
 @patch(MODULE_PATH + ".esi")
@@ -228,25 +224,12 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
         super().setUpClass()
         load_eveuniverse()
         load_allianceauth()
-        cls.moon = helpers.create_moon()
+        cls.moon = helpers.create_moon_40161708()
 
     def test_should_create_new_extraction_with_products(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
-        _, character_ownership = create_user_from_evecharacter(
-            1001,
-            permissions=[
-                "moonplanner.access_moonplanner",
-                "moonplanner.access_our_moons",
-                "moonplanner.add_mining_corporation",
-            ],
-            scopes=[
-                "esi-industry.read_corporation_mining.v1",
-                "esi-universe.read_structures.v1",
-                "esi-characters.read_notifications.v1",
-                "esi-corporations.read_structures.v1",
-            ],
-        )
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
         mining_corporation = MiningCorporation.objects.create(
             corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
@@ -255,7 +238,7 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
             id=1000000000001,
             moon=self.moon,
             corporation=mining_corporation,
-            eve_type=EveType.objects.get(id=35835),
+            eve_type=helpers.eve_type_athanor(),
         )
         # when
         mining_corporation.update_extractions_from_esi()
@@ -279,3 +262,68 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
         self.assertEqual(product.volume, 526825.4047522942)
         product = extraction.products.get(eve_type_id=46689)
         self.assertEqual(product.volume, 528996.6386983792)
+
+    def test_should_cancel_existing_extraction(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1002)
+        mining_corporation = MiningCorporation.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        refinery = Refinery.objects.create(
+            id=1000000000001,
+            moon=self.moon,
+            corporation=mining_corporation,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        # when
+        mining_corporation.update_extractions_from_esi()
+        # then
+        self.assertEqual(refinery.extractions.count(), 0)
+
+    def test_should_create_one_new_extraction(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1004)
+        mining_corporation = MiningCorporation.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        refinery = Refinery.objects.create(
+            id=1000000000001,
+            moon=self.moon,
+            corporation=mining_corporation,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        Extraction.objects.create(
+            refinery=refinery,
+            ready_time=dt.datetime(2019, 11, 20, 0, 1, 0, 105915, tzinfo=pytz.UTC),
+            auto_time=dt.datetime(2019, 11, 20, 3, 1, 0, 105915, tzinfo=pytz.UTC),
+        )
+        # when
+        mining_corporation.update_extractions_from_esi()
+        # then
+        self.assertEqual(refinery.extractions.count(), 2)
+
+    def test_should_update_refinery_with_moon_from_notification_if_not_found(
+        self, mock_esi
+    ):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
+        mining_corporation = MiningCorporation.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        Refinery.objects.create(
+            id=1000000000001,
+            moon=None,
+            corporation=mining_corporation,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        # when
+        mining_corporation.update_extractions_from_esi()
+        # then
+        obj = Refinery.objects.get(id=1000000000001)
+        self.assertEqual(obj.moon, self.moon)
