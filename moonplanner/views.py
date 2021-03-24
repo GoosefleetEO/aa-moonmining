@@ -32,6 +32,9 @@ logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
 URL_PROFILE_TYPE = "https://www.kalkoken.org/apps/eveitems/?typeId="
 
+MOONS_LIST_ALL = "all_moons"
+MOONS_LIST_OUR = "our_moons"
+
 
 class HttpResponseUnauthorized(HttpResponse):
     status_code = 401
@@ -96,7 +99,7 @@ def moon_info(request, moonid):
                 "ore_group_name": product.eve_type.eve_group.name,
                 "image_url": image_url,
                 "amount": amount,
-                "income": product.calc_income_estimate(),
+                "value": product.calc_value(),
             }
         )
 
@@ -147,6 +150,8 @@ def moon_info(request, moonid):
         "product_rows": product_rows,
         "next_pull": next_pull_data,
         "ppulls": ppulls_data,
+        "reprocessing_yield": MOONPLANNER_REPROCESSING_YIELD * 100,
+        "total_volume_per_month": MOONPLANNER_VOLUME_PER_MONTH / 1000000,
     }
     return render(request, "moonplanner/moon_info.html", context)
 
@@ -180,29 +185,21 @@ def add_moon_scan(request):
 @login_required()
 @permission_required(("moonplanner.access_moonplanner", "moonplanner.access_our_moons"))
 def moon_list_ours(request):
-    # render the page only, data is retrieved through ajax from moon_list_data
-    context = {
-        "title": "Our Moons",
-        "ajax_url": reverse("moonplanner:moon_list_data", args=["our_moons"]),
-        "reprocessing_yield": MOONPLANNER_REPROCESSING_YIELD * 100,
-        "total_volume_per_month": "{:,.1f}".format(
-            MOONPLANNER_VOLUME_PER_MONTH / 1000000
-        ),
-    }
-    return render(request, "moonplanner/moon_list.html", context)
+    return _moon_list_generic(request, MOONS_LIST_OUR)
 
 
 @login_required()
 @permission_required(("moonplanner.access_moonplanner", "moonplanner.access_all_moons"))
 def moon_list_all(request):
-    # render the page only, data is retrieved through ajax from moon_list_data
+    return _moon_list_generic(request, MOONS_LIST_ALL)
+
+
+def _moon_list_generic(request, category):
     context = {
-        "title": "All Moons",
-        "ajax_url": reverse("moonplanner:moon_list_data", args=["all_moons"]),
+        "title": "All Moons" if category == MOONS_LIST_ALL else "Our Moons",
+        "ajax_url": reverse("moonplanner:moon_list_data", args=[category]),
         "reprocessing_yield": MOONPLANNER_REPROCESSING_YIELD * 100,
-        "total_volume_per_month": "{:,.1f}".format(
-            MOONPLANNER_VOLUME_PER_MONTH / 1000000
-        ),
+        "total_volume_per_month": MOONPLANNER_VOLUME_PER_MONTH / 1000000,
     }
     return render(request, "moonplanner/moon_list.html", context)
 
@@ -222,7 +219,7 @@ def moon_list_data(request, category):
         "refinery__corporation__eve_corporation",
         "refinery__corporation__eve_corporation__alliance",
     )
-    if category == "our_moons":
+    if category == MOONS_LIST_OUR:
         moon_query = moon_query.filter(refinery__isnull=False)
         if not request.user.has_perm("moonplanner.access_our_moons"):
             return HttpResponseUnauthorized()
@@ -236,10 +233,10 @@ def moon_list_data(request, category):
         solar_system_link = link_html(
             dotlan.solar_system_url(solar_system_name), solar_system_name
         )
-        if moon.income is not None:
-            income = "{:.1f}".format(moon.income / 1000000000)
+        if moon.value is not None:
+            value = "{:.1f}".format(moon.value / 1000000000)
         else:
-            income = "(no data)"
+            value = "(no data)"
 
         has_refinery = hasattr(moon, "refinery")
         if has_refinery:
@@ -272,7 +269,7 @@ def moon_list_data(request, category):
             "corporation": {"display": corporation_html, "sort": corporation_name},
             "solar_system_link": solar_system_link,
             "region_name": region_name,
-            "income": income,
+            "value": value,
             "details": details_button,
             "has_refinery_str": "yes" if has_refinery else "no",
             "solar_system_name": solar_system_name,

@@ -129,9 +129,9 @@ def fetch_missing_eve_objects(EveModel: type, ids_incoming: set, force_refetch: 
         exit(1)
 
 
-def thread_update_moon_income(moon_id):
+def thread_update_moon_value(moon_id):
     moon = Moon.objects.prefetch_related("products").get(pk=moon_id)
-    moon.update_income_estimate()
+    moon.update_value()
 
 
 def main():
@@ -209,7 +209,7 @@ def main():
     if updated_moon_ids:
         logger.info("Updating income estimate for %d moons...", len(updated_moon_ids))
         with futures.ThreadPoolExecutor(max_workers=MAX_THREAD_WORKERS) as executor:
-            executor.map(thread_update_moon_income, list(updated_moon_ids))
+            executor.map(thread_update_moon_value, list(updated_moon_ids))
         logger.info("DONE")
 
 

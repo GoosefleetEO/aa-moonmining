@@ -21,6 +21,7 @@ def process_survey_input(scans, user_pk=None) -> bool:
 
 @shared_task
 def update_all_mining_corporations():
+    """Update refineries and extractions for all mining corporations."""
     mining_corporation_pks = MiningCorporation.objects.values_list("pk", flat=True)
     logger.info("Updating %d mining corporations...", len(mining_corporation_pks))
     for corporation_pk in mining_corporation_pks:
@@ -29,7 +30,7 @@ def update_all_mining_corporations():
 
 @shared_task
 def update_mining_corporation(corporation_pk):
-    """update refineries and extractions from a mining corporation"""
+    """Update refineries and extractions for given mining corporation."""
     chain(
         update_refineries_from_esi.si(corporation_pk),
         update_extractions_from_esi.si(corporation_pk),
@@ -38,29 +39,30 @@ def update_mining_corporation(corporation_pk):
 
 @shared_task
 def update_refineries_from_esi(corporation_pk):
-    """update refineries for a mining corporation from ESI"""
+    """Update refineries for a mining corporation from ESI."""
     mining_corp = MiningCorporation.objects.get(pk=corporation_pk)
     mining_corp.update_refineries_from_esi()
 
 
 @shared_task
 def update_extractions_from_esi(corporation_pk):
-    """update extractions for a mining corporation from ESI"""
+    """Update extractions for a mining corporation from ESI."""
     mining_corp = MiningCorporation.objects.get(pk=corporation_pk)
     mining_corp.update_extractions_from_esi()
 
 
 @shared_task
-def update_all_moon_income():
-    """update the income for all moons"""
+def update_all_moon_values():
+    """Update the value for all moons."""
     moon_pks = Moon.objects.values_list("pk", flat=True)
-    logger.info("Updating moon income for %d moons...", len(moon_pks))
+    logger.info("Updating value estimates for %d moons...", len(moon_pks))
     EveMarketPrice.objects.update_from_esi()
     for moon_pk in moon_pks:
-        update_moon_income.delay(moon_pk)
+        update_moon_value.delay(moon_pk)
 
 
 @shared_task
-def update_moon_income(moon_pk):
+def update_moon_value(moon_pk):
+    """Update the value for given moon."""
     moon = Moon.objects.get(pk=moon_pk)
-    moon.update_income_estimate()
+    moon.update_value()

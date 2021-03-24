@@ -4,7 +4,6 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Q
 from esi.models import Token
 from eveuniverse.models import EveMoon, EveSolarSystem, EveType
 
@@ -65,9 +64,9 @@ class Moon(models.Model):
     """
 
     eve_moon = models.OneToOneField(
-        EveMoon, on_delete=models.CASCADE, primary_key=True, related_name="income"
+        EveMoon, on_delete=models.CASCADE, primary_key=True, related_name="known"
     )
-    income = models.FloatField(
+    value = models.FloatField(
         null=True, default=None, validators=[MinValueValidator(0.0)]
     )
     products_updated_at = models.DateTimeField(null=True, default=None)
@@ -80,37 +79,37 @@ class Moon(models.Model):
     def __str__(self):
         return self.eve_moon.name
 
-    def update_income_estimate(self, total_volume=None, reprocessing_yield=None):
-        """Update income for this moon."""
-        income = self.calc_income_estimate(
+    def update_value(self, total_volume=None, reprocessing_yield=None):
+        """Update value estimate for this moon."""
+        value = self.calc_value(
             total_volume=total_volume, reprocessing_yield=reprocessing_yield
         )
-        self.income = income
+        self.value = value
         self.save()
 
-    def calc_income_estimate(self, total_volume=None, reprocessing_yield=None) -> float:
-        """Return calculated income estimate for given parameters.
+    def calc_value(self, total_volume=None, reprocessing_yield=None) -> float:
+        """Return calculated value estimate for given parameters.
 
         Args:
             total_volume: total excepted ore volume for this moon
             reprocessing_yield: expected average yield for ore reprocessing
 
         Returns:
-            income estimate for moon or None if prices or products are missing
+            value estimate for moon or None if prices or products are missing
         """
         if not total_volume:
             total_volume = MOONPLANNER_VOLUME_PER_MONTH
         if not reprocessing_yield:
             reprocessing_yield = MOONPLANNER_REPROCESSING_YIELD
-        income = 0
+        value = 0
         for product in self.products.select_related("eve_type"):
             if product.eve_type.volume:
-                income += calc_refined_value(
+                value += calc_refined_value(
                     eve_type=product.eve_type,
                     volume=total_volume * product.amount,
                     reprocessing_yield=reprocessing_yield,
                 )
-        return income if income else None
+        return value if value else None
 
     def is_owned(self):
         return hasattr(self, "refinery")
@@ -125,7 +124,6 @@ class MoonProduct(models.Model):
         on_delete=models.DO_NOTHING,
         null=True,
         default=None,
-        limit_choices_to=Q(group__category_id=25),
         related_name="+",
     )
     amount = models.FloatField(
@@ -141,15 +139,15 @@ class MoonProduct(models.Model):
     #         models.Index(fields=["eve_moon"]),
     #     ]
 
-    def calc_income_estimate(self, total_volume=None, reprocessing_yield=None) -> float:
-        """Return calculated income estimate for given parameters.
+    def calc_value(self, total_volume=None, reprocessing_yield=None) -> float:
+        """Return calculated value estimate for given parameters.
 
         Args:
             total_volume: total excepted ore volume for this moon
             reprocessing_yield: expected average yield for ore reprocessing
 
         Returns:
-            income estimate for moon or None if prices or products are missing
+            value estimate for moon or None if prices or products are missing
         """
         if not total_volume:
             total_volume = MOONPLANNER_VOLUME_PER_MONTH
@@ -357,7 +355,6 @@ class Refinery(models.Model):
     eve_type = models.ForeignKey(
         EveType,
         on_delete=models.CASCADE,
-        limit_choices_to={"eve_group_id": constants.EVE_GROUP_ID_REFINERY},
         related_name="+",
     )
 
@@ -406,6 +403,9 @@ class Extraction(models.Model):
     )
     ready_time = models.DateTimeField()
     auto_time = models.DateTimeField()
+    value = models.FloatField(
+        null=True, default=None, validators=[MinValueValidator(0.0)]
+    )
 
     # class Meta:
     #     unique_together = (("ready_time", "refinery"),)
@@ -423,9 +423,7 @@ class ExtractionProduct(models.Model):
     eve_type = models.ForeignKey(
         EveType,
         on_delete=models.CASCADE,
-        limit_choices_to=Q(
-            eve_group__eve_category_id=constants.EVE_CATEGORY_ID_ASTEROID
-        ),
+        related_name="+",
     )
     volume = models.FloatField(validators=[MinValueValidator(0.0)])
 

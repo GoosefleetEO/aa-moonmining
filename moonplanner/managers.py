@@ -119,7 +119,7 @@ class MoonManager(models.Manager):
                     moon.products.all().delete()
                     MoonProduct.objects.bulk_create(moon_products, batch_size=500)
 
-                moon.update_income_estimate()
+                moon.update_value()
                 logger.info("Added moon survey for %s", moon.eve_moon.name)
 
             except Exception as ex:

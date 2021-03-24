@@ -90,10 +90,10 @@ class TestUpdateTasks(TestCase):
         EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
         EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
         # when
-        tasks.update_all_moon_income.delay()
+        tasks.update_all_moon_values.delay()
         # then
         moon.refresh_from_db()
-        self.assertIsNotNone(moon.income)
+        self.assertIsNotNone(moon.value)
 
 
 class TestProcessSurveyInput(TestCase):

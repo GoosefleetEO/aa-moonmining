@@ -92,7 +92,7 @@ for moon_id in random.choices(moon_ids, k=MAX_MOONS):
     print(f"Creating moon {moon_id}")
     eve_moon, _ = EveMoon.objects.get_or_create_esi(id=moon_id)
     moon, created = Moon.objects.get_or_create(
-        eve_moon=eve_moon, defaults={"income": random.randint(100000000, 10000000000)}
+        eve_moon=eve_moon, defaults={"value": random.randint(100000000, 10000000000)}
     )
     if created:
         percentages = random_percentages(4)

@@ -24,20 +24,16 @@
                     <th>Corporation</th>
                     <th>System</th>
                     <th>Region</th>
-                    <th>Monthly income est. in B ISK</th>
+                    <th>Value est. (*)</th>
                     <th>Details</th>
                 </thead>
                 <tbody>
                 </tbody>
             </table>
+            {% include 'moonplanner/partials/value_estimate_legend.html' %}
         </div>
     </div>
-    <p class="text-muted">
-        Income estimates are calculated using reprocessed ores,
-        current average market prices,
-        a reprocessing yield of {{ reprocessing_yield|floatformat }}%
-        and an assumed monthly ore volume of {{ total_volume_per_month }} million m3
-    </p>
+
 
 
 {% endblock %}
@@ -64,7 +60,7 @@
                     },
                     { data: 'solar_system_link' },
                     { data: 'region_name' },
-                    { data: 'income' },
+                    { data: 'value' },
                     { data: 'details' },
 
                     { data: 'solar_system_name' },

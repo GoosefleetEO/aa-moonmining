@@ -36,7 +36,7 @@ class TestDatetime(TestCase):
         # when
         result = moonplanner.datetime(dt.datetime(2021, 3, 24, 14, 50))
         # then
-        self.assertEqual(result, "2021-03-24 14:50")
+        self.assertEqual(result, "2021-Mar-24 14:50")
 
     def test_should_return_none_for_invalid_types_1(self):
         # when

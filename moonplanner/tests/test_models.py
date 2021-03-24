@@ -71,9 +71,7 @@ class TestMoonCalcIncome(NoSocketsTestCase):
         mexallon = EveType.objects.get(id=36)
         EveMarketPrice.objects.create(eve_type=mexallon, average_price=117)
         # when
-        result = self.moon.calc_income_estimate(
-            total_volume=1000000, reprocessing_yield=0.7
-        )
+        result = self.moon.calc_value(total_volume=1000000, reprocessing_yield=0.7)
         # then
         self.assertEqual(result, 180498825.5)
 
@@ -83,9 +81,7 @@ class TestMoonCalcIncome(NoSocketsTestCase):
             eve_type=EveType.objects.get(id=45506), average_price=1, adjusted_price=2
         )
         # when
-        result = self.moon.calc_income_estimate(
-            total_volume=1000000, reprocessing_yield=0.7
-        )
+        result = self.moon.calc_value(total_volume=1000000, reprocessing_yield=0.7)
         # then
         self.assertIsNone(result)
 
