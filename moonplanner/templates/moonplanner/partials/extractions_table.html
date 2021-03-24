@@ -1,3 +1,4 @@
+{% load humanize %}
 {% load moonplanner %}
 
 {% block content %}
@@ -12,6 +13,8 @@
                 <th class="text-center">Ready Time</th>
                 <th class="text-center">Moon</th>
                 <th class="text-center">Corporation</th>
+                <th class="text-center">Volume (m3)</th>
+                <th class="text-center">Value est. (B ISK)</th>
                 <th class="text-center"></th>
             </thead>
             <tbody>
@@ -20,6 +23,8 @@
                         <td class="text-center">{{ extraction.ready_time|datetime }}</td>
                         <td class="text-center">{{ extraction.refinery.moon.eve_moon.name }}</td>
                         <td class="text-center">{{ extraction.refinery.corporation }}</td>
+                        <td class="text-center">{{ extraction.volume|floatformat:"0"|intcomma }}</td>
+                        <td class="text-center">{{ extraction.value|floatformat:"1"|intcomma }}</td>
                         <td class="text-center">
                             {% if extraction.refinery.moon.pk %}
                                 <a class="btn btn-default" href="{% url 'moonplanner:moon_info' extraction.refinery.moon.pk %}">

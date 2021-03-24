@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from django.contrib.auth.decorators import login_required, permission_required
+from django.db.models import Sum
 from django.http import HttpResponse, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -65,7 +66,9 @@ def extractions(request):
     # Upcoming Extractions
     today = datetime.today().replace(tzinfo=timezone.utc)
     context = {
-        "exts": Extraction.objects.filter(ready_time__gte=today),
+        "exts": Extraction.objects.annotate(volume=Sum("products__volume")).filter(
+            ready_time__gte=today
+        ),
         "r_exts": Extraction.objects.filter(ready_time__lt=today)[:20],
     }
     return render(request, "moonplanner/extractions.html", context)
@@ -73,9 +76,9 @@ def extractions(request):
 
 @login_required
 @permission_required("moonplanner.access_moonplanner")
-def moon_info(request, moonid):
+def moon_info(request, moon_pk: int):
     try:
-        moon = Moon.objects.select_related("eve_moon").get(pk=moonid)
+        moon = Moon.objects.select_related("eve_moon").get(pk=moon_pk)
     except Moon.DoesNotExist:
         return HttpResponseNotFound()
     if not request.user.has_perm("moonplanner.access_all_moons") or (
