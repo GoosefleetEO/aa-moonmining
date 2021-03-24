@@ -21,13 +21,10 @@
                     <li class="{% navactive request 'moonplanner:extractions' %}">
                         <a href="{% url 'moonplanner:extractions' %}">Extractions</a>
                     </li>
-                    <li class="{% navactive request 'moonplanner:moon_list_ours' %}">
-                        <a href="{% url 'moonplanner:moon_list_ours' %}">Our Moons</a>
-                    </li>
                 {% endif %}
-                {% if perms.moonplanner.access_all_moons %}
-                    <li class="{% navactive request 'moonplanner:moon_list_all' %}">
-                        <a href="{% url 'moonplanner:moon_list_all' %}">All Moons</a>
+                {% if perms.moonplanner.access_our_moons or perms.moonplanner.access_all_moons %}
+                    <li class="{% navactive request 'moonplanner:moon_list' %}">
+                        <a href="{% url 'moonplanner:moon_list' %}">Moons</a>
                     </li>
                 {% endif %}
 

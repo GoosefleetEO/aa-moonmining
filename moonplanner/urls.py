@@ -12,6 +12,7 @@ urlpatterns = [
     ),
     path("add_moon_scan", views.add_moon_scan, name="add_moon_scan"),
     path("moon_list_data/<str:category>", views.moon_list_data, name="moon_list_data"),
+    path("moons", views.moon_list, name="moon_list"),
     path("our_moons", views.moon_list_ours, name="moon_list_ours"),
     path("all_moons", views.moon_list_all, name="moon_list_all"),
     path("moon/<int:moon_pk>", views.moon_info, name="moon_info"),

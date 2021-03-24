@@ -147,6 +147,7 @@ def moon_info(request, moon_pk: int):
             )
 
     context = {
+        "page_title": moon.eve_moon.name,
         "moon": moon,
         "solar_system": moon.eve_moon.eve_planet.eve_solar_system,
         "moon_name": moon.eve_moon.name,
@@ -162,12 +163,14 @@ def moon_info(request, moon_pk: int):
 @permission_required(("moonplanner.access_moonplanner", "moonplanner.upload_moon_scan"))
 @login_required()
 def add_moon_scan(request):
+    context = {
+        "page_title": "Moon Scan Input",
+    }
     if request.method == "POST":
         form = MoonScanForm(request.POST)
         if form.is_valid():
             scans = request.POST["scan"]
             process_survey_input.delay(scans, request.user.pk)
-
             messages_plus.success(
                 request,
                 (
@@ -175,14 +178,25 @@ def add_moon_scan(request):
                     "receive a notification once processing is complete."
                 ),
             )
-            return render(request, "moonplanner/add_scan.html")
+            return render(request, "moonplanner/add_scan.html", context=context)
         else:
             messages_plus.error(
                 request, "Oh No! Something went wrong with your moon scan submission."
             )
             return redirect("moonplanner:moon_info")
     else:
-        return render(request, "moonplanner/add_scan.html")
+        return render(request, "moonplanner/add_scan.html", context=context)
+
+
+@login_required()
+@permission_required("moonplanner.access_moonplanner")
+def moon_list(request):
+    context = {
+        "page_title": "Moons",
+        "reprocessing_yield": MOONPLANNER_REPROCESSING_YIELD * 100,
+        "total_volume_per_month": MOONPLANNER_VOLUME_PER_MONTH / 1000000,
+    }
+    return render(request, "moonplanner/moon_list.html", context)
 
 
 @login_required()
