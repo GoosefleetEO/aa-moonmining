@@ -10,7 +10,11 @@
         <h2> {{ title }} </h2>
 
         <div id="loader">
-			<img class="center-block" src="{% static 'moonplanner/img/Spinner-1s-200px.gif' %}" alt="Spinner"/>moon_name
+			{% if NIGHT_MODE %}
+                <img src="{% static 'moonplanner/img/Spinner-1s-64px-dark.gif' %}" alt="Spinner"/>
+            {% else %}
+                <img src="{% static 'moonplanner/img/Spinner-1s-64px-light.gif' %}" alt="Spinner"/>
+            {% endif %}
 		</div>
 
         <div id="moon_table" style="display: none !important;">

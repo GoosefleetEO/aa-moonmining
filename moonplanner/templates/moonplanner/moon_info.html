@@ -2,6 +2,8 @@
 {% load i18n %}
 {% block page_title %}{{ moon_name }}{% endblock %}
 {% load static %}
+{% load humanize %}
+{% load moonplanner %}
 
 {% block content %}
     <div class="col-lg-12">
@@ -49,7 +51,7 @@
                                 <p><strong>Monthly income est.:</strong></p>
                             </div>
                             <div class="col-md-9">
-                            <p>{{ moon_income | floatformat }} B</p>
+                            <p>{{ moon.income | formatisk }}</p>
                             </div>
                         </div>
                     </div>
@@ -57,7 +59,7 @@
 
                 <div class="panel panel-default">
                     <div class="panel-heading text-center">
-                        <h3 class="panel-title">Product</h3>
+                        <h3 class="panel-title">Products</h3>
                     </div>
                     <div class="panel-body">
                         {% if product_rows|length_is:"0" %}
@@ -103,13 +105,13 @@
                                     <div class="col-md-2">
                                         <span class="pull-right">
                                             <br>
-                                            {{ product_row.income | floatformat }} B
+                                            {{ product_row.income | formatisk }}
                                         </span>
                                     </div>
                                 </div>
                             {% endfor %}
                         {% endif %}
-                        <p class="text-muted">Last updated on {{moon.products_updated_at|date:"DATE_FORMAT"|default:"?"}} by {{moon.products_updated_by.profile.main_character|default:"?"}}<p>
+                        <p class="text-muted">Last updated on {{moon.products_updated_at|datetime|default:"?"}} by {{moon.products_updated_by.profile.main_character|default:"?"}}<p>
                     </div>
                 </div>
             </div>
@@ -129,7 +131,7 @@
                                     <p><strong>Ready Time:</strong></p>
                                 </div>
                                 <div class="col-md-9">
-                                    <p>{{ next_pull.ready_time }}</p>
+                                    <p>{{ next_pull.ready_time|datetime }}</p>
                                 </div>
                             </div>
 
@@ -138,7 +140,7 @@
                                     <p><strong>Auto Fracture Time:</strong></p>
                                 </div>
                                 <div class="col-md-9">
-                                    <p>{{ next_pull.auto_time }}</p>
+                                    <p>{{ next_pull.auto_time|datetime }}</p>
                                 </div>
                             </div>
 
@@ -156,8 +158,8 @@
                                     <tr>
                                         <td><img src="{{ product.image_url }}"/></td>
                                         <td><a href="{{ product.ore_type_url }}" target="_blank">{{ product.ore_type_name }}</a></td>
-                                        <td>{{ product.volume }}</td>
-                                        <td>{{ product.value | floatformat}} B</td>
+                                        <td>{{ product.volume|floatformat:"0"|intcomma }}</td>
+                                        <td>{{ product.value|formatisk}}</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -165,8 +167,8 @@
                                 <tr>
                                     <th></th>
                                     <th>TOTAL</th>
-                                    <th>{{ next_pull.total_volume }}</th>
-                                    <th>{{ next_pull.total_value | floatformat}} B</th>
+                                    <th>{{ next_pull.total_volume|floatformat:"0"|intcomma }}</th>
+                                    <th>{{ next_pull.total_value|formatisk}}</th>
                                 </tr>
                             </tfoot>
                             </table>
@@ -176,11 +178,11 @@
                 </div>
 
             </div>
-            <div class="col-md-6 {% if product_rows|length_is:"0" %}col-md-offset-6{% endif %}">
+            <div class="col-md-6 {% if product_rows|length_is:'0' %}col-md-offset-6{% endif %}">
 
                     <div class="panel panel-default">
                         <div class="panel-heading text-center">
-                            <h3 class="panel-title"> Past Extractions</h3>
+                            <h3 class="panel-title">Past Extractions</h3>
                         </div>
                         <div class="panel-body">
                             <table class="table text-center" id="past-events">
@@ -190,12 +192,12 @@
                                 <tbody>
                                     {% if ppulls|length_is:"0" %}
                                         <tr>
-                                            <td> No past extraxtions recorded for this moon.</td>
+                                            <td> No past extractions recorded for this moon.</td>
                                         </tr>
                                     {% else %}
                                         {% for pull in ppulls %}
                                             <tr>
-                                                <td>{{ pull.ready_time }}</td>
+                                                <td>{{ pull.ready_time|datetime }}</td>
                                             </tr>
                                         {% endfor %}
                                     {% endif %}

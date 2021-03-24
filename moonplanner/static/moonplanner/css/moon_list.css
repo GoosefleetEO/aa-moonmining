@@ -1,3 +1,8 @@
 /* Moon list */
 #moon-list thead th { text-align: left; vertical-align: middle;}
+
 #moon-list tbody td { text-align: left; vertical-align: middle;}
+
+#moon-list tbody td:nth-child(5) {
+    text-align: right;
+}

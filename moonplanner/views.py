@@ -59,12 +59,13 @@ def index(request):
 @login_required
 @permission_required(("moonplanner.access_our_moons", "moonplanner.access_moonplanner"))
 def extractions(request):
-    ctx = {}
     # Upcoming Extractions
     today = datetime.today().replace(tzinfo=timezone.utc)
-    ctx["exts"] = Extraction.objects.filter(ready_time__gte=today)
-    ctx["r_exts"] = Extraction.objects.filter(ready_time__lt=today)[:20]
-    return render(request, "moonplanner/extractions.html", ctx)
+    context = {
+        "exts": Extraction.objects.filter(ready_time__gte=today),
+        "r_exts": Extraction.objects.filter(ready_time__lt=today)[:20],
+    }
+    return render(request, "moonplanner/extractions.html", context)
 
 
 @login_required
@@ -87,7 +88,6 @@ def moon_info(request, moonid):
     ):
         image_url = product.eve_type.icon_url(64)
         amount = int(round(product.amount * 100))
-        income = product.calc_income_estimate()
         ore_type_url = "{}{}".format(URL_PROFILE_TYPE, product.eve_type_id)
         product_rows.append(
             {
@@ -96,7 +96,7 @@ def moon_info(request, moonid):
                 "ore_group_name": product.eve_type.eve_group.name,
                 "image_url": image_url,
                 "amount": amount,
-                "income": None if income is None else income / 1000000000,
+                "income": product.calc_income_estimate(),
             }
         )
 
@@ -125,17 +125,15 @@ def moon_info(request, moonid):
                         "ore_type_url": ore_type_url,
                         "ore_group_name": product.eve_type.eve_group.name,
                         "image_url": image_url,
-                        "volume": "{:,.0f}".format(product.volume),
-                        "value": None if value is None else value / 1000000000,
+                        "volume": product.volume,
+                        "value": value,
                     }
                 )
-
-            total_value = None if total_value is None else total_value / 1000000000
             next_pull_data = {
                 "ready_time": next_pull.ready_time,
                 "auto_time": next_pull.auto_time,
                 "total_value": total_value,
-                "total_volume": "{:,.0f}".format(total_volume),
+                "total_volume": total_volume,
                 "products": next_pull_product_rows,
             }
             ppulls_data = Extraction.objects.filter(
@@ -146,7 +144,6 @@ def moon_info(request, moonid):
         "moon": moon,
         "solar_system": moon.eve_moon.eve_planet.eve_solar_system,
         "moon_name": moon.eve_moon.name,
-        "moon_income": None if moon.income is None else moon.income / 1000000000,
         "product_rows": product_rows,
         "next_pull": next_pull_data,
         "ppulls": ppulls_data,

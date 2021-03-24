@@ -1,3 +1,15 @@
-#table_next_pull thead th { text-align: center; vertical-align: center;}
-#table_next_pull tbody td { text-align: center; vertical-align: center;}
-#table_next_pull tfoot th { text-align: center; vertical-align: center;}
+#table_next_pull thead th { text-align: center; vertical-align: top;}
+#table_next_pull tbody td { text-align: center; vertical-align: top;}
+#table_next_pull tfoot th { text-align: center; vertical-align: top;}
+#table_next_pull tbody td:nth-child(3) {
+    text-align: right;
+}
+#table_next_pull tbody td:nth-child(4) {
+    text-align: right;
+}
+#table_next_pull tfoot th:nth-child(3) {
+    text-align: right;
+}
+#table_next_pull tfoot th:nth-child(4) {
+    text-align: right;
+}
