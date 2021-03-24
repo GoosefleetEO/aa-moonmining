@@ -16,6 +16,7 @@ from app_utils.logging import LoggerAddTag
 
 from . import __title__, constants
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
+from .managers import MoonManager
 from .providers import esi
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
@@ -73,6 +74,8 @@ class Moon(models.Model):
     products_updated_by = models.ForeignKey(
         User, on_delete=models.SET_DEFAULT, null=True, default=None
     )
+
+    objects = MoonManager()
 
     def __str__(self):
         return self.eve_moon.name
