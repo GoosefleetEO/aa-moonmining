@@ -272,7 +272,7 @@ def moon_list_data(request, category):
         moon_data = {
             "id": moon.pk,
             "moon_name": moon.eve_moon.name,
-            "corporation": corporation_html,
+            "corporation": {"display": corporation_html, "sort": corporation_name},
             "solar_system_link": solar_system_link,
             "region_name": region_name,
             "income": income,

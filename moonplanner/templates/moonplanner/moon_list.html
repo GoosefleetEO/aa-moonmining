@@ -10,7 +10,7 @@
         <h2> {{ title }} </h2>
 
         <div id="loader">
-			<img class="center-block" src="{% static 'moonplanner/Spinner-1s-200px.gif' %}" alt="Spinner"/>
+			<img class="center-block" src="{% static 'moonplanner/img/Spinner-1s-200px.gif' %}" alt="Spinner"/>moon_name
 		</div>
 
         <div id="moon_table" style="display: none !important;">
@@ -52,7 +52,12 @@
                 },
                 columns: [
                     { data: 'moon_name' },
-                    { data: 'corporation' },
+                    { data: 'corporation',
+                        render: {
+                            _: 'display',
+                            sort: 'sort'
+                        }
+                    },
                     { data: 'solar_system_link' },
                     { data: 'region_name' },
                     { data: 'income' },
@@ -115,7 +120,7 @@
 {% endblock %}
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}
-    <link href="{% static 'moonplanner/moon_list.css' %}" type="text/css" rel="stylesheet">
+    <link href="{% static 'moonplanner/css/moon_list.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}
 {% block extra_script %}
 {% endblock %}
