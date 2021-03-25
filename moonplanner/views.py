@@ -207,10 +207,8 @@ def moon_details(request, moon_pk: int):
             )
 
     context = {
-        "page_title": moon.eve_moon.name,
+        "page_title": "Moon Detail",
         "moon": moon,
-        "solar_system": moon.eve_moon.eve_planet.eve_solar_system,
-        "moon_name": moon.eve_moon.name,
         "product_rows": product_rows,
         "next_pull": next_pull_data,
         "ppulls": ppulls_data,

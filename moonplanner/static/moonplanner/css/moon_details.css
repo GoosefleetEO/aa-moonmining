@@ -1,15 +1,34 @@
-#table_next_pull thead th { text-align: center; vertical-align: top;}
-#table_next_pull tbody td { text-align: center; vertical-align: top;}
-#table_next_pull tfoot th { text-align: center; vertical-align: top;}
+#table_next_pull thead th {
+	text-align: center;
+	vertical-align: top;
+}
+#table_next_pull tbody td {
+	text-align: center;
+	vertical-align: top;
+}
+#table_next_pull tfoot th {
+	text-align: center;
+	vertical-align: top;
+}
 #table_next_pull tbody td:nth-child(3) {
-    text-align: right;
+	text-align: right;
 }
 #table_next_pull tbody td:nth-child(4) {
-    text-align: right;
+	text-align: right;
 }
 #table_next_pull tfoot th:nth-child(3) {
-    text-align: right;
+	text-align: right;
 }
 #table_next_pull tfoot th:nth-child(4) {
-    text-align: right;
+	text-align: right;
+}
+
+#table_past_events tbody td:nth-child(1) {
+	text-align: left;
+}
+#table_past_events tbody td:nth-child(2) {
+	text-align: right;
+}
+#table_past_events tbody td:nth-child(3) {
+	text-align: right;
 }

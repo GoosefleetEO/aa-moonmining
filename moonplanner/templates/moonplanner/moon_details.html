@@ -3,12 +3,13 @@
 {% load static %}
 {% load humanize %}
 {% load moonplanner %}
+{% load evelinks %}
 
 {% block details %}
     <div class="row">
         <div class="col-md-6  mr-md-1">
 
-            <div class="panel panel-default" style="height:200px">
+            <div class="panel panel-default" style="height:220px">
                 <div class="panel-heading text-center">
                     <h3 class="panel-title">Moon</h3>
                 </div>
@@ -16,28 +17,41 @@
                 <div class="panel-body">
                     <div class="row">
                         <div class="col-md-3">
+                            <p><strong>Name:</strong></p>
+                        </div>
+                        <div class="col-md-9">
+                        <p>{{ moon.eve_moon.name }}</p>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-3">
                             <p><strong>Solar System:</strong></p>
                         </div>
                         <div class="col-md-9">
-                            <p>{{ solar_system.name }}</p>
+                            {% include "moonplanner/partials/solar_system.html" with eve_solar_system=moon.eve_moon.eve_planet.eve_solar_system %}
                         </div>
                     </div>
 
-                        <div class="row">
+                    <div class="row">
                         <div class="col-md-3">
-                            <p><strong>Security:</strong></p>
+                            <p><strong>Corporation:</strong></p>
                         </div>
                         <div class="col-md-9">
-                            <p>{{ solar_system.security_status | floatformat }}</p>
+                        <p>{{ moon.refinery.corporation|default:"-" }}</p>
                         </div>
                     </div>
 
-                        <div class="row">
+                    <div class="row">
                         <div class="col-md-3">
-                            <p><strong>Region:</strong></p>
+                            <p><strong>Refinery:</strong></p>
                         </div>
                         <div class="col-md-9">
-                            <p>{{ solar_system.eve_constellation.eve_region.name }}</p>
+                        {% if moon.refinery %}
+                            <p>{{ moon.refinery|default:"-" }}  / {{ moon.refinery.eve_type|default:"-" }}</p>
+                        {% else %}
+                            -
+                        {% endif %}
                         </div>
                     </div>
 
@@ -108,6 +122,7 @@
             </div>
             {% include 'moonplanner/partials/value_estimate_legend.html' %}
         </div>
+
         <div class="col-md-6">
 
             <div class="panel panel-default">
@@ -115,10 +130,11 @@
                     <h3 class="panel-title">Next Extraction</h3>
                 </div>
                 <div class="panel-body">
-                    {% if next_pull == None %}
-                        <p> No extraction scheduled</p>
+                    {% if moon.refinery == "" %}
+                        <p>N/A</p>
+                    {% elif next_pull == None %}
+                        <p>No extraction scheduled</p>
                     {% else %}
-
                         <div class="row">
                             <div class="col-md-3">
                                 <p><strong>Ready Time:</strong></p>
@@ -143,7 +159,7 @@
                                 <th></th>
                                 <th>Ore Type</th>
                                 <th>Volume</th>
-                                <th>Est. Value</th>
+                                <th>Value est.</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -178,24 +194,32 @@
                     <h3 class="panel-title">Past Extractions</h3>
                 </div>
                 <div class="panel-body">
-                    <table class="table text-center" id="past-events">
-                        <thead>
-                            <th> Date (EVE/UTC) </th>
-                        </thead>
-                        <tbody>
-                            {% if ppulls|length_is:"0" %}
-                                <tr>
-                                    <td> No past extractions recorded for this moon.</td>
-                                </tr>
-                            {% else %}
-                                {% for pull in ppulls %}
+                     {% if moon.refinery == "" %}
+                        <p>N/A</p>
+                    {% else %}
+                        <table class="table text-center" id="table_past_events">
+                            <thead>
+                                <th>Ready Time</th>
+                                <th>Volume</th>
+                                <th>Value est.</th>
+                            </thead>
+                            <tbody>
+                                {% if ppulls|length_is:"0" %}
                                     <tr>
-                                        <td>{{ pull.ready_time|datetime }}</td>
+                                        <td> No past extractions recorded for this moon.</td>
                                     </tr>
-                                {% endfor %}
-                            {% endif %}
-                        </tbody>
-                    </table>
+                                {% else %}
+                                    {% for pull in ppulls %}
+                                        <tr>
+                                            <td>{{ pull.ready_time|datetime }}</td>
+                                            <td>{{ pull.volume|floatformat:"0"|intcomma }}</td>
+                                            <td>{{ pull.value|formatisk|default:"-" }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -206,13 +230,16 @@
     {% include 'bundles/datatables-js.html' %}
     <script>
         $(document).ready(function(){
-            $('#past-events').DataTable();
+            $('#table_past_events').DataTable({
+                order: [ [0, "desc"] ]
+            });
         });
     </script>
 {% endblock %}
 
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}
+     <link href="{% static 'moonplanner/css/global.css' %}" type="text/css" rel="stylesheet">
      <link href="{% static 'moonplanner/css/moon_details.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}
 

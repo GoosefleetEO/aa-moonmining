@@ -35,6 +35,31 @@
 	.nowrap {
 		white-space: nowrap;
 	}
+
+	.text-high-sec {
+		color: rgb(0, 128, 0);
+	}
+
+	.text-low-sec {
+		color: rgb(255, 165, 0);
+	}
+
+	.text-null-sec {
+		color: rgb(255, 0, 0);
+	}
+
+	.boolean-icon-false {
+		color: rgb(255, 0, 0);
+	}
+
+	.boolean-icon-true {
+		color: rgb(0, 128, 0);
+	}
+
+	/* fix to remove vertical slider when in response mode */
+	.table-width-fix {
+		width: 100% !important;
+	}
 }
 
 @media all and (min-width: 768px) {
