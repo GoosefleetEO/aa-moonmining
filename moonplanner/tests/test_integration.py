@@ -67,7 +67,7 @@ class TestUpdateTasks(TestCase):
         moon = helpers.create_moon_40161708()
         helpers.create_corporation_from_character_ownership(self.character_ownership)
         # when
-        tasks.update_all_mining_corporations.delay()
+        tasks.run_regular_updates.delay()
         # then
         moon.refresh_from_db()
         self.assertSetEqual(
@@ -91,7 +91,7 @@ class TestUpdateTasks(TestCase):
         EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
         EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
         # when
-        tasks.update_values.delay()
+        tasks.run_value_updates.delay()
         # then
         moon.refresh_from_db()
         self.assertIsNotNone(moon.value)

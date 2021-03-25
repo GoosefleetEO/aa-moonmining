@@ -153,6 +153,15 @@
                             </div>
                         </div>
 
+                        <div class="row">
+                            <div class="col-md-3">
+                                <p><strong>Started By:</strong></p>
+                            </div>
+                            <div class="col-md-9">
+                                <p>{{ next_pull.started_by|default:"?" }}</p>
+                            </div>
+                        </div>
+
                         <table class="table table-striped" id="table_next_pull">
                         <thead>
                             <tr>

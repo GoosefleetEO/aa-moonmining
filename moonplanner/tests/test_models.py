@@ -206,6 +206,7 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
         super().setUpClass()
         load_eveuniverse()
         load_allianceauth()
+        helpers.generate_eve_entities_from_allianceauth()
         cls.moon = helpers.create_moon_40161708()
 
     def test_should_create_new_extraction_with_products(self, mock_esi):
@@ -235,6 +236,7 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
             extraction.auto_time,
             dt.datetime(2019, 11, 20, 3, 1, 0, 105915, tzinfo=pytz.UTC),
         )
+        self.assertEqual(extraction.started_by_id, 1001)
         self.assertEqual(extraction.products.count(), 4)
         product = extraction.products.get(eve_type_id=45506)
         self.assertEqual(product.volume, 1288475.124715103)

@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from . import tasks
-from .models import Extraction, MiningCorporation, Refinery
+from .models import Extraction, MiningCorporation, Moon, Refinery
 
 
 @admin.register(Extraction)
@@ -65,12 +65,12 @@ class RefineryAdmin(admin.ModelAdmin):
         return False
 
 
-# @admin.register(Moon)
-# class MoonAdmin(admin.ModelAdmin):
-#     list_display = ("eve_moon",)
+@admin.register(Moon)
+class MoonAdmin(admin.ModelAdmin):
+    list_display = ("eve_moon",)
 
-#     def has_change_permission(self, request, obj=None):
-#         return False
+    def has_change_permission(self, request, obj=None):
+        return False
 
-#     def has_add_permission(self, request):
-#         return False
+    def has_add_permission(self, request):
+        return False

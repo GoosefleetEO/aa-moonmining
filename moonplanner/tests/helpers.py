@@ -2,9 +2,9 @@ import datetime as dt
 
 from django.db import models
 from django.utils.timezone import now
-from eveuniverse.models import EveMoon, EveType
+from eveuniverse.models import EveEntity, EveMoon, EveType
 
-from allianceauth.eveonline.models import EveCorporationInfo
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from app_utils.testing import create_user_from_evecharacter
 
 from ..app_settings import MOONPLANNER_VOLUME_PER_MONTH
@@ -95,3 +95,23 @@ def eve_type_athanor():
 def model_ids(MyModel: models.Model, key="pk") -> set:
     """Return all ids of given model as set."""
     return set(MyModel.objects.values_list(key, flat=True))
+
+
+def generate_eve_entities_from_allianceauth():
+    for character in EveCharacter.objects.all():
+        EveEntity.objects.create(
+            id=character.character_id,
+            name=character.character_name,
+            category=EveEntity.CATEGORY_CHARACTER,
+        )
+        EveEntity.objects.get_or_create(
+            id=character.corporation_id,
+            name=character.corporation_name,
+            category=EveEntity.CATEGORY_CORPORATION,
+        )
+        if character.alliance_id:
+            EveEntity.objects.get_or_create(
+                id=character.alliance_id,
+                name=character.alliance_name,
+                category=EveEntity.CATEGORY_ALLIANCE,
+            )

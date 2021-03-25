@@ -47,7 +47,7 @@ An Alliance Auth app for tracking moon extractions and scouting new moons.
 Make sure you are in the virtual environment (venv) of your Alliance Auth installation. Then install the newest release from PyPI:
 
 ```bash
-pip install aa-memberaudit
+pip install aa-moonplanner
 ```
 
 ### Step 2 - Configure Auth settings
@@ -58,10 +58,16 @@ Configure your Auth settings (`local.py`) as follows:
 - Add below lines to your settings file:
 
 ```python
-CELERYBEAT_SCHEDULE['moonplanner_run_updates'] = {
-    'task': 'memberaudit.tasks.update_all_mining_corporations',
+CELERYBEAT_SCHEDULE['moonplanner_run_regular_updates'] = {
+    'task': 'moonplanner.tasks.run_regular_updates',
     'schedule': crontab(minute='0', minute='*/30'),
 }
+CELERYBEAT_SCHEDULE['moonplanner_run_value_updates'] = {
+ 'task': 'moonplanner.tasks.run_value_updates',
+ 'schedule': crontab(minute=30, hour=3)
+}
+
+> **Hint**: The value updates are supposed to run once a day during off hours. Feel free to adjust to timing according to your timezone.
 ```
 
 - Optional: Add additional settings if you want to change any defaults. See [Settings](#settings) for the full list.
@@ -87,19 +93,23 @@ Update the Eve Online API app used for authentication in your AA installation to
 
 ### Step 5 - Load Eve Universe map data
 
-In order to be able to select solar systems and ships types for trackers you need to load that data from ESI once. If you already have run those commands previously you can skip this step.
+In order to be able to select solar systems and ships types for trackers you need to load that data from ESI once.
 
 Load Eve Online map:
+
+> **Hint**:  If you already have run those commands previously, e.g. while installing another app that uses eveuniverse, you can skip this step.
 
 ```bash
 python manage.py eveuniverse_load_data map
 ```
 
+Load data specific for Moon Planner:
+
 ```bash
-python manage.py memberaudit_load_eve
+python manage.py moonplanner_load_eve
 ```
 
-You may want to wait until the loading is complete before continuing.
+You may want to wait until all data loading is complete before continuing.
 
 > **Hint**: These command will spawn a thousands of tasks. One easy way to monitor the progress is to watch the number of tasks shown on the Dashboard.
 

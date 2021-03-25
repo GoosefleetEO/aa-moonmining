@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from esi.models import Token
-from eveuniverse.models import EveMoon, EveSolarSystem, EveType
+from eveuniverse.models import EveEntity, EveMoon, EveSolarSystem, EveType
 
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.models import EveCorporationInfo
@@ -253,11 +253,19 @@ class MiningCorporation(models.Model):
             if notification["type"] == "MoonminingExtractionStarted":
                 if not refinery:
                     continue  # we ignore notifications for unknown refineries
+                started_by_id = parsed_text.get("startedBy")
+                if started_by_id:
+                    started_by, _ = EveEntity.objects.get_or_create_esi(
+                        id=started_by_id
+                    )
+                else:
+                    started_by = None
                 extraction, _ = Extraction.objects.get_or_create(
                     refinery=refinery,
                     ready_time=ldap_time_2_datetime(parsed_text["readyTime"]),
                     defaults={
-                        "auto_time": ldap_time_2_datetime(parsed_text["autoTime"])
+                        "auto_time": ldap_time_2_datetime(parsed_text["autoTime"]),
+                        "started_by": started_by,
                     },
                 )
                 last_extraction_started[structure_id] = extraction
@@ -382,6 +390,13 @@ class Extraction(models.Model):
     value = models.FloatField(
         null=True, default=None, validators=[MinValueValidator(0.0)]
     )
+    started_by = models.ForeignKey(
+        EveEntity,
+        on_delete=models.SET_DEFAULT,
+        default=None,
+        null=True,
+        related_name="+",
+    )
 
     # class Meta:
     #     unique_together = (("ready_time", "refinery"),)
@@ -411,11 +426,7 @@ class ExtractionProduct(models.Model):
     extraction = models.ForeignKey(
         Extraction, on_delete=models.CASCADE, related_name="products"
     )
-    eve_type = models.ForeignKey(
-        EveType,
-        on_delete=models.CASCADE,
-        related_name="+",
-    )
+    eve_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
     volume = models.FloatField(validators=[MinValueValidator(0.0)])
 
     # class Meta:

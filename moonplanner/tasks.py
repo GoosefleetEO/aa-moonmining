@@ -20,8 +20,8 @@ def process_survey_input(scans, user_pk=None) -> bool:
 
 
 @shared_task
-def update_all_mining_corporations():
-    """Update refineries and extractions for all mining corporations."""
+def run_regular_updates():
+    """Run main tasks for regular updates."""
     mining_corporation_pks = MiningCorporation.objects.values_list("pk", flat=True)
     logger.info("Updating %d mining corporations...", len(mining_corporation_pks))
     for corporation_pk in mining_corporation_pks:
@@ -52,7 +52,7 @@ def update_extractions_from_esi(corporation_pk):
 
 
 @shared_task
-def update_values():
+def run_value_updates():
     """Update the values of all moons and all extractions."""
     EveMarketPrice.objects.update_from_esi()
     update_moon_values.delay()

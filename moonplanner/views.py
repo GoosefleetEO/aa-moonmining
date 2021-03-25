@@ -20,7 +20,7 @@ from app_utils.views import (
     link_html,
 )
 
-from . import __title__, constants
+from . import __title__, constants, tasks
 from .app_settings import (
     MOONPLANNER_EXTRACTIONS_HOURS_UNTIL_STALE,
     MOONPLANNER_REPROCESSING_YIELD,
@@ -28,7 +28,6 @@ from .app_settings import (
 )
 from .forms import MoonScanForm
 from .models import Extraction, MiningCorporation, Moon, MoonProduct
-from .tasks import process_survey_input, update_mining_corporation
 
 # from django.views.decorators.cache import cache_page
 
@@ -198,6 +197,7 @@ def moon_details(request, moon_pk: int):
             next_pull_data = {
                 "ready_time": next_pull.ready_time,
                 "auto_time": next_pull.auto_time,
+                "started_by": next_pull.started_by,
                 "total_value": total_value,
                 "total_volume": total_volume,
                 "products": next_pull_product_rows,
@@ -226,7 +226,7 @@ def upload_survey(request):
         form = MoonScanForm(request.POST)
         if form.is_valid():
             scans = request.POST["scan"]
-            process_survey_input.delay(scans, request.user.pk)
+            tasks.process_survey_input.delay(scans, request.user.pk)
             messages_plus.success(
                 request,
                 (
@@ -336,7 +336,7 @@ def add_mining_corporation(request, token):
         eve_corporation=eve_corporation,
         defaults={"character_ownership": character_ownership},
     )
-    update_mining_corporation.delay(corporation.pk)
+    tasks.update_mining_corporation.delay(corporation.pk)
     messages_plus.success(
         request, f"Update of refineres started for {eve_corporation}."
     )

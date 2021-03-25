@@ -36,8 +36,9 @@ import json
 import random
 from pathlib import Path
 
+from django.contrib.auth.models import User
 from django.utils.timezone import now
-from eveuniverse.models import EveMoon, EveType
+from eveuniverse.models import EveEntity, EveMoon, EveType
 
 from allianceauth.eveonline.models import EveCorporationInfo
 
@@ -53,7 +54,8 @@ from moonplanner.models import (
 
 MAX_MOONS = 5
 MAX_REFINERIES = 2
-GURISTAS_CORPORATION_ID = 1000127
+DUMMY_CORPORATION_ID = 1000127  # Guristas
+DUMMY_CHARACTER_ID = 3019491  # Guristas CEO
 
 
 def random_percentages(parts) -> list:
@@ -67,11 +69,12 @@ def random_percentages(parts) -> list:
     return percentages
 
 
-def generate_extraction(refinery, ready_time):
+def generate_extraction(refinery, ready_time, started_by):
     extraction = Extraction.objects.create(
         refinery=refinery,
         ready_time=ready_time,
         auto_time=ready_time + dt.timedelta(hours=4),
+        started_by=started_by,
     )
     for product in moon.products.all():
         ExtractionProduct.objects.create(
@@ -88,11 +91,17 @@ moon_ids = [int(obj["moon_id"]) for obj in data["moons"]]
 ore_type_ids = [int(obj["type_id"]) for obj in data["ore_type_ids"]]
 
 print(f"Generating {MAX_MOONS} moons...")
+random_user = User.objects.order_by("?").first()
 for moon_id in random.choices(moon_ids, k=MAX_MOONS):
     print(f"Creating moon {moon_id}")
     eve_moon, _ = EveMoon.objects.get_or_create_esi(id=moon_id)
     moon, created = Moon.objects.get_or_create(
-        eve_moon=eve_moon, defaults={"value": random.randint(100000000, 10000000000)}
+        eve_moon=eve_moon,
+        defaults={
+            "value": random.randint(100000000, 10000000000),
+            "products_updated_at": now(),
+            "products_updated_by": random_user,
+        },
     )
     if created:
         percentages = random_percentages(4)
@@ -106,17 +115,18 @@ for moon_id in random.choices(moon_ids, k=MAX_MOONS):
 print(f"Generating {MAX_REFINERIES} refineries...")
 try:
     eve_corporation = EveCorporationInfo.objects.get(
-        corporation_id=GURISTAS_CORPORATION_ID
+        corporation_id=DUMMY_CORPORATION_ID
     )
 except EveCorporationInfo.DoesNotExist:
     eve_corporation = EveCorporationInfo.objects.create_corporation(
-        corp_id=GURISTAS_CORPORATION_ID
+        corp_id=DUMMY_CORPORATION_ID
     )
 corporation, _ = MiningCorporation.objects.get_or_create(
     eve_corporation=eve_corporation
 )
 Refinery.objects.filter(corporation=corporation).delete()
 eve_type, _ = EveType.objects.get_or_create_esi(id=35835)
+character, _ = EveEntity.objects.get_or_create_esi(id=DUMMY_CHARACTER_ID)
 for moon in Moon.objects.order_by("?")[:MAX_REFINERIES]:
     if not hasattr(moon, "refinery"):
         print(f"Creating refinery for moon: {moon}")
@@ -130,14 +140,17 @@ for moon in Moon.objects.order_by("?")[:MAX_REFINERIES]:
         generate_extraction(
             refinery=refinery,
             ready_time=now() + dt.timedelta(days=random.randint(7, 30)),
+            started_by=character,
         )
         generate_extraction(
             refinery=refinery,
             ready_time=now() + dt.timedelta(days=-random.randint(7, 30)),
+            started_by=character,
         )
         generate_extraction(
             refinery=refinery,
             ready_time=now() + dt.timedelta(days=-random.randint(7, 30)),
+            started_by=character,
         )
 
 print("DONE")

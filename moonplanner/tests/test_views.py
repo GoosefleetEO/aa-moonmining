@@ -31,7 +31,7 @@ class TestAddMinningCorporation(TestCase):
             1001, permissions=["moonplanner.add_mining_corporation"]
         )
 
-    @patch(MODULE_PATH + ".update_mining_corporation")
+    @patch(MODULE_PATH + ".tasks.update_mining_corporation")
     @patch(MODULE_PATH + ".messages_plus")
     def test_should_add_new_corporation(
         self, mock_messages, mock_update_mining_corporation
@@ -55,7 +55,7 @@ class TestAddMinningCorporation(TestCase):
         obj = MiningCorporation.objects.get(eve_corporation__corporation_id=2001)
         self.assertEqual(obj.character_ownership, self.character_ownership)
 
-    @patch(MODULE_PATH + ".update_mining_corporation")
+    @patch(MODULE_PATH + ".tasks.update_mining_corporation")
     @patch(MODULE_PATH + ".messages_plus")
     def test_should_update_existing_corporation(
         self, mock_messages, mock_update_mining_corporation
@@ -83,7 +83,7 @@ class TestAddMinningCorporation(TestCase):
         obj = MiningCorporation.objects.get(eve_corporation__corporation_id=2001)
         self.assertEqual(obj.character_ownership, self.character_ownership)
 
-    @patch(MODULE_PATH + ".update_mining_corporation")
+    @patch(MODULE_PATH + ".tasks.update_mining_corporation")
     @patch(MODULE_PATH + ".messages_plus")
     def test_should_raise_404_if_character_ownership_not_found(
         self, mock_messages, mock_update_mining_corporation
