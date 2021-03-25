@@ -189,7 +189,7 @@ class TestMoonListData(TestCase):
         data = json_response_to_dict(response)
         self.assertSetEqual(set(data.keys()), {40131695})
 
-    def test_should_raise_error_when_mission_permission_for_all_moons(self):
+    def test_should_return_empty_list_for_all_moons(self):
         # given
         user, _ = create_user_from_evecharacter(
             1001,
@@ -206,9 +206,11 @@ class TestMoonListData(TestCase):
         # when
         response = views.moon_list_data(request, category="all_moons")
         # then
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.status_code, 200)
+        data = json_response_to_dict(response)
+        self.assertEqual(len(data), 0)
 
-    def test_should_raise_error_when_mission_permission_for_our_moons(self):
+    def test_should_return_empty_list_for_our_moons(self):
         # given
         user, _ = create_user_from_evecharacter(
             1001,
@@ -222,7 +224,9 @@ class TestMoonListData(TestCase):
         # when
         response = views.moon_list_data(request, category="our_moons")
         # then
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.status_code, 200)
+        data = json_response_to_dict(response)
+        self.assertEqual(len(data), 0)
 
 
 class TestMoonInfo(TestCase):

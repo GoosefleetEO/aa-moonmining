@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+import datetime as dt
 
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Sum
@@ -21,7 +21,11 @@ from app_utils.views import (
 )
 
 from . import __title__, constants
-from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
+from .app_settings import (
+    MOONPLANNER_EXTRACTIONS_HOURS_UNTIL_STALE,
+    MOONPLANNER_REPROCESSING_YIELD,
+    MOONPLANNER_VOLUME_PER_MONTH,
+)
 from .forms import MoonScanForm
 from .models import Extraction, MiningCorporation, Moon, MoonProduct
 from .tasks import process_survey_input, update_mining_corporation
@@ -72,29 +76,17 @@ def corporation_names(corporation: MiningCorporation):
 @login_required
 @permission_required("moonplanner.access_moonplanner")
 def index(request):
-    return redirect("moonplanner:extractions")
-
-    # TODO
-    # if request.user.has_perm("moonplanner.access_all_moons"):
-    #     return redirect("moonplanner:moon_list_all")
-
-    # elif request.user.has_perm("moonplanner.access_our_moons"):
-    #     return redirect("moonplanner:extractions")
-
-    # elif request.user.has_perm("moonplanner.upload_moon_scan"):
-    #     return redirect("moonplanner:add_moon_scan")
-
-    # else:
-    #     return HttpResponse("Insufficient permissions to use this app")
+    return redirect("moonplanner:moon_list")
 
 
 @login_required
-@permission_required(("moonplanner.access_our_moons", "moonplanner.access_moonplanner"))
+@permission_required(["moonplanner.access_our_moons", "moonplanner.access_moonplanner"])
 def extractions(request):
     context = {
         "page_title": "Extractions",
         "reprocessing_yield": MOONPLANNER_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONPLANNER_VOLUME_PER_MONTH / 1000000,
+        "stale_hours": MOONPLANNER_EXTRACTIONS_HOURS_UNTIL_STALE,
     }
     return render(request, "moonplanner/extractions.html", context)
 
@@ -103,6 +95,7 @@ def extractions(request):
 @permission_required(["moonplanner.access_our_moons", "moonplanner.access_moonplanner"])
 def extraction_list_data(request, category):
     data = list()
+    cutover_dt = now() - dt.timedelta(hours=MOONPLANNER_EXTRACTIONS_HOURS_UNTIL_STALE)
     extractions = Extraction.objects.select_related(
         "refinery",
         "refinery__moon",
@@ -111,9 +104,9 @@ def extraction_list_data(request, category):
         "refinery__corporation__eve_corporation__alliance",
     ).annotate(volume=Sum("products__volume"))
     if category == "recent":
-        extractions = extractions.filter(ready_time__lt=now())
+        extractions = extractions.filter(ready_time__lt=cutover_dt)
     else:
-        extractions = extractions.filter(ready_time__gte=now())
+        extractions = extractions.filter(ready_time__gte=cutover_dt)
     for ext in extractions:
         (
             corporation_html,
@@ -134,6 +127,7 @@ def extraction_list_data(request, category):
                 "details": moon_details_button(ext.refinery.moon),
                 "corporation_name": corporation_name,
                 "alliance_name": alliance_name,
+                "is_ready": ext.ready_time <= now(),
             }
         )
     return JsonResponse(data, safe=False)
@@ -171,12 +165,11 @@ def moon_info(request, moon_pk: int):
             }
         )
 
-    today = datetime.today().replace(tzinfo=timezone.utc)
     next_pull_data = None
     ppulls_data = None
     if hasattr(moon, "refinery"):
         next_pull = Extraction.objects.filter(
-            refinery=moon.refinery, ready_time__gte=today
+            refinery=moon.refinery, ready_time__gte=now()
         ).first()
         if next_pull:
             next_pull_product_rows = list()
@@ -208,7 +201,7 @@ def moon_info(request, moon_pk: int):
                 "products": next_pull_product_rows,
             }
             ppulls_data = Extraction.objects.filter(
-                refinery=moon.refinery, ready_time__lt=today
+                refinery=moon.refinery, ready_time__lt=now()
             )
 
     context = {
@@ -281,11 +274,11 @@ def moon_list_data(request, category):
     )
     if category == MOONS_LIST_ALL:
         if not request.user.has_perm("moonplanner.access_all_moons"):
-            return HttpResponseUnauthorized()
+            return JsonResponse([], safe=False)
     else:
         moon_query = moon_query.filter(refinery__isnull=False)
         if not request.user.has_perm("moonplanner.access_our_moons"):
-            return HttpResponseUnauthorized()
+            return JsonResponse([], safe=False)
 
     for moon in moon_query:
         solar_system_name = moon.eve_moon.eve_planet.eve_solar_system.name

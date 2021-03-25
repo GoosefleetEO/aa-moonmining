@@ -17,17 +17,14 @@
 
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav">
+                <li class="{% navactive request 'moonplanner:moon_list' %}">
+                    <a href="{% url 'moonplanner:moon_list' %}">Moons</a>
+                </li>
                 {% if perms.moonplanner.access_our_moons %}
                     <li class="{% navactive request 'moonplanner:extractions' %}">
                         <a href="{% url 'moonplanner:extractions' %}">Extractions</a>
                     </li>
                 {% endif %}
-                {% if perms.moonplanner.access_our_moons or perms.moonplanner.access_all_moons %}
-                    <li class="{% navactive request 'moonplanner:moon_list' %}">
-                        <a href="{% url 'moonplanner:moon_list' %}">Moons</a>
-                    </li>
-                {% endif %}
-
                 {% if perms.moonplanner.upload_moon_scan %}
                     <li class="{% navactive request 'moonplanner:add_moon_scan' %}">
                         <a href="{% url 'moonplanner:add_moon_scan' %}">Add Moon Scan</a>

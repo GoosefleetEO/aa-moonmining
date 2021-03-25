@@ -16,8 +16,8 @@
     <div class="panel panel-default panel-tabs">
         <div class="panel-body">
             <div class="tab-content">
-                {% include "moonplanner/partials/moon_list_generic.html" with category="our_moons"%}
-                {% include "moonplanner/partials/moon_list_generic.html" with category="all_moons"%}
+                {% include "moonplanner/partials/moons_tab.html" with category="our_moons"%}
+                {% include "moonplanner/partials/moons_tab.html" with category="all_moons"%}
             </div>
             {% include 'moonplanner/partials/value_estimate_legend.html' %}
         </div>
@@ -92,7 +92,7 @@
                 {
                     if (data['has_refinery'])
                     {
-                        $(row).addClass('success');
+                        $(row).addClass('info');
                     }
                 }
             };
