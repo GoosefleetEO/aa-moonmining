@@ -1,14 +1,14 @@
 /* Moon list */
-.table-moons thead th {
+.table-extractions thead th {
 	text-align: left;
 	vertical-align: middle;
 }
 
-.table-moons tbody td {
+.table-extractions tbody td {
 	text-align: left;
 	vertical-align: middle !important;
 }
 
-.table-moons tbody td:nth-child(5) {
+.table-extractions tbody td:nth-child(5) {
 	text-align: right;
 }

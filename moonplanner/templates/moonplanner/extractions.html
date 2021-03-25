@@ -18,7 +18,6 @@
             <p class="text-muted">All times displayed are EVE/UTC • Extractions will be shown on the upcoming tab until {{ stale_hours }} hours after their ready time.
         </div>
     </div>
-    their ready time.</p>
 {% endblock %}
 
 {% block extra_javascript %}
@@ -98,7 +97,6 @@
             var table = $('#table_recent').DataTable(def);
 
             $('#myTabs a[href="#tab_upcoming"]').tab('show')
-
         });
 
     </script>
@@ -106,6 +104,8 @@
 
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}
+    <link href="{% static 'moonplanner/css/global.css' %}" type="text/css" rel="stylesheet">
+    <link href="{% static 'moonplanner/css/extractions.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}
 
 {% block extra_script %}
