@@ -68,7 +68,7 @@ class Moon(models.Model):
     """
 
     eve_moon = models.OneToOneField(
-        EveMoon, on_delete=models.CASCADE, primary_key=True, related_name="known"
+        EveMoon, on_delete=models.CASCADE, primary_key=True, related_name="known_moon"
     )
     value = models.FloatField(
         null=True, default=None, validators=[MinValueValidator(0.0)]
@@ -148,13 +148,14 @@ class MiningCorporation(models.Model):
         EveCorporationInfo,
         on_delete=models.CASCADE,
         primary_key=True,
-        related_name="mining_corporations",
+        related_name="mining_corporation",
     )
     character_ownership = models.ForeignKey(
         CharacterOwnership,
         on_delete=models.SET_DEFAULT,
         default=None,
         null=True,
+        related_name="+",
         help_text="character used to sync this corporation from ESI",
     )
 
@@ -320,7 +321,7 @@ class Refinery(models.Model):
     """An Eve Online refinery structure."""
 
     id = models.BigIntegerField(primary_key=True)
-    name = models.CharField(max_length=150)
+    name = models.CharField(max_length=150, db_index=True)
     moon = models.OneToOneField(
         Moon,
         on_delete=models.SET_DEFAULT,
@@ -331,11 +332,7 @@ class Refinery(models.Model):
     corporation = models.ForeignKey(
         MiningCorporation, on_delete=models.CASCADE, related_name="refineries"
     )
-    eve_type = models.ForeignKey(
-        EveType,
-        on_delete=models.CASCADE,
-        related_name="+",
-    )
+    eve_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
 
     def __str__(self):
         return self.name
@@ -380,7 +377,7 @@ class Extraction(models.Model):
     refinery = models.ForeignKey(
         Refinery, on_delete=models.CASCADE, related_name="extractions"
     )
-    ready_time = models.DateTimeField()
+    ready_time = models.DateTimeField(db_index=True)
     auto_time = models.DateTimeField()
     value = models.FloatField(
         null=True, default=None, validators=[MinValueValidator(0.0)]
