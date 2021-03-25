@@ -285,11 +285,6 @@ def moons_data(request, category):
         solar_system_link = link_html(
             dotlan.solar_system_url(solar_system_name), solar_system_name
         )
-        if moon.value is not None:
-            value = "{:.1f}".format(moon.value / 1000000000)
-        else:
-            value = "(no data)"
-
         has_refinery = hasattr(moon, "refinery")
         (
             corporation_html,
@@ -305,7 +300,7 @@ def moons_data(request, category):
             "corporation": {"display": corporation_html, "sort": corporation_name},
             "solar_system_link": solar_system_link,
             "region_name": region_name,
-            "value": value,
+            "value": moon.value / 1000000000 if moon.value else None,
             "details": moon_details_button(moon),
             "has_refinery_str": "yes" if has_refinery else "no",
             "solar_system_name": solar_system_name,

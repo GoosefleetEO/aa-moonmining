@@ -58,12 +58,9 @@
                 </div>
                 <div class="panel-body">
                     {% if product_rows|length_is:"0" %}
-                        <div class="alert alert-warning">
-                            <p>
-                                There are no resources recorded for {{ moon_name }}.
-                                {% if perms.moonplanner.add_moon %} Why not add a moon scan? {% endif %}
-                            </p>
-                        </div>
+                        <p class="text-warning"><strong>
+                            We could not find a survey for this moon in our database.
+                        </strong></p>
                     {% else %}
 
                         {% for product_row in product_rows %}

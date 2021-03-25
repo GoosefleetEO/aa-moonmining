@@ -112,7 +112,9 @@ except EveCorporationInfo.DoesNotExist:
     eve_corporation = EveCorporationInfo.objects.create_corporation(
         corp_id=GURISTAS_CORPORATION_ID
     )
-corporation, _ = MiningCorporation.objects.get_or_create(corporation=eve_corporation)
+corporation, _ = MiningCorporation.objects.get_or_create(
+    eve_corporation=eve_corporation
+)
 Refinery.objects.filter(corporation=corporation).delete()
 eve_type, _ = EveType.objects.get_or_create_esi(id=35835)
 for moon in Moon.objects.order_by("?")[:MAX_REFINERIES]:

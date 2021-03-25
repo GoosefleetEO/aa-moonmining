@@ -57,7 +57,10 @@
                     },
                     { data: 'solar_system_link' },
                     { data: 'region_name' },
-                    { data: 'value' },
+                    {
+                        data: 'value',
+                        render: $.fn.dataTable.render.number(',', '.', 1)
+                    },
                     { data: 'details' },
 
                     { data: 'solar_system_name' },
