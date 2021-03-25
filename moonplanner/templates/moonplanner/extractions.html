@@ -1,21 +1,20 @@
 {% extends 'moonplanner/base.html' %}
 {% load i18n %}
-{% block page_title %}{% trans 'Moon Planner' %}{% endblock %}
 {% load static %}
 
 {% block details %}
-    <ul class="nav nav-pills"  role="tablist">
-        <li role="presentation" class="active"><a href="#upcoming" aria-controls="upcoming" role="tab" data-toggle="tab">Upcoming Extractions</a></li>
-        <li role="presentation"><a href="#recent" aria-controls="recent" role="tab" data-toggle="tab">Recent Extractions</a></li>
+    <ul id="myTabs" class="nav nav-tabs" role="tablist">
+        <li role="presentation"><a href="#tab_upcoming" aria-controls="tab_upcoming" role="tab" data-toggle="tab">Upcoming Extractions</a></li>
+        <li role="presentation"><a href="#tab_recent" aria-controls="tab_recent" role="tab" data-toggle="tab">Recent Extractions</a></li>
     </ul>
 
-    <div class="tab-content">
-        <div role="tabpanel" class="tab-pane fade in active panel-default" id="upcoming">
-            {% include "moonplanner/partials/extractions_table.html" with sub_title="Upcoming Extractions" tableid="tab_upcoming" extractions=exts %}
-        </div>
-
-        <div role="tabpanel" class="tab-pane fade panel-default" id="recent">
-            {% include "moonplanner/partials/extractions_table.html" with sub_title="Recent Extractions" tableid="tab_recent" extractions=r_exts %}
+    <div class="panel panel-default panel-tabs">
+        <div class="panel-body">
+            <div class="tab-content">
+                {% include "moonplanner/partials/extraction_list_generic.html" with category="upcoming"%}
+                {% include "moonplanner/partials/extraction_list_generic.html" with category="recent"%}
+            </div>
+            {% include 'moonplanner/partials/value_estimate_legend.html' %}
         </div>
     </div>
 
@@ -27,36 +26,72 @@
     <script type="text/javascript" src="{% static 'js/filterDropDown/filterDropDown.min.js' %}"></script>
     <script type="text/javascript">
         $(function() {
-            $('#tab_upcoming').DataTable({
-                order: [ [0, "asc"], [1, "asc"] ],
+            var def = {
+                ajax: {
+                    url: '',
+                    dataSrc: '',
+                    cache: true
+                },
+                columns: [
+                    { data: 'ready_time',
+                        render: {
+                            _: 'display',
+                            sort: 'sort'
+                        }
+                    },
+                    { data: 'moon' },
+                    { data: 'corporation',
+                        render: {
+                            _: 'display',
+                            sort: 'sort'
+                        }
+                    },
+                    {
+                        data: 'volume',
+                        render: $.fn.dataTable.render.number(',', '.', 0)
+                    },
+                    {
+                        data: 'value',
+                        render: $.fn.dataTable.render.number(',', '.', 0)
+                    },
+                    { data: 'details' },
+
+                    { data: 'corporation_name' },
+                    { data: 'alliance_name' },
+                ],
+                lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                pageLength: 10,
+                order: [ [0, "asc"] ],
                 columnDefs: [
-                    { "orderable": false, "targets": [ 3 ] }
+                    { "orderable": false, "targets": [ 5 ] },
+                    { "visible": false, "targets": [ 6, 7 ] },
                 ],
                 filterDropDown: {
                     columns: [
                         {
-                            idx: 2
+                            idx: 7,
+                            title: "Alliance"
+                        },
+                        {
+                            idx: 6,
+                            title: "Corporation"
                         }
                     ],
                     bootstrap: true,
                     autoSize: false
                 }
-            });
-            $('#tab_recent').DataTable({
-                order: [ [0, "asc"], [1, "asc"] ],
-                columnDefs: [
-                    { "orderable": false, "targets": [ 3 ] }
-                ],
-                filterDropDown: {
-                    columns: [
-                        {
-                            idx: 2
-                        }
-                    ],
-                    bootstrap: true,
-                    autoSize: false
-                }
-            });
+            };
+
+            /* upcoming extractions*/
+            def.ajax.url = '{% url "moonplanner:extraction_list_data" "upcoming" %}'
+            var table = $('#table_upcoming').DataTable(def);
+
+            /* recent extractions */
+            def.ajax.url = '{% url "moonplanner:extraction_list_data" "recent" %}'
+            var table = $('#table_recent').DataTable(def);
+
+            $('#myTabs a[href="#tab_upcoming"]').tab('show')
+
         });
 
     </script>

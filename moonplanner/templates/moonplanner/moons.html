@@ -3,29 +3,27 @@
 {% load static %}
 
 {% block details %}
-    <div id="loader">
-        {% if NIGHT_MODE %}
-            <img src="{% static 'moonplanner/img/Spinner-1s-64px-dark.gif' %}" alt="Spinner"/>
-        {% else %}
-            <img src="{% static 'moonplanner/img/Spinner-1s-64px-light.gif' %}" alt="Spinner"/>
-        {% endif %}
+    <!-- Nav tabs -->
+    <ul id="myTabs" class="nav nav-tabs" role="tablist">
+        <li role="presentation">
+            <a href="#tab_our_moons" aria-controls="tab_our_moons" role="tab" data-toggle="tab">{% trans "Our Moons" %}</a>
+        </li>
+        <li role="presentation">
+            <a href="#tab_all_moons" aria-controls="tab_all_moons" role="tab" data-toggle="tab">{% trans "All Moons" %}</a>
+        </li>
+    </ul>
+
+    <div class="panel panel-default panel-tabs">
+        <div class="panel-body">
+            <div class="tab-content">
+                {% include "moonplanner/partials/moon_list_generic.html" with category="our_moons"%}
+                {% include "moonplanner/partials/moon_list_generic.html" with category="all_moons"%}
+            </div>
+            {% include 'moonplanner/partials/value_estimate_legend.html' %}
+        </div>
     </div>
 
-    <div id="moon_table" style="display: none !important;">
-        <table class="table table-striped" id="moon-list" style="width:100%;">
-            <thead>
-                <th>Moon</th>
-                <th>Corporation</th>
-                <th>System</th>
-                <th>Region</th>
-                <th>Value est. (B ISK) *</th>
-                <th>Details</th>
-            </thead>
-            <tbody>
-            </tbody>
-        </table>
-        {% include 'moonplanner/partials/value_estimate_legend.html' %}
-    </div>
+
 {% endblock %}
 
 {% block extra_javascript %}
@@ -34,10 +32,9 @@
     <script type="text/javascript" src="{% static 'js/filterDropDown/filterDropDown.min.js' %}"></script>
     <script type="text/javascript">
         $(function(){
-            /* datatable definition */
-            var table = $('#moon-list').DataTable({
+            var def = {
                 ajax: {
-                    url: '{% url "moonplanner:moon_list_data" "our_moons" %}',
+                    url: '',
                     dataSrc: '',
                     cache: true
                 },
@@ -98,20 +95,36 @@
                         $(row).addClass('success');
                     }
                 }
-            });
+            };
 
-            /* show table after loading from AJAX source is complete */
+            /* our moons table */
+            def.ajax.url = '{% url "moonplanner:moon_list_data" "our_moons" %}'
+            var table = $('#table_our_moons').DataTable(def);
             table.on( 'xhr', function () {
                 table.columns.adjust().draw();
-                $("#loader").hide();
-                $("#moon_table").show();
+                $("#loader_our_moons").hide();
+                $("#wrapper_our_moons").show();
             } );
+
+            /* all moons table */
+            def.ajax.url = '{% url "moonplanner:moon_list_data" "all_moons" %}'
+            var table = $('#table_all_moons').DataTable(def);
+            table.on( 'xhr', function () {
+                table.columns.adjust().draw();
+                $("#loader_all_moons").hide();
+                $("#wrapper_all_moons").show();
+            } );
+
+            $('#myTabs a[href="#tab_our_moons"]').tab('show')
+
         });
     </script>
 {% endblock %}
+
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}
     <link href="{% static 'moonplanner/css/moon_list.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}
+
 {% block extra_script %}
 {% endblock %}

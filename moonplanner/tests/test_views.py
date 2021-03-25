@@ -305,21 +305,12 @@ class TestViewsAreWorking(TestCase):
         # then
         self.assertEqual(response.status_code, 200)
 
-    def test_should_open_all_moons_page(self):
+    def test_should_open_moons_page(self):
         # given
-        request = self.factory.get(reverse("moonplanner:moon_list_all"))
+        request = self.factory.get(reverse("moonplanner:moon_list"))
         request.user = self.user
         # when
-        response = views.moon_list_all(request)
-        # then
-        self.assertEqual(response.status_code, 200)
-
-    def test_should_open_our_moons_page(self):
-        # given
-        request = self.factory.get(reverse("moonplanner:moon_list_ours"))
-        request.user = self.user
-        # when
-        response = views.moon_list_ours(request)
+        response = views.moon_list(request)
         # then
         self.assertEqual(response.status_code, 200)
 

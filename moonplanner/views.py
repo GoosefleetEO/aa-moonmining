@@ -5,6 +5,7 @@ from django.db.models import Sum
 from django.http import HttpResponse, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.timezone import now
 from esi.decorators import token_required
 
 from allianceauth.authentication.models import CharacterOwnership
@@ -19,7 +20,7 @@ from app_utils.views import (
     link_html,
 )
 
-from . import __title__
+from . import __title__, constants
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
 from .forms import MoonScanForm
 from .models import Extraction, MiningCorporation, Moon, MoonProduct
@@ -39,6 +40,33 @@ MOONS_LIST_OUR = "our_moons"
 
 class HttpResponseUnauthorized(HttpResponse):
     status_code = 401
+
+
+def moon_details_button(moon: Moon) -> str:
+    return fontawesome_link_button_html(
+        url=reverse("moonplanner:moon_info", args=[moon.pk]),
+        fa_code="fas fa-eye",
+        tooltip="Show details in current window",
+        button_type="default",
+    )
+
+
+def corporation_names(corporation: MiningCorporation):
+    if corporation:
+        corporation_name = str(corporation)
+        corporation_html = bootstrap_icon_plus_name_html(
+            corporation.eve_corporation.logo_url(size=64),
+            corporation_name,
+            size=40,
+        )
+        alliance_name = (
+            corporation.eve_corporation.alliance.alliance_name
+            if corporation.eve_corporation.alliance
+            else ""
+        )
+    else:
+        alliance_name = corporation_name = corporation_html = ""
+    return corporation_html, corporation_name, alliance_name
 
 
 @login_required
@@ -63,15 +91,52 @@ def index(request):
 @login_required
 @permission_required(("moonplanner.access_our_moons", "moonplanner.access_moonplanner"))
 def extractions(request):
-    # Upcoming Extractions
-    today = datetime.today().replace(tzinfo=timezone.utc)
     context = {
-        "exts": Extraction.objects.annotate(volume=Sum("products__volume")).filter(
-            ready_time__gte=today
-        ),
-        "r_exts": Extraction.objects.filter(ready_time__lt=today)[:20],
+        "page_title": "Extractions",
+        "reprocessing_yield": MOONPLANNER_REPROCESSING_YIELD * 100,
+        "total_volume_per_month": MOONPLANNER_VOLUME_PER_MONTH / 1000000,
     }
     return render(request, "moonplanner/extractions.html", context)
+
+
+@login_required
+@permission_required(["moonplanner.access_our_moons", "moonplanner.access_moonplanner"])
+def extraction_list_data(request, category):
+    data = list()
+    extractions = Extraction.objects.select_related(
+        "refinery",
+        "refinery__moon",
+        "refinery__corporation",
+        "refinery__corporation__eve_corporation",
+        "refinery__corporation__eve_corporation__alliance",
+    ).annotate(volume=Sum("products__volume"))
+    if category == "recent":
+        extractions = extractions.filter(ready_time__lt=now())
+    else:
+        extractions = extractions.filter(ready_time__gte=now())
+    for ext in extractions:
+        (
+            corporation_html,
+            corporation_name,
+            alliance_name,
+        ) = corporation_names(ext.refinery.corporation)
+        data.append(
+            {
+                "id": ext.pk,
+                "ready_time": {
+                    "display": ext.ready_time.strftime(constants.DATETIME_FORMAT),
+                    "sort": ext.ready_time,
+                },
+                "moon": str(ext.refinery.moon),
+                "corporation": {"display": corporation_html, "sort": corporation_name},
+                "volume": ext.volume,
+                "value": 99,
+                "details": moon_details_button(ext.refinery.moon),
+                "corporation_name": corporation_name,
+                "alliance_name": alliance_name,
+            }
+        )
+    return JsonResponse(data, safe=False)
 
 
 @login_required
@@ -196,29 +261,7 @@ def moon_list(request):
         "reprocessing_yield": MOONPLANNER_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONPLANNER_VOLUME_PER_MONTH / 1000000,
     }
-    return render(request, "moonplanner/moon_list.html", context)
-
-
-@login_required()
-@permission_required(("moonplanner.access_moonplanner", "moonplanner.access_our_moons"))
-def moon_list_ours(request):
-    return _moon_list_generic(request, MOONS_LIST_OUR)
-
-
-@login_required()
-@permission_required(("moonplanner.access_moonplanner", "moonplanner.access_all_moons"))
-def moon_list_all(request):
-    return _moon_list_generic(request, MOONS_LIST_ALL)
-
-
-def _moon_list_generic(request, category):
-    context = {
-        "title": "All Moons" if category == MOONS_LIST_ALL else "Our Moons",
-        "ajax_url": reverse("moonplanner:moon_list_data", args=[category]),
-        "reprocessing_yield": MOONPLANNER_REPROCESSING_YIELD * 100,
-        "total_volume_per_month": MOONPLANNER_VOLUME_PER_MONTH / 1000000,
-    }
-    return render(request, "moonplanner/moon_list.html", context)
+    return render(request, "moonplanner/moons.html", context)
 
 
 # @cache_page(60 * 5) TODO: Remove for release
@@ -236,16 +279,15 @@ def moon_list_data(request, category):
         "refinery__corporation__eve_corporation",
         "refinery__corporation__eve_corporation__alliance",
     )
-    if category == MOONS_LIST_OUR:
+    if category == MOONS_LIST_ALL:
+        if not request.user.has_perm("moonplanner.access_all_moons"):
+            return HttpResponseUnauthorized()
+    else:
         moon_query = moon_query.filter(refinery__isnull=False)
         if not request.user.has_perm("moonplanner.access_our_moons"):
             return HttpResponseUnauthorized()
-    else:
-        if not request.user.has_perm("moonplanner.access_all_moons"):
-            return HttpResponseUnauthorized()
 
     for moon in moon_query:
-        moon_details_url = reverse("moonplanner:moon_info", args=[moon.pk])
         solar_system_name = moon.eve_moon.eve_planet.eve_solar_system.name
         solar_system_link = link_html(
             dotlan.solar_system_url(solar_system_name), solar_system_name
@@ -256,29 +298,13 @@ def moon_list_data(request, category):
             value = "(no data)"
 
         has_refinery = hasattr(moon, "refinery")
-        if has_refinery:
-            eve_corporation = moon.refinery.corporation.eve_corporation
-            corporation_name = str(moon.refinery.corporation)
-            corporation_html = bootstrap_icon_plus_name_html(
-                eve_corporation.logo_url(size=64),
-                corporation_name,
-                size=40,
-            )
-            alliance_name = (
-                eve_corporation.alliance.alliance_name
-                if eve_corporation.alliance
-                else ""
-            )
-        else:
-            alliance_name = corporation_name = corporation_html = ""
+        (
+            corporation_html,
+            corporation_name,
+            alliance_name,
+        ) = corporation_names(moon.refinery.corporation if has_refinery else None)
         region_name = (
             moon.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region.name
-        )
-        details_button = fontawesome_link_button_html(
-            url=moon_details_url,
-            fa_code="fas fa-eye",
-            tooltip="Show details in current window",
-            button_type="default",
         )
         moon_data = {
             "id": moon.pk,
@@ -287,7 +313,7 @@ def moon_list_data(request, category):
             "solar_system_link": solar_system_link,
             "region_name": region_name,
             "value": value,
-            "details": details_button,
+            "details": moon_details_button(moon),
             "has_refinery_str": "yes" if has_refinery else "no",
             "solar_system_name": solar_system_name,
             "corporation_name": corporation_name,
