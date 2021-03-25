@@ -18,5 +18,5 @@ urlpatterns = [
     ),
     path("moons", views.moon_list, name="moon_list"),
     path("moon_list_data/<str:category>", views.moon_list_data, name="moon_list_data"),
-    path("moon/<int:moon_pk>", views.moon_info, name="moon_info"),
+    path("moon/<int:moon_pk>", views.moon_details, name="moon_details"),
 ]

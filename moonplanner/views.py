@@ -48,7 +48,7 @@ class HttpResponseUnauthorized(HttpResponse):
 
 def moon_details_button(moon: Moon) -> str:
     return fontawesome_link_button_html(
-        url=reverse("moonplanner:moon_info", args=[moon.pk]),
+        url=reverse("moonplanner:moon_details", args=[moon.pk]),
         fa_code="fas fa-eye",
         tooltip="Show details in current window",
         button_type="default",
@@ -135,7 +135,7 @@ def extraction_list_data(request, category):
 
 @login_required
 @permission_required("moonplanner.access_moonplanner")
-def moon_info(request, moon_pk: int):
+def moon_details(request, moon_pk: int):
     try:
         moon = Moon.objects.select_related("eve_moon").get(pk=moon_pk)
     except Moon.DoesNotExist:
@@ -215,15 +215,13 @@ def moon_info(request, moon_pk: int):
         "reprocessing_yield": MOONPLANNER_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONPLANNER_VOLUME_PER_MONTH / 1000000,
     }
-    return render(request, "moonplanner/moon_info.html", context)
+    return render(request, "moonplanner/moon_details.html", context)
 
 
-@permission_required(("moonplanner.access_moonplanner", "moonplanner.upload_moon_scan"))
+@permission_required(["moonplanner.access_moonplanner", "moonplanner.upload_moon_scan"])
 @login_required()
 def add_moon_scan(request):
-    context = {
-        "page_title": "Moon Scan Input",
-    }
+    context = {"page_title": "Upload Moon Surveys"}
     if request.method == "POST":
         form = MoonScanForm(request.POST)
         if form.is_valid():
@@ -241,7 +239,7 @@ def add_moon_scan(request):
             messages_plus.error(
                 request, "Oh No! Something went wrong with your moon scan submission."
             )
-            return redirect("moonplanner:moon_info")
+            return redirect("moonplanner:moon_details")
     else:
         return render(request, "moonplanner/add_scan.html", context=context)
 
@@ -318,7 +316,7 @@ def moon_list_data(request, category):
 
 
 @permission_required(
-    ("moonplanner.add_mining_corporation", "moonplanner.access_moonplanner")
+    ["moonplanner.add_mining_corporation", "moonplanner.access_moonplanner"]
 )
 @token_required(scopes=MiningCorporation.esi_scopes())
 @login_required

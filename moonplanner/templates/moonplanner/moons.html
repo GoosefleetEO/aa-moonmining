@@ -3,6 +3,15 @@
 {% load static %}
 
 {% block details %}
+    <span class="pull-right">
+        {% if perms.moonplanner.upload_moon_scan %}
+            <a class="btn btn-success btn-tabs"
+                href="{% url 'moonplanner:add_moon_scan' %}">
+                {% trans "Upload Moon Surveys" %}
+            </a>
+        {% endif %}
+    </span>
+
     <!-- Nav tabs -->
     <ul id="myTabs" class="nav nav-tabs" role="tablist">
         <li role="presentation">

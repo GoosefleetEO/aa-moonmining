@@ -257,10 +257,12 @@ class TestMoonInfo(TestCase):
 
     def test_should_open_page(self):
         # given
-        request = self.factory.get(reverse("moonplanner:moon_info", args=["40161708"]))
+        request = self.factory.get(
+            reverse("moonplanner:moon_details", args=["40161708"])
+        )
         request.user = self.user
         # when
-        response = views.moon_info(request, 40161708)
+        response = views.moon_details(request, 40161708)
         # then
         self.assertEqual(response.status_code, 200)
 

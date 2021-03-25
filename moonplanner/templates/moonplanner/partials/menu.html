@@ -25,9 +25,9 @@
                         <a href="{% url 'moonplanner:extractions' %}">Extractions</a>
                     </li>
                 {% endif %}
-                {% if perms.moonplanner.upload_moon_scan %}
+                {% if "/moonplanner/add_moon_scan" in request.path %}
                     <li class="{% navactive request 'moonplanner:add_moon_scan' %}">
-                        <a href="{% url 'moonplanner:add_moon_scan' %}">Add Moon Scan</a>
+                        <a href="{% url 'moonplanner:add_moon_scan' %}">Upload Moon Surveys</a>
                     </li>
                 {% endif %}
                 {% if "/moonplanner/moon/" in request.path %}
