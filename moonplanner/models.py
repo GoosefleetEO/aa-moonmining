@@ -23,9 +23,13 @@ logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
 
 def calc_refined_value(
-    eve_type: EveType, volume: float, reprocessing_yield: float
+    eve_type: EveType, volume: float, reprocessing_yield: float = None
 ) -> float:
     """Calculate the refined total value of given eve_type and return it."""
+    if not reprocessing_yield:
+        reprocessing_yield = MOONPLANNER_REPROCESSING_YIELD
+    if not eve_type.volume:
+        return 0
     volume_per_unit = eve_type.volume
     units = volume / volume_per_unit
     r_units = units / 100
@@ -79,37 +83,16 @@ class Moon(models.Model):
     def __str__(self):
         return self.eve_moon.name
 
-    def update_value(self, total_volume=None, reprocessing_yield=None):
-        """Update value estimate for this moon."""
-        value = self.calc_value(
-            total_volume=total_volume, reprocessing_yield=reprocessing_yield
+    def update_value(self) -> float:
+        """Update value estimate with given parameters."""
+        value = sum(
+            [
+                product.calc_value(total_volume=MOONPLANNER_VOLUME_PER_MONTH)
+                for product in self.products.select_related("eve_type")
+            ]
         )
-        self.value = value
+        self.value = value if value else None
         self.save()
-
-    def calc_value(self, total_volume=None, reprocessing_yield=None) -> float:
-        """Return calculated value estimate for given parameters.
-
-        Args:
-            total_volume: total excepted ore volume for this moon
-            reprocessing_yield: expected average yield for ore reprocessing
-
-        Returns:
-            value estimate for moon or None if prices or products are missing
-        """
-        if not total_volume:
-            total_volume = MOONPLANNER_VOLUME_PER_MONTH
-        if not reprocessing_yield:
-            reprocessing_yield = MOONPLANNER_REPROCESSING_YIELD
-        value = 0
-        for product in self.products.select_related("eve_type"):
-            if product.eve_type.volume:
-                value += calc_refined_value(
-                    eve_type=product.eve_type,
-                    volume=total_volume * product.amount,
-                    reprocessing_yield=reprocessing_yield,
-                )
-        return value if value else None
 
     def is_owned(self):
         return hasattr(self, "refinery")
@@ -151,10 +134,6 @@ class MoonProduct(models.Model):
         """
         if not total_volume:
             total_volume = MOONPLANNER_VOLUME_PER_MONTH
-        if not reprocessing_yield:
-            reprocessing_yield = MOONPLANNER_REPROCESSING_YIELD
-        if not self.eve_type.volume:
-            return None
         return calc_refined_value(
             eve_type=self.eve_type,
             volume=total_volume * self.amount,
@@ -413,6 +392,21 @@ class Extraction(models.Model):
     def __str__(self):
         return "{} - {}".format(self.refinery, self.ready_time)
 
+    def update_value(self) -> float:
+        """Update value estimate with given parameters.
+
+        Args:
+            reprocessing_yield: expected average yield for ore reprocessing
+        """
+        value = sum(
+            [
+                product.calc_value()
+                for product in self.products.select_related("eve_type")
+            ]
+        )
+        self.value = value
+        self.save()
+
 
 class ExtractionProduct(models.Model):
     """A product within a mining extraction."""
@@ -433,7 +427,7 @@ class ExtractionProduct(models.Model):
     def __str__(self):
         return "{} - {}".format(self.extraction, self.eve_type)
 
-    def calc_value_estimate(self, reprocessing_yield=None) -> float:
+    def calc_value(self, reprocessing_yield=None) -> float:
         """returns calculated value estimate in ISK
 
         Args:
@@ -442,9 +436,6 @@ class ExtractionProduct(models.Model):
             value estimate or None if prices are missing
 
         """
-        if not reprocessing_yield:
-            reprocessing_yield = MOONPLANNER_REPROCESSING_YIELD
-
         return calc_refined_value(
             eve_type=self.eve_type,
             volume=self.volume,

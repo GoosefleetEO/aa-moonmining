@@ -7,7 +7,7 @@ from allianceauth.services.hooks import get_extension_logger
 from app_utils.logging import LoggerAddTag
 
 from . import __title__
-from .models import MiningCorporation, Moon
+from .models import Extraction, MiningCorporation, Moon
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
@@ -52,13 +52,29 @@ def update_extractions_from_esi(corporation_pk):
 
 
 @shared_task
-def update_all_moon_values():
-    """Update the value for all moons."""
-    moon_pks = Moon.objects.values_list("pk", flat=True)
-    logger.info("Updating value estimates for %d moons...", len(moon_pks))
+def update_values():
+    """Update the values of all moons and all extractions."""
     EveMarketPrice.objects.update_from_esi()
+    update_moon_values.delay()
+    update_extraction_values.delay()
+
+
+@shared_task
+def update_moon_values():
+    """Update the values of all moons."""
+    moon_pks = Moon.objects.values_list("pk", flat=True)
+    logger.info("Updating value estimates for %d moons ...", len(moon_pks))
     for moon_pk in moon_pks:
         update_moon_value.delay(moon_pk)
+
+
+@shared_task
+def update_extraction_values():
+    """Update the values of all extractions."""
+    extraction_pks = Extraction.objects.values_list("pk", flat=True)
+    logger.info("Updating value estimates for %d extractions ...", len(extraction_pks))
+    for extraction_pk in extraction_pks:
+        update_extraction_value.delay(extraction_pk)
 
 
 @shared_task
@@ -66,3 +82,10 @@ def update_moon_value(moon_pk):
     """Update the value for given moon."""
     moon = Moon.objects.get(pk=moon_pk)
     moon.update_value()
+
+
+@shared_task
+def update_extraction_value(extraction_pk):
+    """Update the value for given extraction."""
+    extraction = Extraction.objects.get(pk=extraction_pk)
+    extraction.update_value()

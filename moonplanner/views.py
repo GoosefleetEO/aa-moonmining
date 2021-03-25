@@ -107,27 +107,29 @@ def extraction_list_data(request, category):
         extractions = extractions.filter(ready_time__lt=cutover_dt)
     else:
         extractions = extractions.filter(ready_time__gte=cutover_dt)
-    for ext in extractions:
+    for extraction in extractions:
         (
             corporation_html,
             corporation_name,
             alliance_name,
-        ) = corporation_names(ext.refinery.corporation)
+        ) = corporation_names(extraction.refinery.corporation)
         data.append(
             {
-                "id": ext.pk,
+                "id": extraction.pk,
                 "ready_time": {
-                    "display": ext.ready_time.strftime(constants.DATETIME_FORMAT),
-                    "sort": ext.ready_time,
+                    "display": extraction.ready_time.strftime(
+                        constants.DATETIME_FORMAT
+                    ),
+                    "sort": extraction.ready_time,
                 },
-                "moon": str(ext.refinery.moon),
+                "moon": str(extraction.refinery.moon),
                 "corporation": {"display": corporation_html, "sort": corporation_name},
-                "volume": ext.volume,
-                "value": 99,
-                "details": moon_details_button(ext.refinery.moon),
+                "volume": extraction.volume,
+                "value": extraction.value / 1000000000 if extraction.value else None,
+                "details": moon_details_button(extraction.refinery.moon),
                 "corporation_name": corporation_name,
                 "alliance_name": alliance_name,
-                "is_ready": ext.ready_time <= now(),
+                "is_ready": extraction.ready_time <= now(),
             }
         )
     return JsonResponse(data, safe=False)
@@ -179,7 +181,7 @@ def moon_details(request, moon_pk: int):
                 "eve_type", "eve_type__eve_group"
             ).order_by("eve_type__name"):
                 image_url = product.eve_type.icon_url(32)
-                value = product.calc_value_estimate()
+                value = product.calc_value()
                 total_value += value if value else 0
                 total_volume += product.volume
                 ore_type_url = "{}{}".format(URL_PROFILE_TYPE, product.eve_type_id)

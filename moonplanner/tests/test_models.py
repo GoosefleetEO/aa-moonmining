@@ -45,14 +45,16 @@ class TestCalcRefinedValue(NoSocketsTestCase):
         self.assertEqual(result, 400225000.0)
 
 
-class TestMoonCalcIncome(NoSocketsTestCase):
+@patch(MODULE_PATH + ".MOONPLANNER_VOLUME_PER_MONTH", 1000000)
+@patch(MODULE_PATH + ".MOONPLANNER_REPROCESSING_YIELD", 0.7)
+class TestMoonUpdateValue(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         load_eveuniverse()
         cls.moon = helpers.create_moon_40161708()
 
-    def test_should_calc_income(self):
+    def test_should_update_value(self):
         # given
         tungsten = EveType.objects.get(id=16637)
         EveMarketPrice.objects.create(eve_type=tungsten, average_price=7000)
@@ -71,19 +73,21 @@ class TestMoonCalcIncome(NoSocketsTestCase):
         mexallon = EveType.objects.get(id=36)
         EveMarketPrice.objects.create(eve_type=mexallon, average_price=117)
         # when
-        result = self.moon.calc_value(total_volume=1000000, reprocessing_yield=0.7)
+        self.moon.update_value()
         # then
-        self.assertEqual(result, 180498825.5)
+        self.moon.refresh_from_db()
+        self.assertEqual(self.moon.value, 180498825.5)
 
-    def test_should_return_none_if_prices_are_missing(self):
+    def test_should_set_none_if_prices_are_missing(self):
         # given
         EveMarketPrice.objects.create(
             eve_type=EveType.objects.get(id=45506), average_price=1, adjusted_price=2
         )
         # when
-        result = self.moon.calc_value(total_volume=1000000, reprocessing_yield=0.7)
+        self.moon.update_value()
         # then
-        self.assertIsNone(result)
+        self.moon.refresh_from_db()
+        self.assertIsNone(self.moon.value)
 
 
 class TestExtractionProduct(NoSocketsTestCase):
@@ -107,7 +111,7 @@ class TestExtractionProduct(NoSocketsTestCase):
         )
         obj = ExtractionProduct.objects.first()
         # when
-        result = obj.calc_value_estimate()
+        result = obj.calc_value()
         # then
         self.assertIsNotNone(result)
 

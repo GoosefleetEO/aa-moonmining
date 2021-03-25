@@ -79,10 +79,11 @@ class TestUpdateTasks(TestCase):
         # TODO: add more tests
 
     @patch(TASKS_PATH + ".EveMarketPrice.objects.update_from_esi")
-    def test_should_update_income_for_all_moons(self, mock_update_prices):
+    def test_should_update_all_values(self, mock_update_prices):
         # given
         mock_update_prices.return_value = None
         moon = helpers.create_moon_40161708()
+        refinery = helpers.add_refinery(moon)
         tungsten = EveType.objects.get(id=16637)
         mercury = EveType.objects.get(id=16646)
         evaporite_deposits = EveType.objects.get(id=16635)
@@ -90,10 +91,12 @@ class TestUpdateTasks(TestCase):
         EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
         EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
         # when
-        tasks.update_all_moon_values.delay()
+        tasks.update_values.delay()
         # then
         moon.refresh_from_db()
         self.assertIsNotNone(moon.value)
+        extraction = refinery.extractions.first()
+        self.assertIsNotNone(extraction.value)
 
 
 class TestProcessSurveyInput(TestCase):
