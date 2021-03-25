@@ -6,7 +6,7 @@
     <span class="pull-right">
         {% if perms.moonplanner.upload_moon_scan %}
             <a class="btn btn-success btn-tabs"
-                href="{% url 'moonplanner:add_moon_scan' %}">
+                href="{% url 'moonplanner:upload_survey' %}">
                 {% trans "Upload Moon Surveys" %}
             </a>
         {% endif %}
@@ -107,7 +107,7 @@
             };
 
             /* our moons table */
-            def.ajax.url = '{% url "moonplanner:moon_list_data" "our_moons" %}'
+            def.ajax.url = '{% url "moonplanner:moons_data" "our_moons" %}'
             var table = $('#table_our_moons').DataTable(def);
             table.on( 'xhr', function () {
                 table.columns.adjust().draw();
@@ -116,7 +116,7 @@
             } );
 
             /* all moons table */
-            def.ajax.url = '{% url "moonplanner:moon_list_data" "all_moons" %}'
+            def.ajax.url = '{% url "moonplanner:moons_data" "all_moons" %}'
             var table = $('#table_all_moons').DataTable(def);
             table.on( 'xhr', function () {
                 table.columns.adjust().draw();
@@ -133,7 +133,7 @@
 {% block extra_css %}
     {% include 'bundles/datatables-css.html' %}
     <link href="{% static 'moonplanner/css/global.css' %}" type="text/css" rel="stylesheet">
-    <link href="{% static 'moonplanner/css/moon_list.css' %}" type="text/css" rel="stylesheet">
+    <link href="{% static 'moonplanner/css/moons.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}
 
 {% block extra_script %}

@@ -76,7 +76,7 @@ def corporation_names(corporation: MiningCorporation):
 @login_required
 @permission_required("moonplanner.access_moonplanner")
 def index(request):
-    return redirect("moonplanner:moon_list")
+    return redirect("moonplanner:moons")
 
 
 @login_required
@@ -93,7 +93,7 @@ def extractions(request):
 
 @login_required
 @permission_required(["moonplanner.access_our_moons", "moonplanner.access_moonplanner"])
-def extraction_list_data(request, category):
+def extractions_data(request, category):
     data = list()
     cutover_dt = now() - dt.timedelta(hours=MOONPLANNER_EXTRACTIONS_HOURS_UNTIL_STALE)
     extractions = Extraction.objects.select_related(
@@ -222,7 +222,7 @@ def moon_details(request, moon_pk: int):
 
 @permission_required(["moonplanner.access_moonplanner", "moonplanner.upload_moon_scan"])
 @login_required()
-def add_moon_scan(request):
+def upload_survey(request):
     context = {"page_title": "Upload Moon Surveys"}
     if request.method == "POST":
         form = MoonScanForm(request.POST)
@@ -248,7 +248,7 @@ def add_moon_scan(request):
 
 @login_required()
 @permission_required("moonplanner.access_moonplanner")
-def moon_list(request):
+def moons(request):
     context = {
         "page_title": "Moons",
         "reprocessing_yield": MOONPLANNER_REPROCESSING_YIELD * 100,
@@ -260,7 +260,7 @@ def moon_list(request):
 # @cache_page(60 * 5) TODO: Remove for release
 @login_required()
 @permission_required("moonplanner.access_moonplanner")
-def moon_list_data(request, category):
+def moons_data(request, category):
     """returns moon list in JSON for DataTables AJAX"""
     data = list()
     moon_query = Moon.objects.select_related(

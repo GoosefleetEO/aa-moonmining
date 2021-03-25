@@ -89,11 +89,11 @@
             };
 
             /* upcoming extractions*/
-            def.ajax.url = '{% url "moonplanner:extraction_list_data" "upcoming" %}'
+            def.ajax.url = '{% url "moonplanner:extractions_data" "upcoming" %}'
             var table = $('#table_upcoming').DataTable(def);
 
             /* recent extractions */
-            def.ajax.url = '{% url "moonplanner:extraction_list_data" "recent" %}'
+            def.ajax.url = '{% url "moonplanner:extractions_data" "recent" %}'
             var table = $('#table_recent').DataTable(def);
 
             $('#myTabs a[href="#tab_upcoming"]').tab('show')

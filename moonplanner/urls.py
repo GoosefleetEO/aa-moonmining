@@ -9,14 +9,14 @@ urlpatterns = [
     path(
         "add_corporation", views.add_mining_corporation, name="add_mining_corporation"
     ),
-    path("add_moon_scan", views.add_moon_scan, name="add_moon_scan"),
+    path("upload_survey", views.upload_survey, name="upload_survey"),
     path("extractions", views.extractions, name="extractions"),
     path(
-        "extraction_list_data/<str:category>",
-        views.extraction_list_data,
-        name="extraction_list_data",
+        "extractions_data/<str:category>",
+        views.extractions_data,
+        name="extractions_data",
     ),
-    path("moons", views.moon_list, name="moon_list"),
-    path("moon_list_data/<str:category>", views.moon_list_data, name="moon_list_data"),
+    path("moons", views.moons, name="moons"),
+    path("moons_data/<str:category>", views.moons_data, name="moons_data"),
     path("moon/<int:moon_pk>", views.moon_details, name="moon_details"),
 ]
