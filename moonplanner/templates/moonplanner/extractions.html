@@ -4,15 +4,17 @@
 
 {% block details %}
     <ul id="myTabs" class="nav nav-tabs" role="tablist">
-        <li role="presentation"><a href="#tab_upcoming" aria-controls="tab_upcoming" role="tab" data-toggle="tab">Upcoming Extractions</a></li>
-        <li role="presentation"><a href="#tab_past" aria-controls="tab_past" role="tab" data-toggle="tab">Past Extractions</a></li>
+        <li role="presentation">
+            <a href="#tab_{{ ExtractionsCategory.UPCOMING }}" aria-controls="tab_{{ ExtractionsCategory.UPCOMING }}" role="tab" data-toggle="tab">Upcoming Extractions</a>
+        </li>
+        <li role="presentation"><a href="#tab_{{ ExtractionsCategory.PAST }}" aria-controls="tab_{{ ExtractionsCategory.PAST }}" role="tab" data-toggle="tab">Past Extractions</a></li>
     </ul>
 
     <div class="panel panel-default panel-tabs">
         <div class="panel-body">
             <div class="tab-content">
-                {% include "moonplanner/partials/extractions_tab.html" with category="upcoming"%}
-                {% include "moonplanner/partials/extractions_tab.html" with category="past"%}
+                {% include "moonplanner/partials/extractions_tab.html" with category=ExtractionsCategory.UPCOMING %}
+                {% include "moonplanner/partials/extractions_tab.html" with category=ExtractionsCategory.PAST %}
             </div>
             {% include 'moonplanner/partials/value_estimate_legend.html' %}
             <p class="text-muted">All times displayed are EVE/UTC • Extractions will be shown on the upcoming tab until {{ stale_hours }} hours after their ready time.
@@ -89,14 +91,14 @@
             };
 
             /* upcoming extractions*/
-            def.ajax.url = '{% url "moonplanner:extractions_data" "upcoming" %}'
-            var table = $('#table_upcoming').DataTable(def);
+            def.ajax.url = '{% url "moonplanner:extractions_data" ExtractionsCategory.UPCOMING %}'
+            var table = $('#table_{{ ExtractionsCategory.UPCOMING }}').DataTable(def);
 
             /* past extractions */
-            def.ajax.url = '{% url "moonplanner:extractions_data" "past" %}'
-            var table = $('#table_past').DataTable(def);
+            def.ajax.url = '{% url "moonplanner:extractions_data" ExtractionsCategory.PAST %}'
+            var table = $('#table_{{ ExtractionsCategory.PAST }}').DataTable(def);
 
-            $('#myTabs a[href="#tab_upcoming"]').tab('show')
+            $('#myTabs a[href="#tab_{{ ExtractionsCategory.UPCOMING }}"]').tab('show')
         });
 
     </script>

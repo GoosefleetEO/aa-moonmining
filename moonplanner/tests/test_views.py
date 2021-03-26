@@ -112,26 +112,25 @@ class TestMoonsData(TestCase):
         cls.factory = RequestFactory()
         load_eveuniverse()
         load_allianceauth()
+        cls.moon = helpers.create_moon_40161708()
         Moon.objects.create(eve_moon=EveMoon.objects.get(id=40131695))
-        Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161708))
         Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161709))
 
     def test_should_return_all_moons(self):
         # given
         user, _ = create_user_from_evecharacter(
             1001,
-            permissions=[
-                "moonplanner.basic_access",
-                "moonplanner.access_all_moons",
-            ],
+            permissions=["moonplanner.basic_access", "moonplanner.view_all_moons"],
             scopes=MiningCorporation.esi_scopes(),
         )
         request = self.factory.get(
-            reverse("moonplanner:moons_data", args={"category": "all_moons"})
+            reverse(
+                "moonplanner:moons_data", args={"category": views.MoonsCategory.ALL}
+            )
         )
         request.user = user
         # when
-        response = views.moons_data(request, category="all_moons")
+        response = views.moons_data(request, category=views.MoonsCategory.ALL)
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
@@ -142,21 +141,20 @@ class TestMoonsData(TestCase):
     def test_should_return_our_moons_only(self):
         # given
         request = self.factory.get(
-            reverse("moonplanner:moons_data", args={"category": "our_moons"})
+            reverse(
+                "moonplanner:moons_data", args={"category": views.MoonsCategory.OURS}
+            )
         )
         user, _ = create_user_from_evecharacter(
             1001,
-            permissions=[
-                "moonplanner.basic_access",
-                "moonplanner.access_our_moons",
-            ],
+            permissions=["moonplanner.basic_access", "moonplanner.extractions_access"],
             scopes=MiningCorporation.esi_scopes(),
         )
         request.user = user
         moon = Moon.objects.get(pk=40131695)
         helpers.add_refinery(moon)
         # when
-        response = views.moons_data(request, category="our_moons")
+        response = views.moons_data(request, category=views.MoonsCategory.OURS)
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
@@ -165,14 +163,13 @@ class TestMoonsData(TestCase):
     def test_should_handle_empty_refineries(self):
         # given
         request = self.factory.get(
-            reverse("moonplanner:moons_data", args={"category": "our_moons"})
+            reverse(
+                "moonplanner:moons_data", args={"category": views.MoonsCategory.OURS}
+            )
         )
         user, _ = create_user_from_evecharacter(
             1001,
-            permissions=[
-                "moonplanner.basic_access",
-                "moonplanner.access_our_moons",
-            ],
+            permissions=["moonplanner.basic_access", "moonplanner.extractions_access"],
             scopes=MiningCorporation.esi_scopes(),
         )
         request.user = user
@@ -185,7 +182,7 @@ class TestMoonsData(TestCase):
             eve_type_id=35835,
         )
         # when
-        response = views.moons_data(request, category="our_moons")
+        response = views.moons_data(request, category=views.MoonsCategory.OURS)
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
@@ -195,18 +192,17 @@ class TestMoonsData(TestCase):
         # given
         user, _ = create_user_from_evecharacter(
             1001,
-            permissions=[
-                "moonplanner.basic_access",
-                "moonplanner.access_our_moons",
-            ],
+            permissions=["moonplanner.basic_access", "moonplanner.extractions_access"],
             scopes=MiningCorporation.esi_scopes(),
         )
         request = self.factory.get(
-            reverse("moonplanner:moons_data", args={"category": "all_moons"})
+            reverse(
+                "moonplanner:moons_data", args={"category": views.MoonsCategory.ALL}
+            )
         )
         request.user = user
         # when
-        response = views.moons_data(request, category="all_moons")
+        response = views.moons_data(request, category=views.MoonsCategory.ALL)
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
@@ -220,15 +216,40 @@ class TestMoonsData(TestCase):
             scopes=MiningCorporation.esi_scopes(),
         )
         request = self.factory.get(
-            reverse("moonplanner:moons_data", args={"category": "our_moons"})
+            reverse(
+                "moonplanner:moons_data", args={"category": views.MoonsCategory.OURS}
+            )
         )
         request.user = user
         # when
-        response = views.moons_data(request, category="our_moons")
+        response = views.moons_data(request, category=views.MoonsCategory.OURS)
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
         self.assertEqual(len(data), 0)
+
+    # def test_should_return_uploaded_moons_only(self):
+    #     # given
+    #     request = self.factory.get(
+    #         reverse(
+    #             "moonplanner:moons_data",
+    #             args={"category": views.MOONS_CATEGORY_UPLOADS},
+    #         )
+    #     )
+    #     user, _ = create_user_from_evecharacter(
+    #         1001,
+    #         permissions=["moonplanner.basic_access", "moonplanner.upload_moon_scan"],
+    #         scopes=MiningCorporation.esi_scopes(),
+    #     )
+    #     request.user = user
+    #     self.moon.products_updated_by = user
+    #     self.moon.save()
+    #     # when
+    #     response = views.moons_data(request, category=views.MOONS_CATEGORY_UPLOADS)
+    #     # then
+    #     self.assertEqual(response.status_code, 200)
+    #     data = json_response_to_dict(response)
+    #     self.assertSetEqual(set(data.keys()), {40161708})
 
 
 class TestMoonInfo(TestCase):
@@ -242,8 +263,8 @@ class TestMoonInfo(TestCase):
             1001,
             permissions=[
                 "moonplanner.basic_access",
-                "moonplanner.access_our_moons",
-                "moonplanner.access_all_moons",
+                "moonplanner.extractions_access",
+                "moonplanner.view_all_moons",
                 "moonplanner.upload_moon_scan",
                 "moonplanner.add_corporation",
             ],
@@ -280,8 +301,8 @@ class TestViewsAreWorking(TestCase):
             1001,
             permissions=[
                 "moonplanner.basic_access",
-                "moonplanner.access_our_moons",
-                "moonplanner.access_all_moons",
+                "moonplanner.extractions_access",
+                "moonplanner.view_all_moons",
                 "moonplanner.upload_moon_scan",
                 "moonplanner.add_corporation",
             ],
@@ -358,7 +379,7 @@ class TestExtractionsData(TestCase):
         # given
         user, _ = create_user_from_evecharacter(
             1001,
-            permissions=["moonplanner.basic_access", "moonplanner.access_our_moons"],
+            permissions=["moonplanner.basic_access", "moonplanner.extractions_access"],
             scopes=MiningCorporation.esi_scopes(),
         )
         extraction = Extraction.objects.create(
@@ -370,13 +391,13 @@ class TestExtractionsData(TestCase):
         request = self.factory.get(
             reverse(
                 "moonplanner:extractions_data",
-                args={"category": views.EXTRACTIONS_CATEGORY_PAST},
+                args={"category": views.ExtractionsCategory.PAST},
             )
         )
         request.user = user
         # when
         response = views.extractions_data(
-            request, category=views.EXTRACTIONS_CATEGORY_PAST
+            request, category=views.ExtractionsCategory.PAST
         )
         # then
         self.assertEqual(response.status_code, 200)

@@ -14,25 +14,39 @@
 
     <!-- Nav tabs -->
     <ul id="myTabs" class="nav nav-tabs" role="tablist">
-        <li role="presentation">
-            <a href="#tab_our_moons" aria-controls="tab_our_moons" role="tab" data-toggle="tab">{% trans "Our Moons" %}</a>
-        </li>
-        <li role="presentation">
-            <a href="#tab_all_moons" aria-controls="tab_all_moons" role="tab" data-toggle="tab">{% trans "All Moons" %}</a>
-        </li>
+        {% if perms.moonplanner.extractions_access %}
+            <li role="presentation">
+                <a href="#tab_{{ MoonsCategory.OURS }}" aria-controls="tab_{{ MoonsCategory.OURS }}" role="tab" data-toggle="tab">{% trans "Our Moons" %}</a>
+            </li>
+        {% endif %}
+        {% if perms.moonplanner.view_all_moons %}
+            <li role="presentation">
+                <a href="#tab_{{ MoonsCategory.ALL }}" aria-controls="tab_{{ MoonsCategory.ALL }}" role="tab" data-toggle="tab">{% trans "All Moons" %}</a>
+            </li>
+        {% endif %}
+        {% if perms.moonplanner.upload_moon_scan %}
+            <li role="presentation">
+                <a href="#tab_{{ MoonsCategory.UPLOADS }}" aria-controls="tab_{{ MoonsCategory.UPLOADS }}" role="tab" data-toggle="tab">{% trans "My Uploaded Moons" %}</a>
+            </li>
+         {% endif %}
     </ul>
 
     <div class="panel panel-default panel-tabs">
         <div class="panel-body">
             <div class="tab-content">
-                {% include "moonplanner/partials/moons_tab.html" with category="our_moons"%}
-                {% include "moonplanner/partials/moons_tab.html" with category="all_moons"%}
+                {% include "moonplanner/partials/moons_tab.html" with category=MoonsCategory.OURS %}
+                {% include "moonplanner/partials/moons_tab.html" with category=MoonsCategory.ALL %}
+                {% include "moonplanner/partials/moons_tab.html" with category=MoonsCategory.UPLOADS %}
             </div>
             {% include 'moonplanner/partials/value_estimate_legend.html' %}
         </div>
     </div>
 
-
+    {% if perms.moonplanner.extractions_access or perms.moonplanner.view_all_moons %}
+        <script>var defaultTab = "tab_{{MoonsCategory.OURS}}";</script>
+    {% elif perms.moonplanner.upload_moon_scan %}
+        <script>var defaultTab = "tab_{{MoonsCategory.UPLOADS}}";</script>
+    {% endif %}
 {% endblock %}
 
 {% block extra_javascript %}
@@ -110,24 +124,33 @@
             };
 
             /* our moons table */
-            def.ajax.url = '{% url "moonplanner:moons_data" "our_moons" %}'
-            var table = $('#table_our_moons').DataTable(def);
+            def.ajax.url = '{% url "moonplanner:moons_data" MoonsCategory.OURS %}'
+            var table = $('#table_{{ MoonsCategory.OURS }}').DataTable(def);
             table.on( 'xhr', function () {
                 table.columns.adjust().draw();
-                $("#loader_our_moons").hide();
-                $("#wrapper_our_moons").show();
+                $("#loader_{{ MoonsCategory.OURS }}").hide();
+                $("#wrapper_{{ MoonsCategory.OURS }}").show();
             } );
 
             /* all moons table */
-            def.ajax.url = '{% url "moonplanner:moons_data" "all_moons" %}'
-            var table = $('#table_all_moons').DataTable(def);
+            def.ajax.url = '{% url "moonplanner:moons_data" MoonsCategory.ALL %}'
+            var table = $('#table_{{ MoonsCategory.ALL }}').DataTable(def);
             table.on( 'xhr', function () {
                 table.columns.adjust().draw();
-                $("#loader_all_moons").hide();
-                $("#wrapper_all_moons").show();
+                $("#loader_{{ MoonsCategory.ALL }}").hide();
+                $("#wrapper_{{ MoonsCategory.ALL }}").show();
             } );
 
-            $('#myTabs a[href="#tab_our_moons"]').tab('show')
+            /* uploaded moons table */
+            def.ajax.url = '{% url "moonplanner:moons_data" MoonsCategory.UPLOADS %}'
+            var table = $('#table_{{ MoonsCategory.UPLOADS }}').DataTable(def);
+            table.on( 'xhr', function () {
+                table.columns.adjust().draw();
+                $("#loader_{{ MoonsCategory.UPLOADS }}").hide();
+                $("#wrapper_{{ MoonsCategory.UPLOADS }}").show();
+            } );
+
+            $('#myTabs a[href="#' + defaultTab + '"]').tab('show')
 
         });
     </script>

@@ -20,7 +20,7 @@
                 <li class="{% navactive request 'moonplanner:moons' %}">
                     <a href="{% url 'moonplanner:moons' %}">Moons</a>
                 </li>
-                {% if perms.moonplanner.access_our_moons %}
+                {% if perms.moonplanner.extractions_access %}
                     <li class="{% navactive request 'moonplanner:extractions' %}">
                         <a href="{% url 'moonplanner:extractions' %}">Extractions</a>
                     </li>

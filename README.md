@@ -127,7 +127,7 @@ Name  | Description
 -- | --
 `moonplanner.basic_access` | This is access permission, users without this permission will be unable to access the plugin.
 `moonplanner.upload_moon_scan` | This permission allows users to upload moon scan data.
-`moonplanner.access_our_moons` | User gets access all moons that have refineries
+`moonplanner.extractions_access` | User can access extractions and view owned moons
 `moonplanner.access_all_moons` | User gets access to all moons in the database
 `moonplanner.add_corporation` | This permission is allows users to add their tokens to be pulled from when checking for new extraction events.
 

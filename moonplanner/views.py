@@ -1,8 +1,9 @@
 import datetime as dt
+from enum import Enum, IntEnum
 
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Sum
-from django.http import HttpResponse, HttpResponseNotFound, JsonResponse
+from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.timezone import now
@@ -20,13 +21,14 @@ from app_utils.views import (
     link_html,
 )
 
-from . import __title__, constants, tasks
+from . import __title__, constants, helpers, tasks
 from .app_settings import (
     MOONPLANNER_EXTRACTIONS_HOURS_UNTIL_STALE,
     MOONPLANNER_REPROCESSING_YIELD,
     MOONPLANNER_VOLUME_PER_MONTH,
 )
 from .forms import MoonScanForm
+from .helpers import HttpResponseUnauthorized
 from .models import Extraction, MiningCorporation, Moon, MoonProduct
 
 # from django.views.decorators.cache import cache_page
@@ -34,19 +36,24 @@ from .models import Extraction, MiningCorporation, Moon, MoonProduct
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
-MOONS_CATEGORY_ALL = "all_moons"
-MOONS_CATEGORY_OURS = "our_moons"
-EXTRACTIONS_CATEGORY_UPCOMING = "upcoming"
-EXTRACTIONS_CATEGORY_PAST = "past"
-ICON_SIZE_SMALL = 32
-ICON_SIZE_MEDIUM = 64
+
+class IconSize(IntEnum):
+    SMALL = 32
+    MEDIUM = 64
 
 
-class HttpResponseUnauthorized(HttpResponse):
-    status_code = 401
+class ExtractionsCategory(str, helpers.EnumToDict, Enum):
+    UPCOMING = "upcoming"
+    PAST = "past"
 
 
-def moon_details_button(moon: Moon) -> str:
+class MoonsCategory(str, helpers.EnumToDict, Enum):
+    ALL = "all_moons"
+    UPLOADS = "uploads"
+    OURS = "our_moons"
+
+
+def moon_details_button_html(moon: Moon) -> str:
     return fontawesome_link_button_html(
         url=reverse("moonplanner:moon_details", args=[moon.pk]),
         fa_code="fas fa-eye",
@@ -55,22 +62,12 @@ def moon_details_button(moon: Moon) -> str:
     )
 
 
-def corporation_names(corporation: MiningCorporation):
-    if corporation:
-        corporation_name = str(corporation)
-        corporation_html = bootstrap_icon_plus_name_html(
-            corporation.eve_corporation.logo_url(size=ICON_SIZE_MEDIUM),
-            corporation_name,
-            size=40,
-        )
-        alliance_name = (
-            corporation.eve_corporation.alliance.alliance_name
-            if corporation.eve_corporation.alliance
-            else ""
-        )
-    else:
-        alliance_name = corporation_name = corporation_html = ""
-    return corporation_html, corporation_name, alliance_name
+def mining_corporation_html(corporation: MiningCorporation):
+    return bootstrap_icon_plus_name_html(
+        corporation.eve_corporation.logo_url(size=IconSize.SMALL),
+        corporation.name,
+        size=IconSize.SMALL,
+    )
 
 
 @login_required
@@ -80,10 +77,11 @@ def index(request):
 
 
 @login_required
-@permission_required(["moonplanner.access_our_moons", "moonplanner.basic_access"])
+@permission_required(["moonplanner.extractions_access", "moonplanner.basic_access"])
 def extractions(request):
     context = {
         "page_title": "Extractions",
+        "ExtractionsCategory": ExtractionsCategory.to_dict(),
         "reprocessing_yield": MOONPLANNER_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONPLANNER_VOLUME_PER_MONTH / 1000000,
         "stale_hours": MOONPLANNER_EXTRACTIONS_HOURS_UNTIL_STALE,
@@ -92,7 +90,7 @@ def extractions(request):
 
 
 @login_required
-@permission_required(["moonplanner.access_our_moons", "moonplanner.basic_access"])
+@permission_required(["moonplanner.extractions_access", "moonplanner.basic_access"])
 def extractions_data(request, category):
     data = list()
     cutover_dt = now() - dt.timedelta(hours=MOONPLANNER_EXTRACTIONS_HOURS_UNTIL_STALE)
@@ -103,18 +101,16 @@ def extractions_data(request, category):
         "refinery__corporation__eve_corporation",
         "refinery__corporation__eve_corporation__alliance",
     ).annotate(volume=Sum("products__volume"))
-    if category == EXTRACTIONS_CATEGORY_PAST:
+    if category == ExtractionsCategory.PAST:
         extractions = extractions.filter(ready_time__lt=cutover_dt)
-    elif category == EXTRACTIONS_CATEGORY_UPCOMING:
+    elif category == ExtractionsCategory.UPCOMING:
         extractions = extractions.filter(ready_time__gte=cutover_dt)
     else:
         extractions = Extraction.objects.none()
     for extraction in extractions:
-        (
-            corporation_html,
-            corporation_name,
-            alliance_name,
-        ) = corporation_names(extraction.refinery.corporation)
+        corporation_html = mining_corporation_html(extraction.refinery.corporation)
+        corporation_name = extraction.refinery.corporation.name
+        alliance_name = extraction.refinery.corporation.alliance_name
         data.append(
             {
                 "id": extraction.pk,
@@ -128,7 +124,7 @@ def extractions_data(request, category):
                 "corporation": {"display": corporation_html, "sort": corporation_name},
                 "volume": extraction.volume,
                 "value": extraction.value / 1000000000 if extraction.value else None,
-                "details": moon_details_button(extraction.refinery.moon),
+                "details": moon_details_button_html(extraction.refinery.moon),
                 "corporation_name": corporation_name,
                 "alliance_name": alliance_name,
                 "is_ready": extraction.ready_time <= now(),
@@ -144,9 +140,9 @@ def moon_details(request, moon_pk: int):
         moon = Moon.objects.select_related("eve_moon").get(pk=moon_pk)
     except Moon.DoesNotExist:
         return HttpResponseNotFound()
-    if not request.user.has_perm("moonplanner.access_all_moons") or (
-        moon.is_owned and not request.user.has_perm("moonplanner.access_our_moons")
-    ):
+    if not request.user.has_perm(
+        "moonplanner.view_all_moons"
+    ) and not request.user.has_perm("moonplanner.extractions_access"):
         return HttpResponseUnauthorized()
 
     product_rows = [
@@ -154,7 +150,7 @@ def moon_details(request, moon_pk: int):
             "ore_type_name": product.ore_type.name,
             "ore_type_url": product.ore_type.profile_url,
             "ore_group_name": product.ore_type.eve_group.name,
-            "image_url": product.ore_type.icon_url(ICON_SIZE_MEDIUM),
+            "image_url": product.ore_type.icon_url(IconSize.MEDIUM),
             "amount": int(round(product.amount * 100)),
             "value": product.calc_value(),
         }
@@ -185,7 +181,7 @@ def moon_details(request, moon_pk: int):
                         "ore_type_name": product.ore_type.name,
                         "ore_type_url": product.ore_type.profile_url,
                         "ore_group_name": product.ore_type.eve_group.name,
-                        "image_url": product.ore_type.icon_url(ICON_SIZE_SMALL),
+                        "image_url": product.ore_type.icon_url(IconSize.SMALL),
                         "volume": product.volume,
                         "value": value,
                     }
@@ -245,6 +241,7 @@ def upload_survey(request):
 def moons(request):
     context = {
         "page_title": "Moons",
+        "MoonsCategory": MoonsCategory.to_dict(),
         "reprocessing_yield": MOONPLANNER_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONPLANNER_VOLUME_PER_MONTH / 1000000,
     }
@@ -266,13 +263,20 @@ def moons_data(request, category):
         "refinery__corporation__eve_corporation",
         "refinery__corporation__eve_corporation__alliance",
     )
-    if category == MOONS_CATEGORY_ALL:
-        if not request.user.has_perm("moonplanner.access_all_moons"):
-            return JsonResponse([], safe=False)
-    else:
+    if category == MoonsCategory.ALL and request.user.has_perm(
+        "moonplanner.view_all_moons"
+    ):
+        pass
+    elif category == MoonsCategory.OURS and request.user.has_perm(
+        "moonplanner.extractions_access"
+    ):
         moon_query = moon_query.filter(refinery__isnull=False)
-        if not request.user.has_perm("moonplanner.access_our_moons"):
-            return JsonResponse([], safe=False)
+    elif category == MoonsCategory.UPLOADS and request.user.has_perm(
+        "moonplanner.upload_moon_scan"
+    ):
+        moon_query = moon_query.filter(products_updated_by=request.user)
+    else:
+        return JsonResponse([], safe=False)
 
     for moon in moon_query:
         solar_system_name = moon.eve_moon.eve_planet.eve_solar_system.name
@@ -280,14 +284,20 @@ def moons_data(request, category):
             dotlan.solar_system_url(solar_system_name), solar_system_name
         )
         has_refinery = hasattr(moon, "refinery")
-        (
-            corporation_html,
-            corporation_name,
-            alliance_name,
-        ) = corporation_names(moon.refinery.corporation if has_refinery else None)
+        if has_refinery:
+            corporation_html = mining_corporation_html(moon.refinery.corporation)
+            corporation_name = moon.refinery.corporation.name
+            alliance_name = moon.refinery.corporation.alliance_name
+            has_details_access = request.user.has_perm(
+                "moonplanner.extractions_access"
+            ) or request.user.has_perm("moonplanner.view_all_moons")
+        else:
+            corporation_html = corporation_name = alliance_name = ""
+            has_details_access = request.user.has_perm("moonplanner.view_all_moons")
         region_name = (
             moon.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region.name
         )
+        details_html = moon_details_button_html(moon) if has_details_access else ""
         moon_data = {
             "id": moon.pk,
             "moon_name": moon.eve_moon.name,
@@ -295,7 +305,7 @@ def moons_data(request, category):
             "solar_system_link": solar_system_link,
             "region_name": region_name,
             "value": moon.value / 1000000000 if moon.value else None,
-            "details": moon_details_button(moon),
+            "details": details_html,
             "has_refinery_str": "yes" if has_refinery else "no",
             "solar_system_name": solar_system_name,
             "corporation_name": corporation_name,

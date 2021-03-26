@@ -33,10 +33,10 @@ class General(models.Model):
         default_permissions = ()
         permissions = (
             ("basic_access", "Can access the moonplanner app"),
-            ("access_our_moons", "Can access our moons and see extractions"),
-            ("access_all_moons", "Can access all moons in the database"),
+            ("extractions_access", "Can access extractions and view owned moons"),
+            ("view_all_moons", "Can view all known moons"),
             ("upload_moon_scan", "Can upload moon scans"),
-            ("add_corporation", "Can add mining corporation"),
+            ("add_corporation", "Can add mining corporations"),
         )
 
 
@@ -100,17 +100,30 @@ class Moon(models.Model):
         EveMoon, on_delete=models.CASCADE, primary_key=True, related_name="known_moon"
     )
     value = models.FloatField(
-        null=True, default=None, validators=[MinValueValidator(0.0)]
+        null=True,
+        default=None,
+        validators=[MinValueValidator(0.0)],
+        help_text="Calculated value estimate",
     )
-    products_updated_at = models.DateTimeField(null=True, default=None)
+    products_updated_at = models.DateTimeField(
+        null=True, default=None, help_text="Time the last moon survey was uploaded"
+    )
     products_updated_by = models.ForeignKey(
-        User, on_delete=models.SET_DEFAULT, null=True, default=None
+        User,
+        on_delete=models.SET_DEFAULT,
+        null=True,
+        default=None,
+        help_text="User who uploaded the last moon survey",
     )
 
     objects = MoonManager()
 
     def __str__(self):
         return self.eve_moon.name
+
+    @property
+    def is_owned(self):
+        return hasattr(self, "refinery")
 
     def update_value(self) -> float:
         """Update value estimate with given parameters."""
@@ -122,9 +135,6 @@ class Moon(models.Model):
         )
         self.value = value if value else None
         self.save()
-
-    def is_owned(self):
-        return hasattr(self, "refinery")
 
 
 class MoonProduct(models.Model):
@@ -188,12 +198,24 @@ class MiningCorporation(models.Model):
     )
 
     def __str__(self):
+        return self.name
+
+    @property
+    def name(self) -> str:
         alliance_ticker_str = (
             f" [{self.eve_corporation.alliance.alliance_ticker}]"
             if self.eve_corporation.alliance
             else ""
         )
         return f"{self.eve_corporation}{alliance_ticker_str}"
+
+    @property
+    def alliance_name(self) -> str:
+        return (
+            self.eve_corporation.alliance.alliance_name
+            if self.eve_corporation.alliance
+            else ""
+        )
 
     def fetch_token(self):
         """Fetch token for this mining corp and return it..."""
@@ -368,9 +390,13 @@ class Refinery(models.Model):
         default=None,
         null=True,
         related_name="refinery",
+        help_text="The moon this refinery is anchored at (if any)",
     )
     corporation = models.ForeignKey(
-        MiningCorporation, on_delete=models.CASCADE, related_name="refineries"
+        MiningCorporation,
+        on_delete=models.CASCADE,
+        related_name="refineries",
+        help_text="Mining corporation that owns this refinery",
     )
     eve_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
 
@@ -420,7 +446,10 @@ class Extraction(models.Model):
     ready_time = models.DateTimeField(db_index=True)
     auto_time = models.DateTimeField()
     value = models.FloatField(
-        null=True, default=None, validators=[MinValueValidator(0.0)]
+        null=True,
+        default=None,
+        validators=[MinValueValidator(0.0)],
+        help_text="Calculated value estimate",
     )
     started_by = models.ForeignKey(
         EveEntity,
@@ -428,6 +457,7 @@ class Extraction(models.Model):
         default=None,
         null=True,
         related_name="+",
+        help_text="Eve character who started this extraction",
     )
 
     # class Meta:

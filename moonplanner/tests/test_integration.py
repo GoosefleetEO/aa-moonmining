@@ -31,7 +31,7 @@ class TestUI(WebTest):
             1001,
             permissions=[
                 "moonplanner.basic_access",
-                "moonplanner.access_our_moons",
+                "moonplanner.extractions_access",
             ],
         )
 
@@ -110,7 +110,7 @@ class TestProcessSurveyInput(TestCase):
             1001,
             permissions=[
                 "moonplanner.basic_access",
-                "moonplanner.access_our_moons",
+                "moonplanner.extractions_access",
                 "moonplanner.add_corporation",
             ],
             scopes=[
