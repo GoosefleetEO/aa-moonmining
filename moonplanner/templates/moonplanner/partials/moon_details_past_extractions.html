@@ -1,0 +1,37 @@
+{% load i18n %}
+{% load humanize %}
+{% load moonplanner %}
+
+<div class="panel panel-default">
+    <div class="panel-heading text-center">
+        <h3 class="panel-title">Past Extractions</h3>
+    </div>
+    <div class="panel-body">
+            {% if moon.refinery == "" %}
+            <p>N/A</p>
+        {% else %}
+            <table class="table table-striped" id="table_past_events">
+                <thead>
+                    <th>Ready Time</th>
+                    <th>Volume</th>
+                    <th>Value est.</th>
+                </thead>
+                <tbody>
+                    {% if ppulls|length_is:"0" %}
+                        <tr>
+                            <td> No past extractions recorded for this moon.</td>
+                        </tr>
+                    {% else %}
+                        {% for pull in ppulls %}
+                            <tr>
+                                <td>{{ pull.ready_time|datetime }}</td>
+                                <td>{{ pull.volume|floatformat:"0"|intcomma }}</td>
+                                <td>{{ pull.value|formatisk|default:"-" }}</td>
+                            </tr>
+                        {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</div>
