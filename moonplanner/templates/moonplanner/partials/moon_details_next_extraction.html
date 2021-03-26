@@ -39,34 +39,36 @@
                 </div>
             </div>
 
-            <table class="table table-striped" id="table_next_pull">
-            <thead>
-                <tr>
-                    <th></th>
-                    <th>Ore Type</th>
-                    <th>Volume</th>
-                    <th>Value est.</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for product in next_pull.products %}
-                    <tr>
-                        <td><img src="{{ product.image_url }}"/></td>
-                        <td><a href="{{ product.ore_type_url }}" target="_blank">{{ product.ore_type_name }}</a></td>
-                        <td>{{ product.volume|floatformat:"0"|intcomma }}</td>
-                        <td>{{ product.value|formatisk}}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-            <tfoot>
-                <tr>
-                    <th></th>
-                    <th>TOTAL</th>
-                    <th>{{ next_pull.total_volume|floatformat:"0"|intcomma }}</th>
-                    <th>{{ next_pull.total_value|formatisk}}</th>
-                </tr>
-            </tfoot>
-            </table>
+            <div class="table-responsive">
+                <table class="table table-striped" id="table_next_pull">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Ore Type</th>
+                            <th>Volume</th>
+                            <th>Value est.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in next_pull.products %}
+                            <tr>
+                                <td><img src="{{ product.image_url }}"/></td>
+                                <td><a href="{{ product.ore_type_url }}" target="_blank">{{ product.ore_type_name }}</a></td>
+                                <td>{{ product.volume|floatformat:"0"|intcomma }}</td>
+                                <td>{{ product.value|formatisk}}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th></th>
+                            <th>TOTAL</th>
+                            <th>{{ next_pull.total_volume|floatformat:"0"|intcomma }}</th>
+                            <th>{{ next_pull.total_value|formatisk}}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
         {% endif %}
 
     </div>

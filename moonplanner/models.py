@@ -25,6 +25,21 @@ logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 # MAX_DISTANCE_TO_MOON_METERS = 3000000
 
 
+class General(models.Model):
+    """Meta model for global app permissions"""
+
+    class Meta:
+        managed = False
+        default_permissions = ()
+        permissions = (
+            ("basic_access", "Can access the moonplanner app"),
+            ("access_our_moons", "Can access our moons and see extractions"),
+            ("access_all_moons", "Can access all moons in the database"),
+            ("upload_moon_scan", "Can upload moon scans"),
+            ("add_corporation", "Can add mining corporation"),
+        )
+
+
 class EveOreType(EveType):
     """Subset of EveType for all ore types.
 
@@ -73,21 +88,6 @@ class EveOreType(EveType):
         )
         enabled_sections.add(cls.Section.TYPE_MATERIALS)
         return enabled_sections
-
-
-class MoonPlanner(models.Model):
-    """Meta model for global app permissions"""
-
-    class Meta:
-        managed = False
-        default_permissions = ()
-        permissions = (
-            ("access_moonplanner", "Can access the moonplanner app"),
-            ("access_our_moons", "Can access our moons and see extractions"),
-            ("access_all_moons", "Can access all moons in the database"),
-            ("upload_moon_scan", "Can upload moon scans"),
-            ("add_mining_corporation", "Can add mining corporation"),
-        )
 
 
 class Moon(models.Model):

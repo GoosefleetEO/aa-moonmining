@@ -10,28 +10,32 @@
             {% if moon.refinery == "" %}
             <p>N/A</p>
         {% else %}
-            <table class="table table-striped" id="table_past_events">
-                <thead>
-                    <th>Ready Time</th>
-                    <th>Volume</th>
-                    <th>Value est.</th>
-                </thead>
-                <tbody>
-                    {% if ppulls|length_is:"0" %}
-                        <tr>
-                            <td> No past extractions recorded for this moon.</td>
-                        </tr>
-                    {% else %}
-                        {% for pull in ppulls %}
+            <div class="table-responsive">
+                <table class="table table-striped" id="table_past_events">
+                    <thead>
+                        <th>Ready Time</th>
+                        <th>Volume</th>
+                        <th>Value est.</th>
+                    </thead>
+                    <tbody>
+                        {% if ppulls|length_is:"0" %}
                             <tr>
-                                <td>{{ pull.ready_time|datetime }}</td>
-                                <td>{{ pull.volume|floatformat:"0"|intcomma }}</td>
-                                <td>{{ pull.value|formatisk|default:"-" }}</td>
+                                <td colspan="3">
+                                    <span class="text-muted">No past extractions recorded for this moon.</span>
+                                </td>
                             </tr>
-                        {% endfor %}
-                    {% endif %}
-                </tbody>
-            </table>
+                        {% else %}
+                            {% for pull in ppulls %}
+                                <tr>
+                                    <td>{{ pull.ready_time|datetime }}</td>
+                                    <td>{{ pull.volume|floatformat:"0"|intcomma }}</td>
+                                    <td>{{ pull.value|formatisk|default:"-" }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
         {% endif %}
     </div>
 </div>

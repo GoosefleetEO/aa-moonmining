@@ -75,10 +75,10 @@ def create_default_user_from_evecharacter(character_id):
     return create_user_from_evecharacter(
         character_id,
         permissions=[
-            "moonplanner.access_moonplanner",
+            "moonplanner.basic_access",
             "moonplanner.upload_moon_scan",
             "moonplanner.access_our_moons",
-            "moonplanner.add_mining_corporation",
+            "moonplanner.add_corporation",
         ],
         scopes=MiningCorporation.esi_scopes(),
     )

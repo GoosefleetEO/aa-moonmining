@@ -1,6 +1,8 @@
 import datetime as dt
 from unittest.mock import Mock, patch
 
+import pytz
+
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
@@ -28,7 +30,7 @@ class TestAddMinningCorporation(TestCase):
         load_eveuniverse()
         cls.factory = RequestFactory()
         cls.user, cls.character_ownership = create_user_from_evecharacter(
-            1001, permissions=["moonplanner.add_mining_corporation"]
+            1001, permissions=["moonplanner.add_corporation"]
         )
 
     @patch(MODULE_PATH + ".tasks.update_mining_corporation")
@@ -39,12 +41,12 @@ class TestAddMinningCorporation(TestCase):
         # given
         token = Mock(spec=Token)
         token.character_id = self.character_ownership.character.character_id
-        request = self.factory.get(reverse("moonplanner:add_mining_corporation"))
+        request = self.factory.get(reverse("moonplanner:add_corporation"))
         request.user = self.user
         request.token = token
         middleware = SessionMiddleware()
         middleware.process_request(request)
-        orig_view = views.add_mining_corporation.__wrapped__.__wrapped__.__wrapped__
+        orig_view = views.add_corporation.__wrapped__.__wrapped__.__wrapped__
         # when
         response = orig_view(request, token)
         # then
@@ -67,12 +69,12 @@ class TestAddMinningCorporation(TestCase):
         )
         token = Mock(spec=Token)
         token.character_id = self.character_ownership.character.character_id
-        request = self.factory.get(reverse("moonplanner:add_mining_corporation"))
+        request = self.factory.get(reverse("moonplanner:add_corporation"))
         request.user = self.user
         request.token = token
         middleware = SessionMiddleware()
         middleware.process_request(request)
-        orig_view = views.add_mining_corporation.__wrapped__.__wrapped__.__wrapped__
+        orig_view = views.add_corporation.__wrapped__.__wrapped__.__wrapped__
         # when
         response = orig_view(request, token)
         # then
@@ -91,19 +93,19 @@ class TestAddMinningCorporation(TestCase):
         # given
         token = Mock(spec=Token)
         token.character_id = 1099
-        request = self.factory.get(reverse("moonplanner:add_mining_corporation"))
+        request = self.factory.get(reverse("moonplanner:add_corporation"))
         request.user = self.user
         request.token = token
         middleware = SessionMiddleware()
         middleware.process_request(request)
-        orig_view = views.add_mining_corporation.__wrapped__.__wrapped__.__wrapped__
+        orig_view = views.add_corporation.__wrapped__.__wrapped__.__wrapped__
         # when
         response = orig_view(request, token)
         # then
         self.assertEqual(response.status_code, 404)
 
 
-class TestMoonListData(TestCase):
+class TestMoonsData(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -119,7 +121,7 @@ class TestMoonListData(TestCase):
         user, _ = create_user_from_evecharacter(
             1001,
             permissions=[
-                "moonplanner.access_moonplanner",
+                "moonplanner.basic_access",
                 "moonplanner.access_all_moons",
             ],
             scopes=MiningCorporation.esi_scopes(),
@@ -145,7 +147,7 @@ class TestMoonListData(TestCase):
         user, _ = create_user_from_evecharacter(
             1001,
             permissions=[
-                "moonplanner.access_moonplanner",
+                "moonplanner.basic_access",
                 "moonplanner.access_our_moons",
             ],
             scopes=MiningCorporation.esi_scopes(),
@@ -168,7 +170,7 @@ class TestMoonListData(TestCase):
         user, _ = create_user_from_evecharacter(
             1001,
             permissions=[
-                "moonplanner.access_moonplanner",
+                "moonplanner.basic_access",
                 "moonplanner.access_our_moons",
             ],
             scopes=MiningCorporation.esi_scopes(),
@@ -194,7 +196,7 @@ class TestMoonListData(TestCase):
         user, _ = create_user_from_evecharacter(
             1001,
             permissions=[
-                "moonplanner.access_moonplanner",
+                "moonplanner.basic_access",
                 "moonplanner.access_our_moons",
             ],
             scopes=MiningCorporation.esi_scopes(),
@@ -214,7 +216,7 @@ class TestMoonListData(TestCase):
         # given
         user, _ = create_user_from_evecharacter(
             1001,
-            permissions=["moonplanner.access_moonplanner"],
+            permissions=["moonplanner.basic_access"],
             scopes=MiningCorporation.esi_scopes(),
         )
         request = self.factory.get(
@@ -239,11 +241,11 @@ class TestMoonInfo(TestCase):
         cls.user, _ = create_user_from_evecharacter(
             1001,
             permissions=[
-                "moonplanner.access_moonplanner",
+                "moonplanner.basic_access",
                 "moonplanner.access_our_moons",
                 "moonplanner.access_all_moons",
                 "moonplanner.upload_moon_scan",
-                "moonplanner.add_mining_corporation",
+                "moonplanner.add_corporation",
             ],
             scopes=[
                 "esi-industry.read_corporation_mining.v1",
@@ -277,11 +279,11 @@ class TestViewsAreWorking(TestCase):
         cls.user, _ = create_user_from_evecharacter(
             1001,
             permissions=[
-                "moonplanner.access_moonplanner",
+                "moonplanner.basic_access",
                 "moonplanner.access_our_moons",
                 "moonplanner.access_all_moons",
                 "moonplanner.upload_moon_scan",
-                "moonplanner.add_mining_corporation",
+                "moonplanner.add_corporation",
             ],
             scopes=[
                 "esi-industry.read_corporation_mining.v1",
@@ -339,3 +341,47 @@ class TestViewsAreWorking(TestCase):
         response = views.extractions(request)
         # then
         self.assertEqual(response.status_code, 200)
+
+
+class TestExtractionsData(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.factory = RequestFactory()
+        load_eveuniverse()
+        load_allianceauth()
+        helpers.generate_eve_entities_from_allianceauth()
+        moon = helpers.create_moon_40161708()
+        cls.refinery = helpers.add_refinery(moon)
+
+    def test_should_return_all_moons(self):
+        # given
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=["moonplanner.basic_access", "moonplanner.access_our_moons"],
+            scopes=MiningCorporation.esi_scopes(),
+        )
+        extraction = Extraction.objects.create(
+            refinery=self.refinery,
+            ready_time=dt.datetime(2019, 11, 20, 0, 1, 0, tzinfo=pytz.UTC),
+            auto_time=dt.datetime(2019, 11, 20, 3, 1, 0, tzinfo=pytz.UTC),
+            started_by_id=1001,
+        )
+        request = self.factory.get(
+            reverse(
+                "moonplanner:extractions_data",
+                args={"category": views.EXTRACTIONS_CATEGORY_PAST},
+            )
+        )
+        request.user = user
+        # when
+        response = views.extractions_data(
+            request, category=views.EXTRACTIONS_CATEGORY_PAST
+        )
+        # then
+        self.assertEqual(response.status_code, 200)
+        data = json_response_to_dict(response)
+        self.assertSetEqual(set(data.keys()), {extraction.pk})
+        obj = data[extraction.pk]
+        self.assertEqual(obj["ready_time"]["display"], "2019-Nov-20 00:01")
+        self.assertEqual(obj["corporation_name"], "Wayne Technologies [WYN]")

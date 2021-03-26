@@ -37,8 +37,8 @@
                 {% endif %}
             </ul>
 
-            {% if perms.moonplanner.add_mining_corporation %}
-                <a class="btn btn-default navbar-btn" style="float: right" href="{% url 'moonplanner:add_mining_corporation' %}">
+            {% if perms.moonplanner.add_corporation %}
+                <a class="btn btn-default navbar-btn" style="float: right" href="{% url 'moonplanner:add_corporation' %}">
                     Add Corporation
                 </a>
             {% endif %}

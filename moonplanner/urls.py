@@ -6,9 +6,7 @@ app_name = "moonplanner"
 
 urlpatterns = [
     path("", views.index, name="index"),
-    path(
-        "add_corporation", views.add_mining_corporation, name="add_mining_corporation"
-    ),
+    path("add_corporation", views.add_corporation, name="add_corporation"),
     path("upload_survey", views.upload_survey, name="upload_survey"),
     path("extractions", views.extractions, name="extractions"),
     path(

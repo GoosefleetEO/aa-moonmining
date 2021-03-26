@@ -17,7 +17,7 @@ class MoonMenu(MenuItemHook):
         )
 
     def render(self, request):
-        if request.user.has_perm("moonplanner.access_moonplanner"):
+        if request.user.has_perm("moonplanner.basic_access"):
             return MenuItemHook.render(self, request)
         return ""
 

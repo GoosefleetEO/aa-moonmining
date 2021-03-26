@@ -5,14 +5,14 @@
 {% block details %}
     <ul id="myTabs" class="nav nav-tabs" role="tablist">
         <li role="presentation"><a href="#tab_upcoming" aria-controls="tab_upcoming" role="tab" data-toggle="tab">Upcoming Extractions</a></li>
-        <li role="presentation"><a href="#tab_recent" aria-controls="tab_recent" role="tab" data-toggle="tab">Past Extractions</a></li>
+        <li role="presentation"><a href="#tab_past" aria-controls="tab_past" role="tab" data-toggle="tab">Past Extractions</a></li>
     </ul>
 
     <div class="panel panel-default panel-tabs">
         <div class="panel-body">
             <div class="tab-content">
                 {% include "moonplanner/partials/extractions_tab.html" with category="upcoming"%}
-                {% include "moonplanner/partials/extractions_tab.html" with category="recent"%}
+                {% include "moonplanner/partials/extractions_tab.html" with category="past"%}
             </div>
             {% include 'moonplanner/partials/value_estimate_legend.html' %}
             <p class="text-muted">All times displayed are EVE/UTC • Extractions will be shown on the upcoming tab until {{ stale_hours }} hours after their ready time.
@@ -92,9 +92,9 @@
             def.ajax.url = '{% url "moonplanner:extractions_data" "upcoming" %}'
             var table = $('#table_upcoming').DataTable(def);
 
-            /* recent extractions */
-            def.ajax.url = '{% url "moonplanner:extractions_data" "recent" %}'
-            var table = $('#table_recent').DataTable(def);
+            /* past extractions */
+            def.ajax.url = '{% url "moonplanner:extractions_data" "past" %}'
+            var table = $('#table_past').DataTable(def);
 
             $('#myTabs a[href="#tab_upcoming"]').tab('show')
         });

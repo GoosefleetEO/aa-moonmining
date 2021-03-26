@@ -34,8 +34,10 @@ from .models import Extraction, MiningCorporation, Moon, MoonProduct
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
-MOONS_LIST_ALL = "all_moons"
-MOONS_LIST_OUR = "our_moons"
+MOONS_CATEGORY_ALL = "all_moons"
+MOONS_CATEGORY_OURS = "our_moons"
+EXTRACTIONS_CATEGORY_UPCOMING = "upcoming"
+EXTRACTIONS_CATEGORY_PAST = "past"
 ICON_SIZE_SMALL = 32
 ICON_SIZE_MEDIUM = 64
 
@@ -72,13 +74,13 @@ def corporation_names(corporation: MiningCorporation):
 
 
 @login_required
-@permission_required("moonplanner.access_moonplanner")
+@permission_required("moonplanner.basic_access")
 def index(request):
     return redirect("moonplanner:moons")
 
 
 @login_required
-@permission_required(["moonplanner.access_our_moons", "moonplanner.access_moonplanner"])
+@permission_required(["moonplanner.access_our_moons", "moonplanner.basic_access"])
 def extractions(request):
     context = {
         "page_title": "Extractions",
@@ -90,7 +92,7 @@ def extractions(request):
 
 
 @login_required
-@permission_required(["moonplanner.access_our_moons", "moonplanner.access_moonplanner"])
+@permission_required(["moonplanner.access_our_moons", "moonplanner.basic_access"])
 def extractions_data(request, category):
     data = list()
     cutover_dt = now() - dt.timedelta(hours=MOONPLANNER_EXTRACTIONS_HOURS_UNTIL_STALE)
@@ -101,10 +103,12 @@ def extractions_data(request, category):
         "refinery__corporation__eve_corporation",
         "refinery__corporation__eve_corporation__alliance",
     ).annotate(volume=Sum("products__volume"))
-    if category == "recent":
+    if category == EXTRACTIONS_CATEGORY_PAST:
         extractions = extractions.filter(ready_time__lt=cutover_dt)
-    else:
+    elif category == EXTRACTIONS_CATEGORY_UPCOMING:
         extractions = extractions.filter(ready_time__gte=cutover_dt)
+    else:
+        extractions = Extraction.objects.none()
     for extraction in extractions:
         (
             corporation_html,
@@ -134,7 +138,7 @@ def extractions_data(request, category):
 
 
 @login_required
-@permission_required("moonplanner.access_moonplanner")
+@permission_required("moonplanner.basic_access")
 def moon_details(request, moon_pk: int):
     try:
         moon = Moon.objects.select_related("eve_moon").get(pk=moon_pk)
@@ -210,7 +214,7 @@ def moon_details(request, moon_pk: int):
     return render(request, "moonplanner/moon_details.html", context)
 
 
-@permission_required(["moonplanner.access_moonplanner", "moonplanner.upload_moon_scan"])
+@permission_required(["moonplanner.basic_access", "moonplanner.upload_moon_scan"])
 @login_required()
 def upload_survey(request):
     context = {"page_title": "Upload Moon Surveys"}
@@ -237,7 +241,7 @@ def upload_survey(request):
 
 
 @login_required()
-@permission_required("moonplanner.access_moonplanner")
+@permission_required("moonplanner.basic_access")
 def moons(request):
     context = {
         "page_title": "Moons",
@@ -249,7 +253,7 @@ def moons(request):
 
 # @cache_page(60 * 5) TODO: Remove for release
 @login_required()
-@permission_required("moonplanner.access_moonplanner")
+@permission_required("moonplanner.basic_access")
 def moons_data(request, category):
     """returns moon list in JSON for DataTables AJAX"""
     data = list()
@@ -262,7 +266,7 @@ def moons_data(request, category):
         "refinery__corporation__eve_corporation",
         "refinery__corporation__eve_corporation__alliance",
     )
-    if category == MOONS_LIST_ALL:
+    if category == MOONS_CATEGORY_ALL:
         if not request.user.has_perm("moonplanner.access_all_moons"):
             return JsonResponse([], safe=False)
     else:
@@ -302,12 +306,10 @@ def moons_data(request, category):
     return JsonResponse(data, safe=False)
 
 
-@permission_required(
-    ["moonplanner.add_mining_corporation", "moonplanner.access_moonplanner"]
-)
+@permission_required(["moonplanner.add_corporation", "moonplanner.basic_access"])
 @token_required(scopes=MiningCorporation.esi_scopes())
 @login_required
-def add_mining_corporation(request, token):
+def add_corporation(request, token):
     try:
         character_ownership = request.user.character_ownerships.select_related(
             "character"

@@ -30,7 +30,7 @@ class TestUI(WebTest):
         cls.user, cls.character_ownership = create_user_from_evecharacter(
             1001,
             permissions=[
-                "moonplanner.access_moonplanner",
+                "moonplanner.basic_access",
                 "moonplanner.access_our_moons",
             ],
         )
@@ -109,9 +109,9 @@ class TestProcessSurveyInput(TestCase):
         cls.user, cls.character_ownership = create_user_from_evecharacter(
             1001,
             permissions=[
-                "moonplanner.access_moonplanner",
+                "moonplanner.basic_access",
                 "moonplanner.access_our_moons",
-                "moonplanner.add_mining_corporation",
+                "moonplanner.add_corporation",
             ],
             scopes=[
                 "esi-industry.read_corporation_mining.v1",
