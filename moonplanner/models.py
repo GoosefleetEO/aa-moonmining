@@ -1,3 +1,5 @@
+from typing import Iterable
+
 import yaml
 
 from django.contrib.auth.models import User
@@ -15,35 +17,61 @@ from app_utils.logging import LoggerAddTag
 
 from . import __title__, constants
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
-from .managers import MoonManager
+from .managers import EveOreTypeManger, MoonManager
 from .providers import esi
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 # MAX_DISTANCE_TO_MOON_METERS = 3000000
 
 
-def calc_refined_value(
-    eve_type: EveType, volume: float, reprocessing_yield: float = None
-) -> float:
-    """Calculate the refined total value of given eve_type and return it."""
-    if not reprocessing_yield:
-        reprocessing_yield = MOONPLANNER_REPROCESSING_YIELD
-    if not eve_type.volume:
-        return 0
-    volume_per_unit = eve_type.volume
-    units = volume / volume_per_unit
-    r_units = units / 100
-    value = 0
-    for type_material in eve_type.materials.select_related(
-        "material_eve_type__market_price"
-    ):
-        try:
-            price = type_material.material_eve_type.market_price.average_price
-        except (ObjectDoesNotExist, AttributeError):
-            continue
-        if price:
-            value += price * type_material.quantity * r_units * reprocessing_yield
-    return value
+class EveOreType(EveType):
+    """Subset of EveType for all ore types.
+
+    Ensures Section.TYPE_MATERIALS is always enabled and allows adding methods to types.
+    """
+
+    URL_PROFILE_TYPE = "https://www.kalkoken.org/apps/eveitems/"
+
+    class Meta:
+        proxy = True
+
+    objects = EveOreTypeManger()
+
+    @property
+    def profile_url(self) -> str:
+        return f"{self.URL_PROFILE_TYPE}?typeId={self.id}"
+
+    def calc_refined_value(
+        self, volume: float, reprocessing_yield: float = None
+    ) -> float:
+        """Calculate the refined total value and return it."""
+        if not reprocessing_yield:
+            reprocessing_yield = MOONPLANNER_REPROCESSING_YIELD
+        if not self.volume:
+            return 0
+        volume_per_unit = self.volume
+        units = volume / volume_per_unit
+        r_units = units / 100
+        value = 0
+        for type_material in self.materials.select_related(
+            "material_eve_type__market_price"
+        ):
+            try:
+                price = type_material.material_eve_type.market_price.average_price
+            except (ObjectDoesNotExist, AttributeError):
+                continue
+            if price:
+                value += price * type_material.quantity * r_units * reprocessing_yield
+        return value
+
+    @classmethod
+    def _enabled_sections_union(cls, enabled_sections: Iterable[str]) -> set:
+        """Return enabled sections with TYPE_MATERIALS always enabled."""
+        enabled_sections = super()._enabled_sections_union(
+            enabled_sections=enabled_sections
+        )
+        enabled_sections.add(cls.Section.TYPE_MATERIALS)
+        return enabled_sections
 
 
 class MoonPlanner(models.Model):
@@ -88,7 +116,7 @@ class Moon(models.Model):
         value = sum(
             [
                 product.calc_value(total_volume=MOONPLANNER_VOLUME_PER_MONTH)
-                for product in self.products.select_related("eve_type")
+                for product in self.products.select_related("ore_type")
             ]
         )
         self.value = value if value else None
@@ -102,19 +130,13 @@ class MoonProduct(models.Model):
     """A product of a moon, i.e. a specifc ore."""
 
     moon = models.ForeignKey(Moon, on_delete=models.CASCADE, related_name="products")
-    eve_type = models.ForeignKey(
-        EveType,
-        on_delete=models.DO_NOTHING,
-        null=True,
-        default=None,
-        related_name="+",
-    )
+    ore_type = models.ForeignKey(EveOreType, on_delete=models.CASCADE, related_name="+")
     amount = models.FloatField(
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
     )
 
     def __str__(self):
-        return "{} - {}".format(self.eve_type.name, self.amount)
+        return f"{self.ore_type.name} - {self.amount}"
 
     # class Meta:
     #     unique_together = (("eve_moon", "eve_type"),)
@@ -134,10 +156,8 @@ class MoonProduct(models.Model):
         """
         if not total_volume:
             total_volume = MOONPLANNER_VOLUME_PER_MONTH
-        return calc_refined_value(
-            eve_type=self.eve_type,
-            volume=total_volume * self.amount,
-            reprocessing_yield=reprocessing_yield,
+        return self.ore_type.calc_refined_value(
+            volume=total_volume * self.amount, reprocessing_yield=reprocessing_yield
         )
 
 
@@ -158,6 +178,7 @@ class MiningCorporation(models.Model):
         related_name="+",
         help_text="character used to sync this corporation from ESI",
     )
+    last_update_at = models.DateTimeField(null=True, default=None)
 
     def __str__(self):
         alliance_ticker_str = (
@@ -169,7 +190,7 @@ class MiningCorporation(models.Model):
 
     def fetch_token(self):
         """Fetch token for this mining corp and return it..."""
-        return (
+        token = (
             Token.objects.filter(
                 character_id=self.character_ownership.character.character_id
             )
@@ -177,6 +198,7 @@ class MiningCorporation(models.Model):
             .require_valid()
             .first()
         )
+        return token
 
     def update_refineries_from_esi(self):
         """Update all refineries from ESI."""
@@ -255,9 +277,12 @@ class MiningCorporation(models.Model):
                     continue  # we ignore notifications for unknown refineries
                 started_by_id = parsed_text.get("startedBy")
                 if started_by_id:
-                    started_by, _ = EveEntity.objects.get_or_create_esi(
-                        id=started_by_id
-                    )
+                    try:
+                        started_by, _ = EveEntity.objects.get_or_create_esi(
+                            id=started_by_id
+                        )
+                    except OSError:
+                        started_by = None
                 else:
                     started_by = None
                 extraction, _ = Extraction.objects.get_or_create(
@@ -271,13 +296,10 @@ class MiningCorporation(models.Model):
                 last_extraction_started[structure_id] = extraction
                 ore_volume_by_type = parsed_text["oreVolumeByType"].items()
                 for ore_type_id, ore_volume in ore_volume_by_type:
-                    eve_type, _ = EveType.objects.get_or_create_esi(
-                        id=ore_type_id,
-                        enabled_sections=[EveType.Section.TYPE_MATERIALS],
-                    )
+                    ore_type, _ = EveOreType.objects.get_or_create_esi(id=ore_type_id)
                     ExtractionProduct.objects.get_or_create(
                         extraction=extraction,
-                        eve_type=eve_type,
+                        ore_type=ore_type,
                         defaults={"volume": ore_volume},
                     )
 
@@ -401,8 +423,8 @@ class Extraction(models.Model):
     # class Meta:
     #     unique_together = (("ready_time", "refinery"),)
 
-    def __str__(self):
-        return "{} - {}".format(self.refinery, self.ready_time)
+    def __str__(self) -> str:
+        return f"{self.refinery} - {self.ready_time}"
 
     def update_value(self) -> float:
         """Update value estimate with given parameters.
@@ -413,7 +435,7 @@ class Extraction(models.Model):
         value = sum(
             [
                 product.calc_value()
-                for product in self.products.select_related("eve_type")
+                for product in self.products.select_related("ore_type")
             ]
         )
         self.value = value
@@ -426,14 +448,14 @@ class ExtractionProduct(models.Model):
     extraction = models.ForeignKey(
         Extraction, on_delete=models.CASCADE, related_name="products"
     )
-    eve_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
+    ore_type = models.ForeignKey(EveOreType, on_delete=models.CASCADE, related_name="+")
     volume = models.FloatField(validators=[MinValueValidator(0.0)])
 
     # class Meta:
-    #     unique_together = (("extraction", "eve_type"),)
+    #     unique_together = (("extraction", "ore_type"),)
 
-    def __str__(self):
-        return "{} - {}".format(self.extraction, self.eve_type)
+    def __str__(self) -> str:
+        return f"{self.extraction} - {self.ore_type}"
 
     def calc_value(self, reprocessing_yield=None) -> float:
         """returns calculated value estimate in ISK
@@ -444,8 +466,6 @@ class ExtractionProduct(models.Model):
             value estimate or None if prices are missing
 
         """
-        return calc_refined_value(
-            eve_type=self.eve_type,
-            volume=self.volume,
-            reprocessing_yield=reprocessing_yield,
+        return self.ore_type.calc_refined_value(
+            volume=self.volume, reprocessing_yield=reprocessing_yield
         )

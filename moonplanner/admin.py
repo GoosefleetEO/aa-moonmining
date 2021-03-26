@@ -13,8 +13,19 @@ class ExtractionAdmin(admin.ModelAdmin):
         "refinery__corporation",
         "refinery",
     )
-
     search_fields = ("refinery__moon__eve_moon__name",)
+
+    actions = ["update_value"]
+
+    def update_value(self, request, queryset):
+        num = 0
+        for obj in queryset:
+            tasks.update_extraction_value.delay(extraction_pk=obj.pk)
+            num += 1
+
+        self.message_user(request, f"Started updating values for {num} extractions.")
+
+    update_value.short_description = "Update value for selected extrations."
 
     def _corporation(self, obj):
         return obj.refinery.corporation
@@ -28,9 +39,16 @@ class ExtractionAdmin(admin.ModelAdmin):
 
 @admin.register(MiningCorporation)
 class MiningCorporationAdmin(admin.ModelAdmin):
-    list_display = ("eve_corporation", "character_ownership")
+    list_display = ("__str__", "_alliance", "character_ownership")
     ordering = ["eve_corporation"]
+    search_fields = ("refinery__moon__eve_moon__name",)
+    list_filter = ("eve_corporation__alliance",)
     actions = ["update_mining_corporation"]
+
+    def _alliance(self, obj):
+        return obj.eve_corporation.alliance
+
+    _alliance.admin_order_field = "eve_corporation__alliance__alliance_name"
 
     def update_mining_corporation(self, request, queryset):
         for obj in queryset:
@@ -68,6 +86,18 @@ class RefineryAdmin(admin.ModelAdmin):
 @admin.register(Moon)
 class MoonAdmin(admin.ModelAdmin):
     list_display = ("eve_moon",)
+
+    actions = ["update_value"]
+
+    def update_value(self, request, queryset):
+        num = 0
+        for obj in queryset:
+            tasks.update_moon_value.delay(moon_pk=obj.pk)
+            num += 1
+
+        self.message_user(request, f"Started updating values for {num} moons.")
+
+    update_value.short_description = "Update value for selected moons."
 
     def has_change_permission(self, request, obj=None):
         return False

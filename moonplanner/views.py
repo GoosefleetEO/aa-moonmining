@@ -34,11 +34,10 @@ from .models import Extraction, MiningCorporation, Moon, MoonProduct
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
-
-URL_PROFILE_TYPE = "https://www.kalkoken.org/apps/eveitems/?typeId="
-
 MOONS_LIST_ALL = "all_moons"
 MOONS_LIST_OUR = "our_moons"
+ICON_SIZE_SMALL = 32
+ICON_SIZE_MEDIUM = 64
 
 
 class HttpResponseUnauthorized(HttpResponse):
@@ -58,7 +57,7 @@ def corporation_names(corporation: MiningCorporation):
     if corporation:
         corporation_name = str(corporation)
         corporation_html = bootstrap_icon_plus_name_html(
-            corporation.eve_corporation.logo_url(size=64),
+            corporation.eve_corporation.logo_url(size=ICON_SIZE_MEDIUM),
             corporation_name,
             size=40,
         )
@@ -146,26 +145,21 @@ def moon_details(request, moon_pk: int):
     ):
         return HttpResponseUnauthorized()
 
-    product_rows = []
-    for product in (
-        MoonProduct.objects.select_related("eve_type", "eve_type__eve_group")
-        .filter(moon=moon)
-        .order_by("eve_type__name")
-    ):
-        image_url = product.eve_type.icon_url(64)
-        amount = int(round(product.amount * 100))
-        ore_type_url = "{}{}".format(URL_PROFILE_TYPE, product.eve_type_id)
-        product_rows.append(
-            {
-                "ore_type_name": product.eve_type.name,
-                "ore_type_url": ore_type_url,
-                "ore_group_name": product.eve_type.eve_group.name,
-                "image_url": image_url,
-                "amount": amount,
-                "value": product.calc_value(),
-            }
+    product_rows = [
+        {
+            "ore_type_name": product.ore_type.name,
+            "ore_type_url": product.ore_type.profile_url,
+            "ore_group_name": product.ore_type.eve_group.name,
+            "image_url": product.ore_type.icon_url(ICON_SIZE_MEDIUM),
+            "amount": int(round(product.amount * 100)),
+            "value": product.calc_value(),
+        }
+        for product in (
+            MoonProduct.objects.select_related("ore_type", "ore_type__eve_group")
+            .filter(moon=moon)
+            .order_by("ore_type__name")
         )
-
+    ]
     next_pull_data = None
     ppulls_data = None
     if hasattr(moon, "refinery"):
@@ -177,19 +171,17 @@ def moon_details(request, moon_pk: int):
             total_value = 0
             total_volume = 0
             for product in next_pull.products.select_related(
-                "eve_type", "eve_type__eve_group"
-            ).order_by("eve_type__name"):
-                image_url = product.eve_type.icon_url(32)
+                "ore_type", "ore_type__eve_group"
+            ).order_by("ore_type__name"):
                 value = product.calc_value()
                 total_value += value if value else 0
                 total_volume += product.volume
-                ore_type_url = "{}{}".format(URL_PROFILE_TYPE, product.eve_type_id)
                 next_pull_product_rows.append(
                     {
-                        "ore_type_name": product.eve_type.name,
-                        "ore_type_url": ore_type_url,
-                        "ore_group_name": product.eve_type.eve_group.name,
-                        "image_url": image_url,
+                        "ore_type_name": product.ore_type.name,
+                        "ore_type_url": product.ore_type.profile_url,
+                        "ore_group_name": product.ore_type.eve_group.name,
+                        "image_url": product.ore_type.icon_url(ICON_SIZE_SMALL),
                         "volume": product.volume,
                         "value": value,
                     }

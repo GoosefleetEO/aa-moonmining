@@ -22,16 +22,16 @@ def create_moon_40161708() -> EveMoon:
     Moon.objects.filter(pk=40161708).delete()
     moon = Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161708))
     MoonProduct.objects.create(
-        moon=moon, eve_type=EveType.objects.get(id=45506), amount=0.19
+        moon=moon, ore_type=EveType.objects.get(id=45506), amount=0.19
     )
     MoonProduct.objects.create(
-        moon=moon, eve_type=EveType.objects.get(id=46676), amount=0.23
+        moon=moon, ore_type=EveType.objects.get(id=46676), amount=0.23
     )
     MoonProduct.objects.create(
-        moon=moon, eve_type=EveType.objects.get(id=46678), amount=0.25
+        moon=moon, ore_type=EveType.objects.get(id=46678), amount=0.25
     )
     MoonProduct.objects.create(
-        moon=moon, eve_type=EveType.objects.get(id=46689), amount=0.33
+        moon=moon, ore_type=EveType.objects.get(id=46689), amount=0.33
     )
     return moon
 
@@ -65,7 +65,7 @@ def add_refinery(moon: Moon, corporation: MiningCorporation = None) -> Refinery:
     for product in moon.products.all():
         ExtractionProduct.objects.create(
             extraction=extraction,
-            eve_type=product.eve_type,
+            ore_type=product.ore_type,
             volume=MOONPLANNER_VOLUME_PER_MONTH * product.amount,
         )
     return refinery

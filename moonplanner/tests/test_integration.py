@@ -1,16 +1,14 @@
-import datetime as dt
 from unittest.mock import patch
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
-from django.utils.timezone import now
 from django_webtest import WebTest
 from eveuniverse.models import EveMarketPrice, EveType
 
 from app_utils.testing import create_user_from_evecharacter
 
 from .. import tasks
-from ..models import MiningCorporation, Moon, Refinery
+from ..models import MiningCorporation, Refinery
 from . import helpers
 from .testdata.esi_client_stub import esi_client_stub
 from .testdata.load_allianceauth import load_allianceauth
@@ -120,30 +118,6 @@ class TestProcessSurveyInput(TestCase):
             ],
         )
         cls.survey_data = fetch_survey_data()
-
-    @patch(MANAGERS_PATH + ".notify", new=lambda *args, **kwargs: None)
-    def test_should_process_survey_normally(self):
-        # when
-        result = tasks.process_survey_input(self.survey_data.get(2), self.user.pk)
-        # then
-        self.assertTrue(result)
-        m1 = Moon.objects.get(pk=40161708)
-        self.assertEqual(m1.products_updated_by, self.user)
-        self.assertAlmostEqual(m1.products_updated_at, now(), delta=dt.timedelta(30))
-        self.assertEqual(m1.products.count(), 4)
-        self.assertEqual(m1.products.get(eve_type_id=45506).amount, 0.19)
-        self.assertEqual(m1.products.get(eve_type_id=46676).amount, 0.23)
-        self.assertEqual(m1.products.get(eve_type_id=46678).amount, 0.25)
-        self.assertEqual(m1.products.get(eve_type_id=46689).amount, 0.33)
-
-        m2 = Moon.objects.get(pk=40161709)
-        self.assertEqual(m1.products_updated_by, self.user)
-        self.assertAlmostEqual(m1.products_updated_at, now(), delta=dt.timedelta(30))
-        self.assertEqual(m2.products.count(), 4)
-        self.assertEqual(m2.products.get(eve_type_id=45492).amount, 0.27)
-        self.assertEqual(m2.products.get(eve_type_id=45494).amount, 0.23)
-        self.assertEqual(m2.products.get(eve_type_id=46676).amount, 0.21)
-        self.assertEqual(m2.products.get(eve_type_id=46678).amount, 0.29)
 
     @patch(MANAGERS_PATH + ".notify", new=lambda *args, **kwargs: None)
     def test_should_handle_bad_data_orderly(self):

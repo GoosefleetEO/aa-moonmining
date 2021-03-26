@@ -4,19 +4,32 @@ from typing import Tuple
 from django.contrib.auth.models import User
 from django.db import models, transaction
 from django.utils.timezone import now
-from eveuniverse.models import EveMoon, EveType
+from eveuniverse.managers import EveTypeManager
+from eveuniverse.models import EveMoon
 
 from allianceauth.notifications import notify
 from allianceauth.services.hooks import get_extension_logger
 from app_utils.logging import LoggerAddTag
 
-from . import __title__
+from . import __title__, constants
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
 SurveyProcessResult = namedtuple(
     "SurveyProcessResult", ["moon_name", "success", "error_name"]
 )
+
+
+class EveOreTypeManger(EveTypeManager):
+    def get_queryset(self):
+        """Return ore types only."""
+        return (
+            super()
+            .get_queryset()
+            .select_related("eve_group")
+            .filter(published=True)
+            .filter(eve_group__eve_category_id=constants.EVE_CATEGORY_ID_ASTEROID)
+        )
 
 
 class MoonManager(models.Manager):
@@ -87,7 +100,7 @@ class MoonManager(models.Manager):
         return surveys, error_name
 
     def _process_surveys(self, surveys: list, user: User) -> Tuple[list, bool]:
-        from .models import MoonProduct
+        from .models import EveOreType, MoonProduct
 
         overall_success = True
         process_results = list()
@@ -105,13 +118,13 @@ class MoonManager(models.Manager):
                 for product_data in survey:
                     # Trim off the empty index at the front
                     product_data = product_data[1:]
-                    eve_type, _ = EveType.objects.get_or_create_esi(
+                    ore_type, _ = EveOreType.objects.get_or_create_esi(
                         id=product_data[2],
-                        enabled_sections=[EveType.Section.TYPE_MATERIALS],
+                        enabled_sections=[EveOreType.Section.TYPE_MATERIALS],
                     )
                     moon_products.append(
                         MoonProduct(
-                            moon=moon, amount=product_data[1], eve_type=eve_type
+                            moon=moon, amount=product_data[1], ore_type=ore_type
                         )
                     )
 

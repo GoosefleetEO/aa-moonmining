@@ -72,7 +72,7 @@ from django.db import transaction
 from eveuniverse.core.esitools import is_esi_online
 from eveuniverse.models import EveMoon, EveType
 
-from moonplanner.models import Moon, MoonProduct
+from moonplanner.models import EveOreType, Moon, MoonProduct
 
 MAX_RETRIES = 3
 BULK_BATCH_SIZE = 500
@@ -199,7 +199,7 @@ def main():
             for moon_id, moon_data in product_moons.items():
                 for ore in moon_data:
                     product_objects.append(
-                        MoonProduct(moon_id=moon_id, eve_type_id=ore[0], amount=ore[1])
+                        MoonProduct(moon_id=moon_id, ore_type_id=ore[0], amount=ore[1])
                     )
             MoonProduct.objects.bulk_create(product_objects, batch_size=BULK_BATCH_SIZE)
 

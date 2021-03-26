@@ -81,9 +81,9 @@
                 },
                 createdRow: function( row, data, dataIndex )
                 {
-                    if (data['is_ready'])
+                    if (!data['is_ready'])
                     {
-                        $(row).addClass('success');
+                        $(row).addClass('info');
                     }
                 }
             };

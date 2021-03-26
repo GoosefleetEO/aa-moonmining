@@ -44,6 +44,7 @@ from allianceauth.eveonline.models import EveCorporationInfo
 
 from moonplanner.app_settings import MOONPLANNER_VOLUME_PER_MONTH
 from moonplanner.models import (
+    EveOreType,
     Extraction,
     ExtractionProduct,
     MiningCorporation,
@@ -79,7 +80,7 @@ def generate_extraction(refinery, ready_time, started_by):
     for product in moon.products.all():
         ExtractionProduct.objects.create(
             extraction=extraction,
-            eve_type=product.eve_type,
+            ore_type=product.ore_type,
             volume=MOONPLANNER_VOLUME_PER_MONTH * product.amount,
         )
 
@@ -106,11 +107,9 @@ for moon_id in random.choices(moon_ids, k=MAX_MOONS):
     if created:
         percentages = random_percentages(4)
         for ore_type_id in random.choices(ore_type_ids, k=4):
-            eve_type, _ = EveType.objects.get_or_create_esi(
-                id=ore_type_id, enabled_sections=[EveType.Section.TYPE_MATERIALS]
-            )
+            ore_type, _ = EveOreType.objects.get_or_create_esi(id=ore_type_id)
             MoonProduct.objects.create(
-                moon=moon, eve_type=eve_type, amount=percentages.pop() / 100
+                moon=moon, ore_type=ore_type, amount=percentages.pop() / 100
             )
 print(f"Generating {MAX_REFINERIES} refineries...")
 try:

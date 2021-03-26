@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import pytz
 
+from django.utils.timezone import now
 from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 
 from allianceauth.eveonline.models import EveCorporationInfo
@@ -10,21 +11,24 @@ from app_utils.esi_testing import BravadoOperationStub
 from app_utils.testing import NoSocketsTestCase
 
 from ..models import (
+    EveOreType,
     Extraction,
     ExtractionProduct,
     MiningCorporation,
+    Moon,
     Refinery,
-    calc_refined_value,
 )
 from . import helpers
 from .testdata.esi_client_stub import esi_client_stub
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse, nearest_celestial_stub
+from .testdata.survey_data import fetch_survey_data
 
-MODULE_PATH = "moonplanner.models"
+MODELS_PATH = "moonplanner.models"
+MANAGERS_PATH = "moonplanner.managers"
 
 
-class TestCalcRefinedValue(NoSocketsTestCase):
+class TestEveOreTypeCalcRefinedValue(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -32,7 +36,7 @@ class TestCalcRefinedValue(NoSocketsTestCase):
 
     def test_should_return_correct_value(self):
         # given
-        cinnebar = EveType.objects.get(id=45506)
+        cinnebar = EveOreType.objects.get(id=45506)
         tungsten = EveType.objects.get(id=16637)
         mercury = EveType.objects.get(id=16646)
         evaporite_deposits = EveType.objects.get(id=16635)
@@ -40,13 +44,28 @@ class TestCalcRefinedValue(NoSocketsTestCase):
         EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
         EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
         # when
-        result = calc_refined_value(cinnebar, 1000000, 0.7)
+        result = cinnebar.calc_refined_value(1000000, 0.7)
         # then
         self.assertEqual(result, 400225000.0)
 
 
-@patch(MODULE_PATH + ".MOONPLANNER_VOLUME_PER_MONTH", 1000000)
-@patch(MODULE_PATH + ".MOONPLANNER_REPROCESSING_YIELD", 0.7)
+class TestEveOreTypeProfileUrl(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+
+    def test_should_return_correct_value(self):
+        # given
+        cinnebar = EveOreType.objects.get(id=45506)
+        # when
+        result = cinnebar.profile_url
+        # then
+        self.assertEqual(result, "https://www.kalkoken.org/apps/eveitems/?typeId=45506")
+
+
+@patch(MODELS_PATH + ".MOONPLANNER_VOLUME_PER_MONTH", 1000000)
+@patch(MODELS_PATH + ".MOONPLANNER_REPROCESSING_YIELD", 0.7)
 class TestMoonUpdateValue(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
@@ -116,7 +135,7 @@ class TestExtractionProduct(NoSocketsTestCase):
         self.assertIsNotNone(result)
 
 
-@patch(MODULE_PATH + ".esi")
+@patch(MODELS_PATH + ".esi")
 class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
@@ -130,7 +149,7 @@ class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
         )
 
     @patch(
-        MODULE_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub
+        MODELS_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub
     )
     def test_should_create_two_new_refineries(self, mock_esi):
         # given
@@ -144,7 +163,7 @@ class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
         self.assertEqual(refinery.moon.eve_moon, my_eve_moon)
 
     @patch(
-        MODULE_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub
+        MODELS_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub
     )
     def test_should_handle_OSError_exceptions_from_universe_structure(self, mock_esi):
         # given
@@ -164,7 +183,7 @@ class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
             mock_esi.client.Universe.get_universe_structures_structure_id.call_count, 2
         )
 
-    @patch(MODULE_PATH + ".EveSolarSystem.nearest_celestial")
+    @patch(MODELS_PATH + ".EveSolarSystem.nearest_celestial")
     def test_should_handle_OSError_exceptions_from_nearest_celestial(
         self, mock_nearest_celestial, mock_esi
     ):
@@ -179,7 +198,7 @@ class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
         self.assertEqual(mock_nearest_celestial.call_count, 2)
 
     @patch(
-        MODULE_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub
+        MODELS_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub
     )
     def test_should_remove_refineries_that_no_longer_exist(self, mock_esi):
         # given
@@ -199,7 +218,7 @@ class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
         )
 
 
-@patch(MODULE_PATH + ".esi")
+@patch(MODELS_PATH + ".esi")
 class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
@@ -238,13 +257,13 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
         )
         self.assertEqual(extraction.started_by_id, 1001)
         self.assertEqual(extraction.products.count(), 4)
-        product = extraction.products.get(eve_type_id=45506)
+        product = extraction.products.get(ore_type_id=45506)
         self.assertEqual(product.volume, 1288475.124715103)
-        product = extraction.products.get(eve_type_id=46676)
+        product = extraction.products.get(ore_type_id=46676)
         self.assertEqual(product.volume, 544691.7637724016)
-        product = extraction.products.get(eve_type_id=46678)
+        product = extraction.products.get(ore_type_id=46678)
         self.assertEqual(product.volume, 526825.4047522942)
-        product = extraction.products.get(eve_type_id=46689)
+        product = extraction.products.get(ore_type_id=46689)
         self.assertEqual(product.volume, 528996.6386983792)
 
     def test_should_cancel_existing_extraction(self, mock_esi):
@@ -311,3 +330,52 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
         # then
         obj = Refinery.objects.get(id=1000000000001)
         self.assertEqual(obj.moon, self.moon)
+
+
+class TestProcessSurveyInput(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        load_allianceauth()
+        cls.user, cls.character_ownership = helpers.create_user_from_evecharacter(
+            1001,
+            permissions=[
+                "moonplanner.access_moonplanner",
+                "moonplanner.access_our_moons",
+                "moonplanner.add_mining_corporation",
+            ],
+            scopes=[
+                "esi-industry.read_corporation_mining.v1",
+                "esi-universe.read_structures.v1",
+                "esi-characters.read_notifications.v1",
+                "esi-corporations.read_structures.v1",
+            ],
+        )
+        cls.survey_data = fetch_survey_data()
+
+    @patch(MANAGERS_PATH + ".notify", new=lambda *args, **kwargs: None)
+    def test_should_process_survey_normally(self):
+        # when
+        result = Moon.objects.update_moons_from_survey(
+            self.survey_data.get(2), self.user
+        )
+        # then
+        self.assertTrue(result)
+        m1 = Moon.objects.get(pk=40161708)
+        self.assertEqual(m1.products_updated_by, self.user)
+        self.assertAlmostEqual(m1.products_updated_at, now(), delta=dt.timedelta(30))
+        self.assertEqual(m1.products.count(), 4)
+        self.assertEqual(m1.products.get(ore_type_id=45506).amount, 0.19)
+        self.assertEqual(m1.products.get(ore_type_id=46676).amount, 0.23)
+        self.assertEqual(m1.products.get(ore_type_id=46678).amount, 0.25)
+        self.assertEqual(m1.products.get(ore_type_id=46689).amount, 0.33)
+
+        m2 = Moon.objects.get(pk=40161709)
+        self.assertEqual(m1.products_updated_by, self.user)
+        self.assertAlmostEqual(m1.products_updated_at, now(), delta=dt.timedelta(30))
+        self.assertEqual(m2.products.count(), 4)
+        self.assertEqual(m2.products.get(ore_type_id=45492).amount, 0.27)
+        self.assertEqual(m2.products.get(ore_type_id=45494).amount, 0.23)
+        self.assertEqual(m2.products.get(ore_type_id=46676).amount, 0.21)
+        self.assertEqual(m2.products.get(ore_type_id=46678).amount, 0.29)
