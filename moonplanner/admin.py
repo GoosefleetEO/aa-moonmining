@@ -1,6 +1,10 @@
+import datetime as dt
+
 from django.contrib import admin
+from django.utils.timezone import now
 
 from . import tasks
+from .app_settings import MOONPLANNER_UPDATES_MINUTES_UNTIL_DELAYED
 from .models import Extraction, MiningCorporation, Moon, Refinery
 
 
@@ -39,10 +43,20 @@ class ExtractionAdmin(admin.ModelAdmin):
 
 @admin.register(MiningCorporation)
 class MiningCorporationAdmin(admin.ModelAdmin):
-    list_display = ("__str__", "_alliance", "character_ownership")
+    list_display = (
+        "__str__",
+        "_alliance",
+        "character_ownership",
+        "is_enabled",
+        "last_update_at",
+        "_updates_ok",
+    )
     ordering = ["eve_corporation"]
     search_fields = ("refinery__moon__eve_moon__name",)
-    list_filter = ("eve_corporation__alliance",)
+    list_filter = (
+        "is_enabled",
+        "eve_corporation__alliance",
+    )
     actions = ["update_mining_corporation"]
 
     def _alliance(self, obj):
@@ -50,9 +64,21 @@ class MiningCorporationAdmin(admin.ModelAdmin):
 
     _alliance.admin_order_field = "eve_corporation__alliance__alliance_name"
 
+    def _updates_ok(self, obj):
+        return (
+            (
+                now() - obj.last_update_at
+                < dt.timedelta(minutes=MOONPLANNER_UPDATES_MINUTES_UNTIL_DELAYED)
+            )
+            if obj.last_update_at
+            else None
+        )
+
+    _updates_ok.boolean = True
+
     def update_mining_corporation(self, request, queryset):
         for obj in queryset:
-            tasks.update_mining_corporation.delay(mining_corp_pk=obj.pk)
+            tasks.update_mining_corporation.delay(corporation_pk=obj.pk)
             text = f"Started updating mining corporation: {obj}. "
             self.message_user(request, text)
 

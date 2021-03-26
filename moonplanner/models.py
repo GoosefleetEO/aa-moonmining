@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils.timezone import now
 from esi.models import Token
 from eveuniverse.models import EveEntity, EveMoon, EveSolarSystem, EveType
 
@@ -178,7 +179,13 @@ class MiningCorporation(models.Model):
         related_name="+",
         help_text="character used to sync this corporation from ESI",
     )
-    last_update_at = models.DateTimeField(null=True, default=None)
+    last_update_at = models.DateTimeField(
+        null=True, default=None, help_text="time of last successful update"
+    )
+    is_enabled = models.BooleanField(
+        default=True,
+        help_text="disabled corporations are excluded from the update process",
+    )
 
     def __str__(self):
         alliance_ticker_str = (
@@ -209,6 +216,9 @@ class MiningCorporation(models.Model):
 
         # remove refineries that no longer exist
         self.refineries.exclude(id__in=refineries).delete()
+
+        self.last_update_at = now()
+        self.save()
 
     def _fetch_refineries_from_esi(self, token: Token) -> dict:
         logger.info("%s: Fetching refineries from ESI...", self)

@@ -73,7 +73,10 @@ class TestUpdateTasks(TestCase):
             {2001},
         )
         self.assertSetEqual(helpers.model_ids(Refinery), {1000000000001, 1000000000002})
-        self.assertEqual(Refinery.objects.first().extractions.count(), 1)
+        refinery = Refinery.objects.get(id=1000000000001)
+        self.assertEqual(refinery.extractions.count(), 1)
+        corporation = refinery.corporation
+        self.assertIsNotNone(corporation.last_update_at)
         # TODO: add more tests
 
     @patch(TASKS_PATH + ".EveMarketPrice.objects.update_from_esi")
