@@ -36,7 +36,9 @@ def create_moon_40161708() -> EveMoon:
     return moon
 
 
-def create_corporation_from_character_ownership(character_ownership):
+def create_corporation_from_character_ownership(
+    character_ownership,
+) -> MiningCorporation:
     corporation, _ = MiningCorporation.objects.get_or_create(
         eve_corporation=EveCorporationInfo.objects.get(
             corporation_id=character_ownership.character.corporation_id

@@ -1,6 +1,7 @@
 from celery import chain, shared_task
 
 from django.contrib.auth.models import User
+from django.utils.timezone import now
 from eveuniverse.models import EveMarketPrice
 
 from allianceauth.services.hooks import get_extension_logger
@@ -22,9 +23,11 @@ def process_survey_input(scans, user_pk=None) -> bool:
 @shared_task
 def run_regular_updates():
     """Run main tasks for regular updates."""
-    mining_corporation_pks = MiningCorporation.objects.values_list("pk", flat=True)
-    logger.info("Updating %d mining corporations...", len(mining_corporation_pks))
-    for corporation_pk in mining_corporation_pks:
+    corporations_to_update = MiningCorporation.objects.filter(is_enabled=True)
+    corporation_pks = corporations_to_update.values_list("pk", flat=True)
+    logger.info("Updating %d mining corporations...", len(corporation_pks))
+    corporations_to_update.update(last_update_ok=None, last_update_at=now())
+    for corporation_pk in corporation_pks:
         update_mining_corporation.delay(corporation_pk)
 
 
@@ -34,6 +37,7 @@ def update_mining_corporation(corporation_pk):
     chain(
         update_refineries_from_esi.si(corporation_pk),
         update_extractions_from_esi.si(corporation_pk),
+        mark_successful_update.si(corporation_pk),
     ).delay()
 
 
@@ -49,6 +53,14 @@ def update_extractions_from_esi(corporation_pk):
     """Update extractions for a mining corporation from ESI."""
     mining_corp = MiningCorporation.objects.get(pk=corporation_pk)
     mining_corp.update_extractions_from_esi()
+
+
+@shared_task
+def mark_successful_update(corporation_pk):
+    """Mark a successful update for this corporation."""
+    mining_corp = MiningCorporation.objects.get(pk=corporation_pk)
+    mining_corp.last_update_ok = True
+    mining_corp.save()
 
 
 @shared_task

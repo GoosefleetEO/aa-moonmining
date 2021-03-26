@@ -189,12 +189,15 @@ class MiningCorporation(models.Model):
         related_name="+",
         help_text="character used to sync this corporation from ESI",
     )
-    last_update_at = models.DateTimeField(
-        null=True, default=None, help_text="time of last successful update"
-    )
     is_enabled = models.BooleanField(
         default=True,
         help_text="disabled corporations are excluded from the update process",
+    )
+    last_update_at = models.DateTimeField(
+        null=True, default=None, help_text="time of last successful update"
+    )
+    last_update_ok = models.BooleanField(
+        null=True, default=None, help_text="True if the last update was successful"
     )
 
     def __str__(self):

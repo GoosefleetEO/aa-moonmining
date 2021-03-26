@@ -1,7 +1,11 @@
+import datetime as dt
 from unittest.mock import patch
+
+import pytz
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils.timezone import now
 from django_webtest import WebTest
 from eveuniverse.models import EveMarketPrice, EveType
 
@@ -46,6 +50,7 @@ class TestUI(WebTest):
     # TODO: Add more UI tests
 
 
+@patch(MODELS_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub)
 @override_settings(CELERY_ALWAYS_EAGER=True)
 class TestUpdateTasks(TestCase):
     @classmethod
@@ -55,29 +60,82 @@ class TestUpdateTasks(TestCase):
         load_allianceauth()
         _, cls.character_ownership = helpers.create_default_user_1001()
 
-    @patch(
-        MODELS_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub
-    )
     @patch(MODELS_PATH + ".esi")
     def test_should_update_all_mining_corporations(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
         moon = helpers.create_moon_40161708()
-        helpers.create_corporation_from_character_ownership(self.character_ownership)
+        corporation_2001 = helpers.create_corporation_from_character_ownership(
+            self.character_ownership
+        )
         # when
         tasks.run_regular_updates.delay()
         # then
         moon.refresh_from_db()
-        self.assertSetEqual(
-            helpers.model_ids(MiningCorporation, "eve_corporation__corporation_id"),
-            {2001},
-        )
         self.assertSetEqual(helpers.model_ids(Refinery), {1000000000001, 1000000000002})
         refinery = Refinery.objects.get(id=1000000000001)
         self.assertEqual(refinery.extractions.count(), 1)
-        corporation = refinery.corporation
-        self.assertIsNotNone(corporation.last_update_at)
+        corporation_2001.refresh_from_db()
+        self.assertAlmostEqual(
+            corporation_2001.last_update_at, now(), delta=dt.timedelta(minutes=1)
+        )
+        self.assertTrue(corporation_2001.last_update_ok)
+
+    @patch(MODELS_PATH + ".esi")
+    def test_should_report_when_updating_mining_corporations_failed(self, mock_esi):
+        # given
+        mock_esi.client.Corporation.get_corporations_corporation_id_structures.side_effect = (
+            OSError
+        )
+        corporation_2001 = helpers.create_corporation_from_character_ownership(
+            self.character_ownership
+        )
+        # when
+        tasks.run_regular_updates.delay()
+        # then
+        corporation_2001.refresh_from_db()
+        self.assertAlmostEqual(
+            corporation_2001.last_update_at, now(), delta=dt.timedelta(minutes=1)
+        )
+        self.assertIsNone(corporation_2001.last_update_ok)
+
         # TODO: add more tests
+
+    @patch(MODELS_PATH + ".esi")
+    def test_should_not_update_disabled_corporation(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        helpers.create_moon_40161708()
+        corporation_2001 = helpers.create_corporation_from_character_ownership(
+            self.character_ownership
+        )
+        _, character_ownership_1003 = create_user_from_evecharacter(
+            1003,
+            permissions=[
+                "moonplanner.basic_access",
+                "moonplanner.extractions_access",
+                "moonplanner.add_corporation",
+            ],
+            scopes=MiningCorporation.esi_scopes(),
+        )
+        corporation_2002 = helpers.create_corporation_from_character_ownership(
+            character_ownership_1003
+        )
+        my_date = dt.datetime(2020, 1, 11, 12, 30, tzinfo=pytz.UTC)
+        corporation_2002.last_update_at = my_date
+        corporation_2002.is_enabled = False
+        corporation_2002.save()
+        # when
+        tasks.run_regular_updates.delay()
+        # then
+        corporation_2001.refresh_from_db()
+        self.assertAlmostEqual(
+            corporation_2001.last_update_at, now(), delta=dt.timedelta(minutes=1)
+        )
+        self.assertTrue(corporation_2001.last_update_ok)
+        corporation_2002.refresh_from_db()
+        self.assertEqual(corporation_2002.last_update_at, my_date)
+        self.assertIsNone(corporation_2002.last_update_ok)
 
     @patch(TASKS_PATH + ".EveMarketPrice.objects.update_from_esi")
     def test_should_update_all_values(self, mock_update_prices):
@@ -113,12 +171,7 @@ class TestProcessSurveyInput(TestCase):
                 "moonplanner.extractions_access",
                 "moonplanner.add_corporation",
             ],
-            scopes=[
-                "esi-industry.read_corporation_mining.v1",
-                "esi-universe.read_structures.v1",
-                "esi-characters.read_notifications.v1",
-                "esi-corporations.read_structures.v1",
-            ],
+            scopes=MiningCorporation.esi_scopes(),
         )
         cls.survey_data = fetch_survey_data()
 
