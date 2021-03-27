@@ -1,0 +1,40 @@
+/* Moon list */
+#table_owned_value thead th:nth-child(3) {
+	text-align: center;
+}
+#table_owned_value thead th:nth-child(4) {
+	text-align: center;
+}
+#table_owned_value thead th:nth-child(5) {
+	text-align: center;
+}
+#table_owned_value thead th:nth-child(6) {
+	text-align: center;
+}
+#table_owned_value tbody td:nth-child(3) {
+	text-align: right;
+}
+#table_owned_value tbody td:nth-child(4) {
+	text-align: right;
+}
+#table_owned_value tbody td:nth-child(5) {
+	text-align: right;
+}
+#table_owned_value tbody td:nth-child(6) {
+	text-align: right;
+}
+#table_owned_value tfoot th:nth-child(3) {
+	text-align: right;
+}
+#table_owned_value tfoot th:nth-child(4) {
+	text-align: right;
+}
+#table_owned_value tfoot th:nth-child(5) {
+	text-align: right;
+}
+#table_owned_value tfoot th:nth-child(6) {
+	text-align: right;
+}
+.report-title {
+	font-size: x-large;
+}

@@ -51,8 +51,8 @@
 
 {% block extra_javascript %}
     {% include 'bundles/datatables-js.html' %}
-    <!--load JS for filterDropDown plugin -->
     <script type="text/javascript" src="{% static 'js/filterDropDown/filterDropDown.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'moonplanner/js/global.js' %}"></script>
     <script type="text/javascript">
         $(function(){
             var def = {
@@ -82,8 +82,8 @@
                     { data: 'corporation_name' },
                     { data: 'alliance_name' },
                 ],
-                lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
-                pageLength: 10,
+                lengthMenu: DEFAULT_LENGTH_MENU,
+                pageLength: DEFAULT_PAGE_LENGTH,
                 order: [ [0, "asc"] ],
                 columnDefs: [
                     { "orderable": false, "targets": [ 5 ] },

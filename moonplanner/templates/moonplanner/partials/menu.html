@@ -35,6 +35,11 @@
                         <a href="#">Moon Details</a>
                     </li>
                 {% endif %}
+                {% if perms.moonplanner.reports_access %}
+                    <li class="{% navactive request 'moonplanner:reports' %}">
+                        <a href="{% url 'moonplanner:reports' %}">Reports</a>
+                    </li>
+                {% endif %}
             </ul>
 
             {% if perms.moonplanner.add_corporation %}

@@ -302,6 +302,7 @@ class TestViewsAreWorking(TestCase):
             permissions=[
                 "moonplanner.basic_access",
                 "moonplanner.extractions_access",
+                "moonplanner.reports_access",
                 "moonplanner.view_all_moons",
                 "moonplanner.upload_moon_scan",
                 "moonplanner.add_corporation",
@@ -340,6 +341,15 @@ class TestViewsAreWorking(TestCase):
         request.user = self.user
         # when
         response = views.moons(request)
+        # then
+        self.assertEqual(response.status_code, 200)
+
+    def test_should_open_reports_page(self):
+        # given
+        request = self.factory.get(reverse("moonplanner:reports"))
+        request.user = self.user
+        # when
+        response = views.reports(request)
         # then
         self.assertEqual(response.status_code, 200)
 
@@ -406,3 +416,30 @@ class TestExtractionsData(TestCase):
         obj = data[extraction.pk]
         self.assertEqual(obj["ready_time"]["display"], "2019-Nov-20 00:01")
         self.assertEqual(obj["corporation_name"], "Wayne Technologies [WYN]")
+
+
+class TestReportsData(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.factory = RequestFactory()
+        load_eveuniverse()
+        load_allianceauth()
+        cls.moon = helpers.create_moon_40161708()
+        Moon.objects.create(eve_moon=EveMoon.objects.get(id=40131695))
+        Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161709))
+
+    def test_should_return_owned_moon_values(self):
+        # given
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=["moonplanner.basic_access", "moonplanner.reports_access"],
+            scopes=MiningCorporation.esi_scopes(),
+        )
+        request = self.factory.get(reverse("moonplanner:report_owned_value_data"))
+        request.user = user
+        # when
+        response = views.report_owned_value_data(request)
+        # then
+        self.assertEqual(response.status_code, 200)
+        # TODO: Test values

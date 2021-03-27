@@ -34,6 +34,7 @@ class General(models.Model):
         permissions = (
             ("basic_access", "Can access the moonplanner app"),
             ("extractions_access", "Can access extractions and view owned moons"),
+            ("reports_access", "Can access reports"),
             ("view_all_moons", "Can view all known moons"),
             ("upload_moon_scan", "Can upload moon scans"),
             ("add_corporation", "Can add mining corporations"),
@@ -103,6 +104,7 @@ class Moon(models.Model):
         null=True,
         default=None,
         validators=[MinValueValidator(0.0)],
+        db_index=True,
         help_text="Calculated value estimate",
     )
     products_updated_at = models.DateTimeField(
@@ -119,10 +121,14 @@ class Moon(models.Model):
     objects = MoonManager()
 
     def __str__(self):
+        return self.name
+
+    @property
+    def name(self) -> str:
         return self.eve_moon.name
 
     @property
-    def is_owned(self):
+    def is_owned(self) -> bool:
         return hasattr(self, "refinery")
 
     def update_value(self) -> float:

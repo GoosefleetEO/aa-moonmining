@@ -1,4 +1,5 @@
 import datetime as dt
+from collections import defaultdict
 from enum import Enum, IntEnum
 
 from django.contrib.auth.decorators import login_required, permission_required
@@ -35,6 +36,8 @@ from .models import Extraction, MiningCorporation, Moon, MoonProduct
 
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
+
+VALUE_DIVIDER = 1_000_000_000
 
 
 class IconSize(IntEnum):
@@ -123,7 +126,7 @@ def extractions_data(request, category):
                 "moon": str(extraction.refinery.moon),
                 "corporation": {"display": corporation_html, "sort": corporation_name},
                 "volume": extraction.volume,
-                "value": extraction.value / 1000000000 if extraction.value else None,
+                "value": extraction.value / VALUE_DIVIDER if extraction.value else None,
                 "details": moon_details_button_html(extraction.refinery.moon),
                 "corporation_name": corporation_name,
                 "alliance_name": alliance_name,
@@ -304,7 +307,7 @@ def moons_data(request, category):
             "corporation": {"display": corporation_html, "sort": corporation_name},
             "solar_system_link": solar_system_link,
             "region_name": region_name,
-            "value": moon.value / 1000000000 if moon.value else None,
+            "value": moon.value / VALUE_DIVIDER if moon.value else None,
             "details": details_html,
             "has_refinery_str": "yes" if has_refinery else "no",
             "solar_system_name": solar_system_name,
@@ -345,3 +348,82 @@ def add_corporation(request, token):
         request, f"Update of refineres started for {eve_corporation}."
     )
     return redirect("moonplanner:extractions")
+
+
+@login_required()
+@permission_required(["moonplanner.basic_access", "moonplanner.reports_access"])
+def reports(request):
+    context = {
+        "page_title": "Reports",
+        "reprocessing_yield": MOONPLANNER_REPROCESSING_YIELD * 100,
+        "total_volume_per_month": MOONPLANNER_VOLUME_PER_MONTH / 1000000,
+    }
+    return render(request, "moonplanner/reports.html", context)
+
+
+@login_required()
+@permission_required(["moonplanner.basic_access", "moonplanner.reports_access"])
+def report_owned_value_data(request):
+    moon_query = Moon.objects.select_related(
+        "eve_moon",
+        "eve_moon__eve_planet__eve_solar_system",
+        "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
+        "refinery",
+        "refinery__corporation",
+        "refinery__corporation__eve_corporation",
+        "refinery__corporation__eve_corporation__alliance",
+    ).filter(refinery__isnull=False)
+    corporation_moons = defaultdict(lambda: {"moons": list(), "total": 0})
+    for moon in moon_query.order_by("eve_moon__name"):
+        corporation_name = moon.refinery.corporation.name
+        moon_value = moon.value / VALUE_DIVIDER if moon.value else 0
+        corporation_moons[corporation_name]["moons"].append(
+            {
+                "pk": moon.pk,
+                "name": moon.name,
+                "value": moon_value,
+                "region": moon.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region.name,
+            }
+        )
+        corporation_moons[corporation_name]["total"] += moon_value
+
+    moon_ranks = {
+        moon_pk: rank
+        for rank, moon_pk in enumerate(
+            moon_query.order_by("-value").values_list("pk", flat=True)
+        )
+    }
+    grand_total = sum(
+        [corporation["total"] for corporation in corporation_moons.values()]
+    )
+    data = list()
+    for corporation_name, details in corporation_moons.items():
+        corporation = f"{corporation_name} ({len(details['moons'])})"
+        counter = 0
+        for moon in details["moons"]:
+            data.append(
+                {
+                    "corporation": corporation,
+                    "moon": {"display": moon["name"], "sort": counter},
+                    "region": moon["region"],
+                    "value": moon["value"],
+                    "rank": moon_ranks[moon["pk"]] + 1,
+                    "total": None,
+                    "is_total": False,
+                    "grand_total_percent": moon["value"] / grand_total * 100,
+                }
+            )
+            counter += 1
+        data.append(
+            {
+                "corporation": corporation,
+                "moon": {"display": "TOTAL", "sort": counter},
+                "region": None,
+                "value": None,
+                "rank": None,
+                "total": details["total"],
+                "is_total": True,
+                "grand_total_percent": None,
+            }
+        )
+    return JsonResponse(data, safe=False)

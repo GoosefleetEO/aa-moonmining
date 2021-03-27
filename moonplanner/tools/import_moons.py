@@ -183,6 +183,9 @@ def main():
             Moon.objects.bulk_create(moon_objects, batch_size=BULK_BATCH_SIZE)
 
         if args.force_update:
+            Moon.objects.filter(pk__in=ids_existing).update(
+                products_updated_at=None, products_updated_by=None
+            )
             MoonProduct.objects.filter(moon__pk__in=moons.keys()).delete()
             product_moons = moons
         else:

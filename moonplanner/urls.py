@@ -17,4 +17,10 @@ urlpatterns = [
     path("moons", views.moons, name="moons"),
     path("moons_data/<str:category>", views.moons_data, name="moons_data"),
     path("moon/<int:moon_pk>", views.moon_details, name="moon_details"),
+    path("reports", views.reports, name="reports"),
+    path(
+        "report_owned_value_data",
+        views.report_owned_value_data,
+        name="report_owned_value_data",
+    ),
 ]

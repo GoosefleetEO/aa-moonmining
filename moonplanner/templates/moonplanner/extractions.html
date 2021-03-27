@@ -17,7 +17,7 @@
                 {% include "moonplanner/partials/extractions_tab.html" with category=ExtractionsCategory.PAST %}
             </div>
             {% include 'moonplanner/partials/value_estimate_legend.html' %}
-            <p class="text-muted">All times displayed are EVE/UTC • Extractions will be shown on the upcoming tab until {{ stale_hours }} hours after their ready time.
+            <p class="text-muted">All times displayed are EVE/UTC • Extractions will be shown on the upcoming tab until {{ stale_hours }} hours after their ready time.</p>
         </div>
     </div>
 {% endblock %}
@@ -25,6 +25,7 @@
 {% block extra_javascript %}
     {% include 'bundles/datatables-js.html' %}
     <script type="text/javascript" src="{% static 'js/filterDropDown/filterDropDown.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'moonplanner/js/global.js' %}"></script>
     <script type="text/javascript">
         $(function() {
             var def = {
@@ -60,8 +61,8 @@
                     { data: 'corporation_name' },
                     { data: 'alliance_name' },
                 ],
-                lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
-                pageLength: 10,
+                lengthMenu: DEFAULT_LENGTH_MENU,
+                pageLength: DEFAULT_PAGE_LENGTH,
                 order: [ [0, "asc"] ],
                 columnDefs: [
                     { "orderable": false, "targets": [ 5 ] },
