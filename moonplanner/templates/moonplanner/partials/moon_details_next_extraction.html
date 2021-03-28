@@ -53,7 +53,11 @@
                         {% for product in next_pull.products %}
                             <tr>
                                 <td><img src="{{ product.image_url }}"/></td>
-                                <td><a href="{{ product.ore_type_url }}" target="_blank">{{ product.ore_type_name }}</a></td>
+                                <td>
+                                    <a href="{{ product.ore_type_url }}" target="_blank">
+                                        {{ product.ore_type_name }}
+                                    </a>&nbsp;{{ product.ore_rarity_tag }}
+                                </td>
                                 <td>{{ product.volume|floatformat:"0"|intcomma }}</td>
                                 <td>{{ product.value|formatisk}}</td>
                             </tr>

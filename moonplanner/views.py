@@ -152,7 +152,7 @@ def moon_details(request, moon_pk: int):
         {
             "ore_type_name": product.ore_type.name,
             "ore_type_url": product.ore_type.profile_url,
-            "ore_group_name": product.ore_type.eve_group.name,
+            "ore_rarity_tag": product.ore_type.rarity_class.tag_html,
             "image_url": product.ore_type.icon_url(IconSize.MEDIUM),
             "amount": int(round(product.amount * 100)),
             "value": product.calc_value(),
@@ -160,7 +160,7 @@ def moon_details(request, moon_pk: int):
         for product in (
             MoonProduct.objects.select_related("ore_type", "ore_type__eve_group")
             .filter(moon=moon)
-            .order_by("ore_type__name")
+            .order_by("-ore_type__eve_group_id")
         )
     ]
     next_pull_data = None
@@ -175,7 +175,7 @@ def moon_details(request, moon_pk: int):
             total_volume = 0
             for product in next_pull.products.select_related(
                 "ore_type", "ore_type__eve_group"
-            ).order_by("ore_type__name"):
+            ).order_by("-ore_type__eve_group_id"):
                 value = product.calc_value()
                 total_value += value if value else 0
                 total_volume += product.volume
@@ -183,7 +183,7 @@ def moon_details(request, moon_pk: int):
                     {
                         "ore_type_name": product.ore_type.name,
                         "ore_type_url": product.ore_type.profile_url,
-                        "ore_group_name": product.ore_type.eve_group.name,
+                        "ore_rarity_tag": product.ore_type.rarity_class.tag_html,
                         "image_url": product.ore_type.icon_url(IconSize.SMALL),
                         "volume": product.volume,
                         "value": value,
@@ -308,6 +308,10 @@ def moons_data(request, category):
             "solar_system_link": solar_system_link,
             "region_name": region_name,
             "value": moon.value / VALUE_DIVIDER if moon.value else None,
+            "rarity_class": {
+                "display": moon.rarity_tag_html,
+                "sort": moon.rarity_class,
+            },
             "details": details_html,
             "has_refinery_str": "yes" if has_refinery else "no",
             "solar_system_name": solar_system_name,

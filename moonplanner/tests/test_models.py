@@ -16,6 +16,8 @@ from ..models import (
     ExtractionProduct,
     MiningCorporation,
     Moon,
+    MoonProduct,
+    OreRarityClass,
     Refinery,
 )
 from . import helpers
@@ -379,3 +381,71 @@ class TestProcessSurveyInput(NoSocketsTestCase):
         self.assertEqual(m2.products.get(ore_type_id=45494).amount, 0.23)
         self.assertEqual(m2.products.get(ore_type_id=46676).amount, 0.21)
         self.assertEqual(m2.products.get(ore_type_id=46678).amount, 0.29)
+
+
+class TestMoonCalcRarityClass(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        load_allianceauth()
+        cls.ore_type_r0 = EveOreType.objects.get(id=46676)
+        cls.ore_type_r4 = EveOreType.objects.get(id=45492)
+        cls.ore_type_r8 = EveOreType.objects.get(id=45497)
+        cls.ore_type_r16 = EveOreType.objects.get(id=46296)
+        cls.ore_type_r32 = EveOreType.objects.get(id=45506)
+        cls.ore_type_r64 = EveOreType.objects.get(id=46316)
+
+    def test_should_return_R4(self):
+        # given
+        moon = Moon.objects.create(eve_moon_id=40161708)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r0, amount=0.23)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r4, amount=0.19)
+        # when
+        result = moon.calc_rarity_class()
+        # then
+        self.assertEqual(result, OreRarityClass.R4)
+
+    def test_should_return_R8(self):
+        # given
+        moon = Moon.objects.create(eve_moon_id=40161708)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r8, amount=0.25)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r0, amount=0.23)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r4, amount=0.19)
+        # when
+        result = moon.calc_rarity_class()
+        # then
+        self.assertEqual(result, OreRarityClass.R8)
+
+    def test_should_return_R16(self):
+        # given
+        moon = Moon.objects.create(eve_moon_id=40161708)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r4, amount=0.19)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r16, amount=0.23)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r8, amount=0.25)
+        # when
+        result = moon.calc_rarity_class()
+        # then
+        self.assertEqual(result, OreRarityClass.R16)
+
+    def test_should_return_R32(self):
+        # given
+        moon = Moon.objects.create(eve_moon_id=40161708)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r16, amount=0.23)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r32, amount=0.19)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r8, amount=0.25)
+        # when
+        result = moon.calc_rarity_class()
+        # then
+        self.assertEqual(result, OreRarityClass.R32)
+
+    def test_should_return_R64(self):
+        # given
+        moon = Moon.objects.create(eve_moon_id=40161708)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r16, amount=0.23)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r32, amount=0.19)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r64, amount=0.25)
+        # when
+        result = moon.calc_rarity_class()
+        # then
+        self.assertEqual(result, OreRarityClass.R64)

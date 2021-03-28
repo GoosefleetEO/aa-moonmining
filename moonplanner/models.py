@@ -15,6 +15,7 @@ from allianceauth.eveonline.models import EveCorporationInfo
 from allianceauth.services.hooks import get_extension_logger
 from app_utils.datetime import ldap_time_2_datetime
 from app_utils.logging import LoggerAddTag
+from app_utils.views import bootstrap_label_html
 
 from . import __title__, constants
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
@@ -23,6 +24,61 @@ from .providers import esi
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 # MAX_DISTANCE_TO_MOON_METERS = 3000000
+
+
+class OreRarityClass(models.IntegerChoices):
+    """Rarity class of an ore"""
+
+    NONE = 0, ""
+    R4 = 4, "R4"
+    R8 = 8, "R8"
+    R16 = 16, "R16"
+    R32 = 32, "R32"
+    R64 = 64, "R64"
+
+    @property
+    def tag_html(self) -> str:
+        map_rarity_to_type = {
+            4: "primary",
+            8: "info",
+            16: "success",
+            32: "warning",
+            64: "danger",
+        }
+        try:
+            return bootstrap_label_html(
+                f"R{self.value}", label=map_rarity_to_type[self.value]
+            )
+        except KeyError:
+            return ""
+
+    @classmethod
+    def from_eve_group_id(cls, eve_group_id: int) -> "OreRarityClass":
+        """Create object from eve group ID"""
+        map_group_2_rarity = {
+            constants.EVE_GROUP_ID_UBIQUITOUS_MOON_ASTEROIDS: cls.R4,
+            constants.EVE_GROUP_ID_COMMON_MOON_ASTEROIDS: cls.R8,
+            constants.EVE_GROUP_ID_UNCOMMON_MOON_ASTEROIDS: cls.R16,
+            constants.EVE_GROUP_ID_RARE_MOON_ASTEROIDS: cls.R32,
+            constants.EVE_GROUP_ID_EXCEPTIONAL_MOON_ASTEROIDS: cls.R64,
+        }
+        try:
+            return map_group_2_rarity[eve_group_id]
+        except KeyError:
+            return cls.NONE
+
+    @classmethod
+    def from_eve_type(cls, eve_type: EveType) -> "OreRarityClass":
+        """Create object from eve type"""
+        return cls.from_eve_group_id(eve_type.eve_group_id)
+
+
+class OreQualityClass(models.TextChoices):
+    """Quality class of an ore"""
+
+    REGULAR = "RE", "regular"
+    IMPROVED = "IM", "improved"
+    EXCELLENT = "EX", "excellent"
 
 
 class General(models.Model):
@@ -81,6 +137,13 @@ class EveOreType(EveType):
                 value += price * type_material.quantity * r_units * reprocessing_yield
         return value
 
+    @property
+    def rarity_class(self) -> OreRarityClass:
+        return OreRarityClass.from_eve_type(self)
+
+    def quality_class(self) -> OreQualityClass:
+        pass
+
     @classmethod
     def _enabled_sections_union(cls, enabled_sections: Iterable[str]) -> set:
         """Return enabled sections with TYPE_MATERIALS always enabled."""
@@ -88,6 +151,7 @@ class EveOreType(EveType):
             enabled_sections=enabled_sections
         )
         enabled_sections.add(cls.Section.TYPE_MATERIALS)
+        enabled_sections.add(cls.Section.DOGMAS)
         return enabled_sections
 
 
@@ -106,6 +170,9 @@ class Moon(models.Model):
         validators=[MinValueValidator(0.0)],
         db_index=True,
         help_text="Calculated value estimate",
+    )
+    rarity_class = models.PositiveIntegerField(
+        choices=OreRarityClass.choices, default=OreRarityClass.NONE
     )
     products_updated_at = models.DateTimeField(
         null=True, default=None, help_text="Time the last moon survey was uploaded"
@@ -130,6 +197,25 @@ class Moon(models.Model):
     @property
     def is_owned(self) -> bool:
         return hasattr(self, "refinery")
+
+    @property
+    def rarity_tag_html(self) -> str:
+        return OreRarityClass(self.rarity_class).tag_html
+
+    def calc_rarity_class(self) -> OreRarityClass:
+        rarity_class = max(
+            [
+                OreRarityClass.from_eve_group_id(eve_group_id)
+                for eve_group_id in self.products.select_related(
+                    "ore_type"
+                ).values_list("ore_type__eve_group_id", flat=True)
+            ]
+        )
+        return rarity_class
+
+    def update_rarity_class(self):
+        self.rarity_class = self.calc_rarity_class()
+        self.save()
 
     def update_value(self) -> float:
         """Update value estimate with given parameters."""

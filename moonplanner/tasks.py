@@ -94,6 +94,7 @@ def update_moon_value(moon_pk):
     """Update the value for given moon."""
     moon = Moon.objects.get(pk=moon_pk)
     moon.update_value()
+    moon.update_rarity_class()
 
 
 @shared_task

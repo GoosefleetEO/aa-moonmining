@@ -119,8 +119,7 @@ class MoonManager(models.Manager):
                     # Trim off the empty index at the front
                     product_data = product_data[1:]
                     ore_type, _ = EveOreType.objects.get_or_create_esi(
-                        id=product_data[2],
-                        enabled_sections=[EveOreType.Section.TYPE_MATERIALS],
+                        id=product_data[2]
                     )
                     moon_products.append(
                         MoonProduct(

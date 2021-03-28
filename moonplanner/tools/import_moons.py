@@ -94,9 +94,7 @@ def thread_fetch_eve_object(EveModel: type, id: int):
                     id,
                     f"(retry #{run + 1})" if run > 0 else "",
                 )
-                EveModel.objects.update_or_create_esi(
-                    id=id, enabled_sections=[EveType.Section.TYPE_MATERIALS]
-                )
+                EveModel.objects.update_or_create_esi(id=id)
         except (HTTPBadGateway, HTTPGatewayTimeout, HTTPServiceUnavailable) as ex:
             logger.exception("Recoverable HTTP error occurred: %s", ex)
         else:
@@ -164,7 +162,7 @@ def main():
         force_refetch=args.force_refetch,
     )
     fetch_missing_eve_objects(
-        EveModel=EveType, ids_incoming=ore_types, force_refetch=args.force_refetch
+        EveModel=EveOreType, ids_incoming=ore_types, force_refetch=args.force_refetch
     )
 
     # create moons

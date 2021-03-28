@@ -17,7 +17,10 @@ class CreateEveUniverseTestData(TestCase):
                 "EveCategory",
                 ids=[constants.EVE_CATEGORY_ID_ASTEROID],
                 include_children=True,
-                enabled_sections=[EveType.Section.TYPE_MATERIALS],
+                enabled_sections=[
+                    EveType.Section.TYPE_MATERIALS,
+                    EveType.Section.DOGMAS,
+                ],
             ),
             ModelSpec(
                 "EveType",

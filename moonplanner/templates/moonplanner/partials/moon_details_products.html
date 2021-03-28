@@ -22,11 +22,11 @@
                         <p><a href="{{ product_row.ore_type_url}}" target="_blank">
                                 {{ product_row.ore_type_name }}
                             </a>
-                            ({{ product_row.ore_group_name }})
+                            {{ product_row.ore_rarity_tag }}
                         </p>
                         <div class="progress" style="height: 20px; width: 100%">
                             <div
-                                class="progress-bar progress-bar-success progress-bar-striped"
+                                class="progress-bar progress-bar-default progress-bar-striped"
                                 role="progressbar"
                                 aria-valuenow="{{ product_row.amount }}"
                                 aria-valuemin="0"
