@@ -56,7 +56,8 @@
                                 <td>
                                     <a href="{{ product.ore_type_url }}" target="_blank">
                                         {{ product.ore_type_name }}
-                                    </a>&nbsp;{{ product.ore_rarity_tag }}
+                                    </a>&nbsp;{{ product.ore_quality_tag }}
+
                                 </td>
                                 <td>{{ product.volume|floatformat:"0"|intcomma }}</td>
                                 <td>{{ product.value|formatisk}}</td>

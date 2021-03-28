@@ -17,6 +17,7 @@ from ..models import (
     MiningCorporation,
     Moon,
     MoonProduct,
+    OreQualityClass,
     OreRarityClass,
     Refinery,
 )
@@ -388,7 +389,6 @@ class TestMoonCalcRarityClass(NoSocketsTestCase):
     def setUpClass(cls):
         super().setUpClass()
         load_eveuniverse()
-        load_allianceauth()
         cls.ore_type_r0 = EveOreType.objects.get(id=46676)
         cls.ore_type_r4 = EveOreType.objects.get(id=45492)
         cls.ore_type_r8 = EveOreType.objects.get(id=45497)
@@ -449,3 +449,23 @@ class TestMoonCalcRarityClass(NoSocketsTestCase):
         result = moon.calc_rarity_class()
         # then
         self.assertEqual(result, OreRarityClass.R64)
+
+
+class TestOreQualityClass(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+
+    def test_should_return_correct_quality(self):
+        # given
+        ore_quality_regular = EveOreType.objects.get(id=45490)
+        ore_quality_improved = EveOreType.objects.get(id=46280)
+        ore_quality_excellent = EveOreType.objects.get(id=46281)
+        # when/then
+        self.assertEqual(ore_quality_regular.quality_class, OreQualityClass.REGULAR)
+        self.assertEqual(ore_quality_improved.quality_class, OreQualityClass.IMPROVED)
+        self.assertEqual(ore_quality_excellent.quality_class, OreQualityClass.EXCELLENT)
+
+    def test_should_return_correct_tag(self):
+        self.assertIn("+100%", OreQualityClass.EXCELLENT.bootstrap_tag_html)

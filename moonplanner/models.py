@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils.functional import cached_property
 from django.utils.timezone import now
 from esi.models import Token
 from eveuniverse.models import EveEntity, EveMoon, EveSolarSystem, EveType
@@ -37,13 +38,13 @@ class OreRarityClass(models.IntegerChoices):
     R64 = 64, "R64"
 
     @property
-    def tag_html(self) -> str:
+    def bootstrap_tag_html(self) -> str:
         map_rarity_to_type = {
-            4: "primary",
-            8: "info",
-            16: "success",
-            32: "warning",
-            64: "danger",
+            self.R4: "primary",
+            self.R8: "info",
+            self.R16: "success",
+            self.R32: "warning",
+            self.R64: "danger",
         }
         try:
             return bootstrap_label_html(
@@ -76,9 +77,42 @@ class OreRarityClass(models.IntegerChoices):
 class OreQualityClass(models.TextChoices):
     """Quality class of an ore"""
 
+    UNDEFINED = "UN", "(undefined)"
     REGULAR = "RE", "regular"
     IMPROVED = "IM", "improved"
     EXCELLENT = "EX", "excellent"
+
+    @property
+    def bootstrap_tag_html(self) -> str:
+        """Return bootstrap tag."""
+        map_quality_to_label_def = {
+            self.IMPROVED: {"text": "+15%", "label": "success"},
+            self.EXCELLENT: {"text": "+100%", "label": "warning"},
+        }
+        try:
+            label_def = map_quality_to_label_def[self.value]
+            return bootstrap_label_html(label_def["text"], label=label_def["label"])
+        except KeyError:
+            return ""
+
+    @classmethod
+    def from_eve_type(cls, eve_type: EveType) -> "OreQualityClass":
+        """Create object from given eve type."""
+        map_value_2_quality_class = {
+            1: cls.REGULAR,
+            3: cls.IMPROVED,
+            5: cls.EXCELLENT,
+        }
+        try:
+            dogma_attribute = eve_type.dogma_attributes.get(
+                eve_dogma_attribute_id=constants.DOGMA_ATTRIBUTE_ID_ORE_QUALITY
+            )
+        except ObjectDoesNotExist:
+            return cls.UNDEFINED
+        try:
+            return map_value_2_quality_class[int(dogma_attribute.value)]
+        except KeyError:
+            return cls.UNDEFINED
 
 
 class General(models.Model):
@@ -141,8 +175,9 @@ class EveOreType(EveType):
     def rarity_class(self) -> OreRarityClass:
         return OreRarityClass.from_eve_type(self)
 
+    @cached_property
     def quality_class(self) -> OreQualityClass:
-        pass
+        return OreQualityClass.from_eve_type(self)
 
     @classmethod
     def _enabled_sections_union(cls, enabled_sections: Iterable[str]) -> set:
@@ -200,7 +235,7 @@ class Moon(models.Model):
 
     @property
     def rarity_tag_html(self) -> str:
-        return OreRarityClass(self.rarity_class).tag_html
+        return OreRarityClass(self.rarity_class).bootstrap_tag_html
 
     def calc_rarity_class(self) -> OreRarityClass:
         rarity_class = max(

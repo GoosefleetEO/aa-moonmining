@@ -152,7 +152,7 @@ def moon_details(request, moon_pk: int):
         {
             "ore_type_name": product.ore_type.name,
             "ore_type_url": product.ore_type.profile_url,
-            "ore_rarity_tag": product.ore_type.rarity_class.tag_html,
+            "ore_rarity_tag": product.ore_type.rarity_class.bootstrap_tag_html,
             "image_url": product.ore_type.icon_url(IconSize.MEDIUM),
             "amount": int(round(product.amount * 100)),
             "value": product.calc_value(),
@@ -179,12 +179,13 @@ def moon_details(request, moon_pk: int):
                 value = product.calc_value()
                 total_value += value if value else 0
                 total_volume += product.volume
+                ore_type = product.ore_type
                 next_pull_product_rows.append(
                     {
-                        "ore_type_name": product.ore_type.name,
-                        "ore_type_url": product.ore_type.profile_url,
-                        "ore_rarity_tag": product.ore_type.rarity_class.tag_html,
-                        "image_url": product.ore_type.icon_url(IconSize.SMALL),
+                        "ore_type_name": ore_type.name,
+                        "ore_type_url": ore_type.profile_url,
+                        "ore_quality_tag": ore_type.quality_class.bootstrap_tag_html,
+                        "image_url": ore_type.icon_url(IconSize.SMALL),
                         "volume": product.volume,
                         "value": value,
                     }
