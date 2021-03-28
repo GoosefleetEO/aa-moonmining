@@ -128,8 +128,8 @@ def fetch_missing_eve_objects(EveModel: type, ids_incoming: set, force_refetch: 
 
 
 def thread_update_moon_value(moon_id):
-    moon = Moon.objects.prefetch_related("products").get(pk=moon_id)
-    moon.update_value()
+    moon = Moon.objects.get(pk=moon_id)
+    moon.update_calculated_properties()
 
 
 def main():

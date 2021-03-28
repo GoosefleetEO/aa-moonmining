@@ -77,7 +77,7 @@ def update_moon_values():
     moon_pks = Moon.objects.values_list("pk", flat=True)
     logger.info("Updating value estimates for %d moons ...", len(moon_pks))
     for moon_pk in moon_pks:
-        update_moon_value.delay(moon_pk)
+        update_moon_calculated_properties.delay(moon_pk)
 
 
 @shared_task
@@ -86,19 +86,18 @@ def update_extraction_values():
     extraction_pks = Extraction.objects.values_list("pk", flat=True)
     logger.info("Updating value estimates for %d extractions ...", len(extraction_pks))
     for extraction_pk in extraction_pks:
-        update_extraction_value.delay(extraction_pk)
+        update_extraction_calculated_properties.delay(extraction_pk)
 
 
 @shared_task
-def update_moon_value(moon_pk):
-    """Update the value for given moon."""
+def update_moon_calculated_properties(moon_pk):
+    """Update all calculated properties for given moon."""
     moon = Moon.objects.get(pk=moon_pk)
-    moon.update_value()
-    moon.update_rarity_class()
+    moon.update_calculated_properties()
 
 
 @shared_task
-def update_extraction_value(extraction_pk):
-    """Update the value for given extraction."""
+def update_extraction_calculated_properties(extraction_pk):
+    """Update all calculated properties for given extraction."""
     extraction = Extraction.objects.get(pk=extraction_pk)
-    extraction.update_value()
+    extraction.update_calculated_properties()

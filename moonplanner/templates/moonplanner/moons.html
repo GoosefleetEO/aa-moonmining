@@ -87,13 +87,14 @@
                     { data: 'has_refinery_str' },
                     { data: 'corporation_name' },
                     { data: 'alliance_name' },
+                    { data: 'rarity_class_label' },
                 ],
                 lengthMenu: DEFAULT_LENGTH_MENU,
                 pageLength: DEFAULT_PAGE_LENGTH,
                 order: [ [0, "asc"] ],
                 columnDefs: [
                     { "orderable": false, "targets": [ 6 ] },
-                    { "visible": false, "targets": [ 7, 8, 9, 10 ] },
+                    { "visible": false, "targets": [ 7, 8, 9, 10, 11 ] },
                 ],
                 filterDropDown: {
                     columns: [
@@ -113,7 +114,8 @@
                             title: "System"
                         },
                         {
-                            idx: 4
+                            idx: 11,
+                            title: "Rarity"
                         },
                         {
                             idx: 8,

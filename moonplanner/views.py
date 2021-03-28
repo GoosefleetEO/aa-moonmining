@@ -7,6 +7,7 @@ from django.db.models import Sum
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.html import format_html
 from django.utils.timezone import now
 from esi.decorators import token_required
 
@@ -18,8 +19,10 @@ from app_utils.logging import LoggerAddTag
 from app_utils.messages import messages_plus
 from app_utils.views import (
     bootstrap_icon_plus_name_html,
+    bootstrap_label_html,
     fontawesome_link_button_html,
     link_html,
+    yesno_str,
 )
 
 from . import __title__, constants, helpers, tasks
@@ -30,7 +33,7 @@ from .app_settings import (
 )
 from .forms import MoonScanForm
 from .helpers import HttpResponseUnauthorized
-from .models import Extraction, MiningCorporation, Moon, MoonProduct
+from .models import Extraction, MiningCorporation, Moon, MoonProduct, OreRarityClass
 
 # from django.views.decorators.cache import cache_page
 
@@ -118,8 +121,12 @@ def extractions_data(request, category):
             {
                 "id": extraction.pk,
                 "ready_time": {
-                    "display": extraction.ready_time.strftime(
-                        constants.DATETIME_FORMAT
+                    "display": format_html(
+                        "{}&nbsp;{}",
+                        extraction.ready_time.strftime(constants.DATETIME_FORMAT),
+                        bootstrap_label_html("Jackpot", "warning")
+                        if extraction.is_jackpot
+                        else "",
                     ),
                     "sort": extraction.ready_time,
                 },
@@ -130,6 +137,7 @@ def extractions_data(request, category):
                 "details": moon_details_button_html(extraction.refinery.moon),
                 "corporation_name": corporation_name,
                 "alliance_name": alliance_name,
+                "is_jackpot_str": yesno_str(extraction.is_jackpot),
                 "is_ready": extraction.ready_time <= now(),
             }
         )
@@ -318,6 +326,7 @@ def moons_data(request, category):
             "solar_system_name": solar_system_name,
             "corporation_name": corporation_name,
             "alliance_name": alliance_name,
+            "rarity_class_label": OreRarityClass(moon.rarity_class).label,
             "has_refinery": has_refinery,
         }
         data.append(moon_data)

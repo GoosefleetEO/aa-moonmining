@@ -414,7 +414,7 @@ class TestExtractionsData(TestCase):
         data = json_response_to_dict(response)
         self.assertSetEqual(set(data.keys()), {extraction.pk})
         obj = data[extraction.pk]
-        self.assertEqual(obj["ready_time"]["display"], "2019-Nov-20 00:01")
+        self.assertIn("2019-Nov-20 00:01", obj["ready_time"]["display"])
         self.assertEqual(obj["corporation_name"], "Wayne Technologies [WYN]")
 
 

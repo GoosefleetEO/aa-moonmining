@@ -76,7 +76,7 @@ class TestMoonUpdateValue(NoSocketsTestCase):
         load_eveuniverse()
         cls.moon = helpers.create_moon_40161708()
 
-    def test_should_update_value(self):
+    def test_should_calc_correct_value(self):
         # given
         tungsten = EveType.objects.get(id=16637)
         EveMarketPrice.objects.create(eve_type=tungsten, average_price=7000)
@@ -95,21 +95,19 @@ class TestMoonUpdateValue(NoSocketsTestCase):
         mexallon = EveType.objects.get(id=36)
         EveMarketPrice.objects.create(eve_type=mexallon, average_price=117)
         # when
-        self.moon.update_value()
+        result = self.moon.calc_value()
         # then
-        self.moon.refresh_from_db()
-        self.assertEqual(self.moon.value, 180498825.5)
+        self.assertEqual(result, 180498825.5)
 
-    def test_should_set_none_if_prices_are_missing(self):
+    def test_should_return_0_if_prices_are_missing(self):
         # given
         EveMarketPrice.objects.create(
             eve_type=EveType.objects.get(id=45506), average_price=1, adjusted_price=2
         )
         # when
-        self.moon.update_value()
+        result = self.moon.calc_value()
         # then
-        self.moon.refresh_from_db()
-        self.assertIsNone(self.moon.value)
+        self.assertEqual(result, 0)
 
 
 class TestExtractionProduct(NoSocketsTestCase):
@@ -469,3 +467,109 @@ class TestOreQualityClass(NoSocketsTestCase):
 
     def test_should_return_correct_tag(self):
         self.assertIn("+100%", OreQualityClass.EXCELLENT.bootstrap_tag_html)
+
+
+class TestExtractionIsJackpot(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        load_allianceauth()
+        cls.moon = helpers.create_moon_40161708()
+        cls.corporation = MiningCorporation.objects.create(
+            eve_corporation=EveCorporationInfo.objects.get(corporation_id=2001)
+        )
+        cls.refinery = Refinery.objects.create(
+            id=40161708, moon=cls.moon, corporation=cls.corporation, eve_type_id=35835
+        )
+        cls.ore_quality_regular = EveOreType.objects.get(id=45490)
+        cls.ore_quality_improved = EveOreType.objects.get(id=46280)
+        cls.ore_quality_excellent = EveOreType.objects.get(id=46281)
+
+    def test_should_identify_as_jackpot(self):
+        # given
+        extraction = Extraction.objects.create(
+            refinery=self.refinery,
+            ready_time=now() + dt.timedelta(days=3),
+            auto_time=now() + dt.timedelta(days=4),
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            ore_type=self.ore_quality_excellent,
+            volume=1000000 * 0.1,
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            ore_type=self.ore_quality_excellent,
+            volume=1000000 * 0.1,
+        )
+        # when
+        result = extraction.calc_is_jackpot()
+        # then
+        self.assertTrue(result)
+
+    def test_should_not_identify_as_jackpot_1(self):
+        # given
+        extraction = Extraction.objects.create(
+            refinery=self.refinery,
+            ready_time=now() + dt.timedelta(days=3),
+            auto_time=now() + dt.timedelta(days=4),
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            ore_type=self.ore_quality_excellent,
+            volume=1000000 * 0.1,
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            ore_type=self.ore_quality_improved,
+            volume=1000000 * 0.1,
+        )
+        # when
+        result = extraction.calc_is_jackpot()
+        # then
+        self.assertFalse(result)
+
+    def test_should_not_identify_as_jackpot_2(self):
+        # given
+        extraction = Extraction.objects.create(
+            refinery=self.refinery,
+            ready_time=now() + dt.timedelta(days=3),
+            auto_time=now() + dt.timedelta(days=4),
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            ore_type=self.ore_quality_improved,
+            volume=1000000 * 0.1,
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            ore_type=self.ore_quality_excellent,
+            volume=1000000 * 0.1,
+        )
+        # when
+        result = extraction.calc_is_jackpot()
+        # then
+        self.assertFalse(result)
+
+    def test_should_not_identify_as_jackpot_3(self):
+        # given
+        extraction = Extraction.objects.create(
+            refinery=self.refinery,
+            ready_time=now() + dt.timedelta(days=3),
+            auto_time=now() + dt.timedelta(days=4),
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            ore_type=self.ore_quality_regular,
+            volume=1000000 * 0.1,
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            ore_type=self.ore_quality_improved,
+            volume=1000000 * 0.1,
+        )
+        # when
+        result = extraction.calc_is_jackpot()
+        # then
+        self.assertFalse(result)

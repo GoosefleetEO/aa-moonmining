@@ -15,17 +15,21 @@ class ExtractionAdmin(admin.ModelAdmin):
     )
     search_fields = ("refinery__moon__eve_moon__name",)
 
-    actions = ["update_value"]
+    actions = ["update_calculated_properties"]
 
-    def update_value(self, request, queryset):
+    def update_calculated_properties(self, request, queryset):
         num = 0
         for obj in queryset:
-            tasks.update_extraction_value.delay(extraction_pk=obj.pk)
+            tasks.update_extraction_calculated_properties.delay(extraction_pk=obj.pk)
             num += 1
 
-        self.message_user(request, f"Started updating values for {num} extractions.")
+        self.message_user(
+            request, f"Started updating calculated properties for {num} extractions."
+        )
 
-    update_value.short_description = "Update value for selected extrations."
+    update_calculated_properties.short_description = (
+        "Update calculated properties for selected extrations."
+    )
 
     def _corporation(self, obj):
         return obj.refinery.corporation
@@ -98,17 +102,21 @@ class RefineryAdmin(admin.ModelAdmin):
 class MoonAdmin(admin.ModelAdmin):
     list_display = ("eve_moon",)
 
-    actions = ["update_value"]
+    actions = ["update_calculated_properties"]
 
-    def update_value(self, request, queryset):
+    def update_calculated_properties(self, request, queryset):
         num = 0
         for obj in queryset:
-            tasks.update_moon_value.delay(moon_pk=obj.pk)
+            tasks.update_moon_calculated_properties.delay(moon_pk=obj.pk)
             num += 1
 
-        self.message_user(request, f"Started updating values for {num} moons.")
+        self.message_user(
+            request, f"Started updating calculated properties for {num} moons."
+        )
 
-    update_value.short_description = "Update value for selected moons."
+    update_calculated_properties.short_description = (
+        "Update calculated properties for selected moons."
+    )
 
     def has_change_permission(self, request, obj=None):
         return False

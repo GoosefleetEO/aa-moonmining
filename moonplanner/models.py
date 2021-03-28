@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Optional
 
 import yaml
 
@@ -237,30 +237,35 @@ class Moon(models.Model):
     def rarity_tag_html(self) -> str:
         return OreRarityClass(self.rarity_class).bootstrap_tag_html
 
-    def calc_rarity_class(self) -> OreRarityClass:
-        rarity_class = max(
-            [
-                OreRarityClass.from_eve_group_id(eve_group_id)
-                for eve_group_id in self.products.select_related(
-                    "ore_type"
-                ).values_list("ore_type__eve_group_id", flat=True)
-            ]
-        )
-        return rarity_class
+    def calc_rarity_class(self) -> Optional[OreRarityClass]:
+        try:
+            return max(
+                [
+                    OreRarityClass.from_eve_group_id(eve_group_id)
+                    for eve_group_id in self.products.select_related(
+                        "ore_type"
+                    ).values_list("ore_type__eve_group_id", flat=True)
+                ]
+            )
+        except ObjectDoesNotExist:
+            return None
 
-    def update_rarity_class(self):
+    def calc_value(self) -> Optional[float]:
+        """Calculate value estimate."""
+        try:
+            return sum(
+                [
+                    product.calc_value(total_volume=MOONPLANNER_VOLUME_PER_MONTH)
+                    for product in self.products.select_related("ore_type")
+                ]
+            )
+        except ObjectDoesNotExist:
+            return None
+
+    def update_calculated_properties(self):
+        """Update all calculated properties for this moon."""
+        self.value = self.calc_value()
         self.rarity_class = self.calc_rarity_class()
-        self.save()
-
-    def update_value(self) -> float:
-        """Update value estimate with given parameters."""
-        value = sum(
-            [
-                product.calc_value(total_volume=MOONPLANNER_VOLUME_PER_MONTH)
-                for product in self.products.select_related("ore_type")
-            ]
-        )
-        self.value = value if value else None
         self.save()
 
 
@@ -464,6 +469,7 @@ class MiningCorporation(models.Model):
                         ore_type=ore_type,
                         defaults={"volume": ore_volume},
                     )
+                extraction.update_calculated_properties()
 
             # remove latest started extraction if it was canceled
             # and not finished
@@ -581,6 +587,7 @@ class Extraction(models.Model):
         validators=[MinValueValidator(0.0)],
         help_text="Calculated value estimate",
     )
+    is_jackpot = models.BooleanField(default=None, null=True)
     started_by = models.ForeignKey(
         EveEntity,
         on_delete=models.SET_DEFAULT,
@@ -596,19 +603,34 @@ class Extraction(models.Model):
     def __str__(self) -> str:
         return f"{self.refinery} - {self.ready_time}"
 
-    def update_value(self) -> float:
-        """Update value estimate with given parameters.
+    def calc_value(self) -> Optional[float]:
+        """Calculate value estimate and return result."""
+        try:
+            return sum(
+                [
+                    product.calc_value()
+                    for product in self.products.select_related("ore_type")
+                ]
+            )
+        except ObjectDoesNotExist:
+            return None
 
-        Args:
-            reprocessing_yield: expected average yield for ore reprocessing
-        """
-        value = sum(
-            [
-                product.calc_value()
-                for product in self.products.select_related("ore_type")
-            ]
-        )
-        self.value = value
+    def calc_is_jackpot(self) -> Optional[bool]:
+        """Calculate if extraction is jackpot and return result"""
+        try:
+            return all(
+                [
+                    product.ore_type.quality_class == OreQualityClass.EXCELLENT
+                    for product in self.products.select_related("ore_type").all()
+                ]
+            )
+        except ObjectDoesNotExist:
+            return None
+
+    def update_calculated_properties(self) -> float:
+        """Update calculated properties for this extraction."""
+        self.value = self.calc_value()
+        self.is_jackpot = self.calc_is_jackpot()
         self.save()
 
 

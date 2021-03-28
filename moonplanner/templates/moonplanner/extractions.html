@@ -35,18 +35,14 @@
                     cache: true
                 },
                 columns: [
-                    { data: 'ready_time',
-                        render: {
-                            _: 'display',
-                            sort: 'sort'
-                        }
+                    {
+                        data: 'ready_time',
+                        render: { _: 'display', sort: 'sort'}
                     },
                     { data: 'moon' },
-                    { data: 'corporation',
-                        render: {
-                            _: 'display',
-                            sort: 'sort'
-                        }
+                    {
+                        data: 'corporation',
+                        render: { _: 'display', sort: 'sort'}
                     },
                     {
                         data: 'volume',
@@ -60,13 +56,14 @@
 
                     { data: 'corporation_name' },
                     { data: 'alliance_name' },
+                    { data: 'is_jackpot_str' },
                 ],
                 lengthMenu: DEFAULT_LENGTH_MENU,
                 pageLength: DEFAULT_PAGE_LENGTH,
                 order: [ [0, "asc"] ],
                 columnDefs: [
                     { "orderable": false, "targets": [ 5 ] },
-                    { "visible": false, "targets": [ 6, 7 ] },
+                    { "visible": false, "targets": [ 6, 7, 8 ] },
                 ],
                 filterDropDown: {
                     columns: [
@@ -77,6 +74,10 @@
                         {
                             idx: 6,
                             title: "Corporation"
+                        },
+                        {
+                            idx: 8,
+                            title: "Jackpot?"
                         }
                     ],
                     bootstrap: true,
