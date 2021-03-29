@@ -60,6 +60,13 @@ def moon_details_button_html(moon: Moon) -> str:
     )
 
 
+def default_if_none(value, default):
+    """Return given default if value is None"""
+    if value is None:
+        return default
+    return value
+
+
 @login_required
 @permission_required("moonmining.basic_access")
 def index(request):
@@ -169,7 +176,7 @@ def moon_details(request, moon_pk: int):
                 "ore_type", "ore_type__eve_group"
             ).order_by("-ore_type__eve_group_id"):
                 value = product.calc_value()
-                total_value += value if value else 0
+                total_value += default_if_none(value, 0)
                 total_volume += product.volume
                 ore_type = product.ore_type
                 next_pull_product_rows.append(
@@ -375,12 +382,14 @@ def report_owned_value_data(request):
     for moon in moon_query.order_by("eve_moon__name"):
         corporation_name = moon.refinery.corporation.name
         corporation_moons[corporation_name]["moons"].append(moon)
-        corporation_moons[corporation_name]["total"] += moon.value
+        corporation_moons[corporation_name]["total"] += default_if_none(moon.value, 0)
 
     moon_ranks = {
         moon_pk: rank
         for rank, moon_pk in enumerate(
-            moon_query.order_by("-value").values_list("pk", flat=True)
+            moon_query.filter(value__isnull=False)
+            .order_by("-value")
+            .values_list("pk", flat=True)
         )
     }
     grand_total = sum(
@@ -391,16 +400,23 @@ def report_owned_value_data(request):
         corporation = f"{corporation_name} ({len(details['moons'])})"
         counter = 0
         for moon in details["moons"]:
+            grand_total_percent = (
+                default_if_none(moon.value, 0) / grand_total * 100
+                if grand_total > 0
+                else None
+            )
+            rank = moon_ranks[moon.pk] + 1 if moon.pk in moon_ranks else None
             data.append(
                 {
                     "corporation": corporation,
                     "moon": {"display": moon.name, "sort": counter},
                     "region": moon.region.name,
+                    "rarity_class": moon.rarity_tag_html,
                     "value": moon.value,
-                    "rank": moon_ranks[moon.pk] + 1,
+                    "rank": rank,
                     "total": None,
                     "is_total": False,
-                    "grand_total_percent": moon.value / grand_total * 100,
+                    "grand_total_percent": grand_total_percent,
                 }
             )
             counter += 1
@@ -409,6 +425,7 @@ def report_owned_value_data(request):
                 "corporation": corporation,
                 "moon": {"display": "TOTAL", "sort": counter},
                 "region": None,
+                "rarity_class": None,
                 "value": None,
                 "rank": None,
                 "total": details["total"],
