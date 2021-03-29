@@ -16,7 +16,7 @@ from allianceauth.eveonline.models import EveCorporationInfo
 from allianceauth.services.hooks import get_extension_logger
 from app_utils.datetime import ldap_time_2_datetime
 from app_utils.logging import LoggerAddTag
-from app_utils.views import bootstrap_label_html
+from app_utils.views import bootstrap_icon_plus_name_html, bootstrap_label_html
 
 from . import __title__, constants
 from .app_settings import MOONPLANNER_REPROCESSING_YIELD, MOONPLANNER_VOLUME_PER_MONTH
@@ -229,6 +229,10 @@ class Moon(models.Model):
     def name(self) -> str:
         return self.eve_moon.name
 
+    @cached_property
+    def region(self) -> str:
+        return self.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region
+
     @property
     def is_owned(self) -> bool:
         return hasattr(self, "refinery")
@@ -350,6 +354,14 @@ class MiningCorporation(models.Model):
             self.eve_corporation.alliance.alliance_name
             if self.eve_corporation.alliance
             else ""
+        )
+
+    @property
+    def name_html(self):
+        return bootstrap_icon_plus_name_html(
+            self.eve_corporation.logo_url(size=constants.IconSize.SMALL),
+            self.name,
+            size=constants.IconSize.SMALL,
         )
 
     def fetch_token(self):

@@ -12,7 +12,7 @@ register = template.Library()
 def formatisk(value) -> Optional[str]:
     """Return the formatted ISK value or None if input was invalid."""
     try:
-        return "{:,.1f} B".format(float(value) / 1000000000)
+        return "{:,.1f} B".format(float(value) / constants.VALUE_DIVIDER)
     except (ValueError, TypeError):
         return None
 

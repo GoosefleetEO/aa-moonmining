@@ -1,6 +1,6 @@
 import datetime as dt
 from collections import defaultdict
-from enum import Enum, IntEnum
+from enum import Enum
 
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Sum
@@ -18,7 +18,6 @@ from allianceauth.services.hooks import get_extension_logger
 from app_utils.logging import LoggerAddTag
 from app_utils.messages import messages_plus
 from app_utils.views import (
-    bootstrap_icon_plus_name_html,
     bootstrap_label_html,
     fontawesome_link_button_html,
     link_html,
@@ -40,13 +39,6 @@ from .models import Extraction, MiningCorporation, Moon, MoonProduct, OreRarityC
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
-VALUE_DIVIDER = 1_000_000_000
-
-
-class IconSize(IntEnum):
-    SMALL = 32
-    MEDIUM = 64
-
 
 class ExtractionsCategory(str, helpers.EnumToDict, Enum):
     UPCOMING = "upcoming"
@@ -65,14 +57,6 @@ def moon_details_button_html(moon: Moon) -> str:
         fa_code="fas fa-eye",
         tooltip="Show details in current window",
         button_type="default",
-    )
-
-
-def mining_corporation_html(corporation: MiningCorporation):
-    return bootstrap_icon_plus_name_html(
-        corporation.eve_corporation.logo_url(size=IconSize.SMALL),
-        corporation.name,
-        size=IconSize.SMALL,
     )
 
 
@@ -114,7 +98,7 @@ def extractions_data(request, category):
     else:
         extractions = Extraction.objects.none()
     for extraction in extractions:
-        corporation_html = mining_corporation_html(extraction.refinery.corporation)
+        corporation_html = extraction.refinery.corporation.name_html
         corporation_name = extraction.refinery.corporation.name
         alliance_name = extraction.refinery.corporation.alliance_name
         data.append(
@@ -133,7 +117,7 @@ def extractions_data(request, category):
                 "moon": str(extraction.refinery.moon),
                 "corporation": {"display": corporation_html, "sort": corporation_name},
                 "volume": extraction.volume,
-                "value": extraction.value / VALUE_DIVIDER if extraction.value else None,
+                "value": extraction.value if extraction.value else None,
                 "details": moon_details_button_html(extraction.refinery.moon),
                 "corporation_name": corporation_name,
                 "alliance_name": alliance_name,
@@ -161,7 +145,7 @@ def moon_details(request, moon_pk: int):
             "ore_type_name": product.ore_type.name,
             "ore_type_url": product.ore_type.profile_url,
             "ore_rarity_tag": product.ore_type.rarity_class.bootstrap_tag_html,
-            "image_url": product.ore_type.icon_url(IconSize.MEDIUM),
+            "image_url": product.ore_type.icon_url(constants.IconSize.MEDIUM),
             "amount": int(round(product.amount * 100)),
             "value": product.calc_value(),
         }
@@ -193,7 +177,7 @@ def moon_details(request, moon_pk: int):
                         "ore_type_name": ore_type.name,
                         "ore_type_url": ore_type.profile_url,
                         "ore_quality_tag": ore_type.quality_class.bootstrap_tag_html,
-                        "image_url": ore_type.icon_url(IconSize.SMALL),
+                        "image_url": ore_type.icon_url(constants.IconSize.SMALL),
                         "volume": product.volume,
                         "value": value,
                     }
@@ -211,7 +195,7 @@ def moon_details(request, moon_pk: int):
             )
 
     context = {
-        "page_title": "Moon Detail",
+        "page_title": "Moon Details",
         "moon": moon,
         "product_rows": product_rows,
         "next_pull": next_pull_data,
@@ -297,7 +281,7 @@ def moons_data(request, category):
         )
         has_refinery = hasattr(moon, "refinery")
         if has_refinery:
-            corporation_html = mining_corporation_html(moon.refinery.corporation)
+            corporation_html = moon.refinery.corporation.name_html
             corporation_name = moon.refinery.corporation.name
             alliance_name = moon.refinery.corporation.alliance_name
             has_details_access = request.user.has_perm(
@@ -316,7 +300,7 @@ def moons_data(request, category):
             "corporation": {"display": corporation_html, "sort": corporation_name},
             "solar_system_link": solar_system_link,
             "region_name": region_name,
-            "value": moon.value / VALUE_DIVIDER if moon.value else None,
+            "value": moon.value,
             "rarity_class": {
                 "display": moon.rarity_tag_html,
                 "sort": moon.rarity_class,
@@ -390,16 +374,8 @@ def report_owned_value_data(request):
     corporation_moons = defaultdict(lambda: {"moons": list(), "total": 0})
     for moon in moon_query.order_by("eve_moon__name"):
         corporation_name = moon.refinery.corporation.name
-        moon_value = moon.value / VALUE_DIVIDER if moon.value else 0
-        corporation_moons[corporation_name]["moons"].append(
-            {
-                "pk": moon.pk,
-                "name": moon.name,
-                "value": moon_value,
-                "region": moon.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region.name,
-            }
-        )
-        corporation_moons[corporation_name]["total"] += moon_value
+        corporation_moons[corporation_name]["moons"].append(moon)
+        corporation_moons[corporation_name]["total"] += moon.value
 
     moon_ranks = {
         moon_pk: rank
@@ -418,13 +394,13 @@ def report_owned_value_data(request):
             data.append(
                 {
                     "corporation": corporation,
-                    "moon": {"display": moon["name"], "sort": counter},
-                    "region": moon["region"],
-                    "value": moon["value"],
-                    "rank": moon_ranks[moon["pk"]] + 1,
+                    "moon": {"display": moon.name, "sort": counter},
+                    "region": moon.region.name,
+                    "value": moon.value,
+                    "rank": moon_ranks[moon.pk] + 1,
                     "total": None,
                     "is_total": False,
-                    "grand_total_percent": moon["value"] / grand_total * 100,
+                    "grand_total_percent": moon.value / grand_total * 100,
                 }
             )
             counter += 1

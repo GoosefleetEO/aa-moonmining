@@ -16,7 +16,7 @@
     <ul id="myTabs" class="nav nav-tabs" role="tablist">
         {% if perms.moonplanner.extractions_access %}
             <li role="presentation">
-                <a href="#tab_{{ MoonsCategory.OURS }}" aria-controls="tab_{{ MoonsCategory.OURS }}" role="tab" data-toggle="tab">{% trans "Our Moons" %}</a>
+                <a href="#tab_{{ MoonsCategory.OURS }}" aria-controls="tab_{{ MoonsCategory.OURS }}" role="tab" data-toggle="tab">{% trans "Owned Moons" %}</a>
             </li>
         {% endif %}
         {% if perms.moonplanner.view_all_moons %}
@@ -79,7 +79,7 @@
                     },
                     {
                         data: 'value',
-                        render: $.fn.dataTable.render.number(',', '.', 1)
+                        render: $.fn.dataTable.render.formatisk()
                     },
                     { data: 'details' },
 
