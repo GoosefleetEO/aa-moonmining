@@ -208,7 +208,9 @@ def main():
         moons.keys() if args.force_update or args.force_calc else new_moons.keys()
     )
     if updated_moon_ids:
-        logger.info("Updating income estimate for %d moons...", len(updated_moon_ids))
+        logger.info(
+            "Updating calculated properties for %d moons...", len(updated_moon_ids)
+        )
         with futures.ThreadPoolExecutor(max_workers=MAX_THREAD_WORKERS) as executor:
             executor.map(thread_update_moons, list(updated_moon_ids))
         logger.info("DONE")

@@ -18,6 +18,10 @@
 		border-top-right-radius: 0%;
 	}
 
+	.btn-tabs {
+		border-width: 0px;
+	}
+
 	/* Datatables row group headers */
 	.template-light-mode .table > tbody > .table-group > td {
 		background-color: rgb(105, 105, 105);
