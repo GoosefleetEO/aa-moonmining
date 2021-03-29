@@ -138,7 +138,7 @@ class TestUpdateTasks(TestCase):
         self.assertIsNone(corporation_2002.last_update_ok)
 
     @patch(TASKS_PATH + ".EveMarketPrice.objects.update_from_esi")
-    def test_should_update_all_values(self, mock_update_prices):
+    def test_should_update_all_calculated_values(self, mock_update_prices):
         # given
         mock_update_prices.return_value = None
         moon = helpers.create_moon_40161708()
@@ -150,7 +150,7 @@ class TestUpdateTasks(TestCase):
         EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
         EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
         # when
-        tasks.run_value_updates.delay()
+        tasks.run_calculated_properties_update.delay()
         # then
         moon.refresh_from_db()
         self.assertIsNotNone(moon.value)

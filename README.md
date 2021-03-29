@@ -63,7 +63,7 @@ CELERYBEAT_SCHEDULE['moonplanner_run_regular_updates'] = {
     'schedule': crontab(minute='0', minute='*/30'),
 }
 CELERYBEAT_SCHEDULE['moonplanner_run_value_updates'] = {
- 'task': 'moonplanner.tasks.run_value_updates',
+ 'task': 'moonplanner.tasks.run_calculated_properties_update',
  'schedule': crontab(minute=30, hour=3)
 }
 

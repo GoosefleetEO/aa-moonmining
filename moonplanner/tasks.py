@@ -64,27 +64,29 @@ def mark_successful_update(corporation_pk):
 
 
 @shared_task
-def run_value_updates():
-    """Update the values of all moons and all extractions."""
+def run_calculated_properties_update():
+    """Update the calculated properties of all moons and all extractions."""
     EveMarketPrice.objects.update_from_esi()
-    update_moon_values.delay()
-    update_extraction_values.delay()
+    update_moons.delay()
+    update_extractions.delay()
 
 
 @shared_task
-def update_moon_values():
-    """Update the values of all moons."""
+def update_moons():
+    """Update the calculated properties of all moons."""
     moon_pks = Moon.objects.values_list("pk", flat=True)
-    logger.info("Updating value estimates for %d moons ...", len(moon_pks))
+    logger.info("Updating calculated properties for %d moons ...", len(moon_pks))
     for moon_pk in moon_pks:
         update_moon_calculated_properties.delay(moon_pk)
 
 
 @shared_task
-def update_extraction_values():
-    """Update the values of all extractions."""
+def update_extractions():
+    """Update the calculated properties of all extractions."""
     extraction_pks = Extraction.objects.values_list("pk", flat=True)
-    logger.info("Updating value estimates for %d extractions ...", len(extraction_pks))
+    logger.info(
+        "Updating calculated properties for %d extractions ...", len(extraction_pks)
+    )
     for extraction_pk in extraction_pks:
         update_extraction_calculated_properties.delay(extraction_pk)
 

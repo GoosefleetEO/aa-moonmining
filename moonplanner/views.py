@@ -274,7 +274,7 @@ def moons_data(request, category):
     else:
         return JsonResponse([], safe=False)
 
-    for moon in moon_query:
+    for moon in moon_query.iterator():
         solar_system_name = moon.eve_moon.eve_planet.eve_solar_system.name
         solar_system_link = link_html(
             dotlan.solar_system_url(solar_system_name), solar_system_name
