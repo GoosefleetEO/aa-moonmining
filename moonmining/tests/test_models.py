@@ -485,6 +485,7 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
         cls.ore_quality_regular = EveOreType.objects.get(id=45490)
         cls.ore_quality_improved = EveOreType.objects.get(id=46280)
         cls.ore_quality_excellent = EveOreType.objects.get(id=46281)
+        cls.ore_quality_excellent_2 = EveOreType.objects.get(id=46283)
 
     def test_should_identify_as_jackpot(self):
         # given
@@ -500,7 +501,7 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
         )
         ExtractionProduct.objects.create(
             extraction=extraction,
-            ore_type=self.ore_quality_excellent,
+            ore_type=self.ore_quality_excellent_2,
             volume=1000000 * 0.1,
         )
         # when
