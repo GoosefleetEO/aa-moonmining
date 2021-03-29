@@ -43,6 +43,7 @@
                         }
                     },
                     { data: 'region' },
+                    { data: 'rarity_class' },
                     {
                         data: 'value',
                         render: $.fn.dataTable.render.formatisk()
@@ -76,24 +77,28 @@
                 },
                 footerCallback: function (row, data, start, end, display) {
                     var api = this.api(), data;
-                    var total_value = api
-                        .column(6)
-                        .data()
-                        .reduce(function (a, b) {
-                                return intVal(a) + intVal(b);
-                            },
-                            0
-                        );
-                    $(api.column(6).footer()).html(formatisk(total_value));
+
+                    const columnPercent = 5
                     var total_percent = api
-                        .column(4)
+                        .column(columnPercent)
                         .data()
                         .reduce(function (a, b) {
                                 return intVal(a) + intVal(b);
                             },
                             0
                         );
-                    $(api.column(4).footer()).html(total_percent.toFixed(0));
+                    $(api.column(columnPercent).footer()).html(total_percent.toFixed(0));
+
+                    const columnTotal = 7
+                    var total_value = api
+                        .column(columnTotal)
+                        .data()
+                        .reduce(function (a, b) {
+                                return intVal(a) + intVal(b);
+                            },
+                            0
+                        );
+                    $(api.column(columnTotal).footer()).html(formatisk(total_value));
                 }
             });
         });

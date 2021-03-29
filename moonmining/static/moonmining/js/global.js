@@ -16,7 +16,7 @@ var intVal = function (i) {
 function formatisk(data) {
     if ( data != null ) {
         return (data / VALUE_DIVIDER).toLocaleString(
-            'en-US', {minimumFractionDigits: 1, maximumFractionDigits:1}
+            'en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1}
         );
     }
     else {

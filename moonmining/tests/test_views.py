@@ -22,7 +22,7 @@ from .testdata.load_eveuniverse import load_eveuniverse
 MODULE_PATH = "moonmining.views"
 
 
-class TestAddMinningCorporation(TestCase):
+class TestOwner(TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
@@ -35,7 +35,7 @@ class TestAddMinningCorporation(TestCase):
 
     @patch(MODULE_PATH + ".tasks.update_owner")
     @patch(MODULE_PATH + ".messages_plus")
-    def test_should_add_new_corporation(self, mock_messages, mock_update_owner):
+    def test_should_add_new_owner(self, mock_messages, mock_update_owner):
         # given
         token = Mock(spec=Token)
         token.character_id = self.character_ownership.character.character_id
@@ -57,7 +57,7 @@ class TestAddMinningCorporation(TestCase):
 
     @patch(MODULE_PATH + ".tasks.update_owner")
     @patch(MODULE_PATH + ".messages_plus")
-    def test_should_update_existing_corporation(self, mock_messages, mock_update_owner):
+    def test_should_update_existing_owner(self, mock_messages, mock_update_owner):
         # given
         Owner.objects.create(
             corporation=EveCorporationInfo.objects.get(corporation_id=2001),
@@ -305,6 +305,16 @@ class TestViewsAreWorking(TestCase):
         )
         cls.moon = helpers.create_moon_40161708()
         cls.refinery = helpers.add_refinery(cls.moon)
+
+    def test_should_redirect_to_moons_page(self):
+        # given
+        request = self.factory.get(reverse("moonmining:index"))
+        request.user = self.user
+        # when
+        response = views.extractions(request)
+        # then
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("moonmining:moons"))
 
     def test_should_open_extractions_page(self):
         # given

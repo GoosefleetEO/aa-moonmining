@@ -181,7 +181,7 @@ class EveOreType(EveType):
 
     @classmethod
     def _enabled_sections_union(cls, enabled_sections: Iterable[str]) -> set:
-        """Return enabled sections with TYPE_MATERIALS always enabled."""
+        """Return enabled sections with TYPE_MATERIALS and DOGMAS always enabled."""
         enabled_sections = super()._enabled_sections_union(
             enabled_sections=enabled_sections
         )
@@ -285,11 +285,12 @@ class MoonProduct(models.Model):
     def __str__(self):
         return f"{self.ore_type.name} - {self.amount}"
 
-    # class Meta:
-    #     unique_together = (("eve_moon", "eve_type"),)
-    #     indexes = [
-    #         models.Index(fields=["eve_moon"]),
-    #     ]
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["moon", "ore_type"], name="functional_pk_moonproduct"
+            )
+        ]
 
     def calc_value(self, total_volume=None, reprocessing_yield=None) -> float:
         """Return calculated value estimate for given parameters.
@@ -590,6 +591,7 @@ class Extraction(models.Model):
         Refinery, on_delete=models.CASCADE, related_name="extractions"
     )
     ready_time = models.DateTimeField(db_index=True)
+
     auto_time = models.DateTimeField()
     value = models.FloatField(
         null=True,
@@ -607,8 +609,12 @@ class Extraction(models.Model):
         help_text="Eve character who started this extraction",
     )
 
-    # class Meta:
-    #     unique_together = (("ready_time", "refinery"),)
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["refinery", "ready_time"], name="functional_pk_extraction"
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.refinery} - {self.ready_time}"
@@ -651,10 +657,16 @@ class ExtractionProduct(models.Model):
         Extraction, on_delete=models.CASCADE, related_name="products"
     )
     ore_type = models.ForeignKey(EveOreType, on_delete=models.CASCADE, related_name="+")
+
     volume = models.FloatField(validators=[MinValueValidator(0.0)])
 
-    # class Meta:
-    #     unique_together = (("extraction", "ore_type"),)
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["extraction", "ore_type"],
+                name="functional_pk_extractionproduct",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.extraction} - {self.ore_type}"

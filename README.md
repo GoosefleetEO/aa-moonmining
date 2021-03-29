@@ -22,16 +22,40 @@ An Alliance Auth app for tracking moon extractions and scouting new moons.
 
 ## Features
 
-- Manage moon extractions
-- Upload moon surveys
-- Browse list of scanned moons
-- Detail view of moons
-- Filter by solar solar_system and region in moon list
-- Show estimated monthly income for moons and ores
-- Optimized to handle thousands of moons with good performance
-- Open multiple moon detail pages at the same time
+- Upload survey scans and research your own moon database.
+- Monitor ongoing extractions from your refineries.
+- Automatic value estimates for all moons and extractions.
+- See reports for your potential total income
 
-> **Note**<br>This is a heavy modified fork of the original [moonstuff](https://gitlab.com/colcrunch/aa-moonstuff) by [colcrunch](https://gitlab.com/colcrunch). It's not migration compatible with the original due to major changes in the data model.
+## Highlights
+
+### Research your moon database
+
+Build your own moon database from survey inputs and find the best moons for you. The moon rarity class and value are automatically calculated from your survey input.
+
+![moons](https://i.imgur.com/usZcEmC.png)
+
+See the exact ore makeup of this moon on the details page.
+
+![moons](https://i.imgur.com/olSr4mh.png)
+
+### Manage extractions
+
+After you added your corporation you can see which moons you own and see upcoming and past extractions:
+
+![moons](https://i.imgur.com/fJ6rTvq.png)
+
+You can also review the extraction details, incl. which ore qualities you got.
+
+![moons](https://i.imgur.com/ZGH7eWL.png)
+
+### Reports
+
+Check out the reporting section for detail reports on your operation, e.g. Breakdown by corporation and moon of your potential total gross moon income per months:
+
+![moons](https://i.imgur.com/JBDPTtB.png)
+
+> **Note**<br>All ore compositions and ISK values shown on this screenshot are fake.
 
 ## Installation
 
