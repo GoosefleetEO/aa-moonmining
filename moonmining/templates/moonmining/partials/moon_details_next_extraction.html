@@ -1,0 +1,80 @@
+{% load i18n %}
+{% load humanize %}
+{% load moonmining %}
+
+<div class="panel panel-default">
+    <div class="panel-heading text-center">
+        <h3 class="panel-title">Next Extraction</h3>
+    </div>
+    <div class="panel-body">
+        {% if not perms.moonmining.extractions_access or moon.refinery == "" %}
+            <p class="text-muted">No refinery or no access</p>
+        {% elif next_pull == None %}
+            <p>No extraction scheduled</p>
+        {% else %}
+            <div class="row">
+                <div class="col-md-3">
+                    <p><strong>Ready Time:</strong></p>
+                </div>
+                <div class="col-md-9">
+                    <p>{{ next_pull.ready_time|datetime }}</p>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-3">
+                    <p><strong>Auto Fracture Time:</strong></p>
+                </div>
+                <div class="col-md-9">
+                    <p>{{ next_pull.auto_time|datetime }}</p>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-3">
+                    <p><strong>Started By:</strong></p>
+                </div>
+                <div class="col-md-9">
+                    <p>{{ next_pull.started_by|default:"?" }}</p>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-striped" id="table_next_pull">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Ore Type</th>
+                            <th>Volume</th>
+                            <th>Value est.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in next_pull.products %}
+                            <tr>
+                                <td><img src="{{ product.image_url }}"/></td>
+                                <td>
+                                    <a href="{{ product.ore_type_url }}" target="_blank">
+                                        {{ product.ore_type_name }}
+                                    </a>&nbsp;{{ product.ore_quality_tag }}
+
+                                </td>
+                                <td>{{ product.volume|floatformat:"0"|intcomma }}</td>
+                                <td>{{ product.value|formatisk}}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th></th>
+                            <th>TOTAL</th>
+                            <th>{{ next_pull.total_volume|floatformat:"0"|intcomma }}</th>
+                            <th>{{ next_pull.total_value|formatisk}}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        {% endif %}
+
+    </div>
+</div>

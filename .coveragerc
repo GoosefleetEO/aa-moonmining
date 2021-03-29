@@ -1,6 +1,6 @@
 [run]
 branch = True
-source = moonplanner
+source = moonmining
 
 [report]
 exclude_lines =

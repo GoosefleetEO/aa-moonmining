@@ -1,0 +1,29 @@
+{% load i18n %}
+{% load bootstrap %}
+{% load static %}
+
+<div role="tabpanel" class="tab-pane" id="tab_{{ category }}">
+    <div id="loader_{{ category }}">
+        {% if NIGHT_MODE %}
+            <img src="{% static 'moonmining/img/Spinner-1s-64px-dark.gif' %}" alt="Spinner"/>
+        {% else %}
+            <img src="{% static 'moonmining/img/Spinner-1s-64px-light.gif' %}" alt="Spinner"/>
+        {% endif %}
+    </div>
+
+    <div id="wrapper_{{ category }}" style="display: none !important;">
+        <div class="table-responsive">
+            <table class="table table-striped table-moons" id="table_{{ category }}" style="width:100%;">
+                <thead>
+                    <th>Moon</th>
+                    <th>Corporation</th>
+                    <th>System</th>
+                    <th>Region</th>
+                    <th>Rarity</th>
+                    <th>Value est. *</th>
+                    <th>Details</th>
+                </thead>
+            </table>
+        </div>
+    </div>
+</div>

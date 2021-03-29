@@ -1,7 +1,6 @@
 include LICENSE
 include README.md
 include MANIFEST.in
-include moonplanner/swagger.json
-recursive-include moonplanner *.py
-recursive-include moonplanner/static *
-recursive-include moonplanner/templates *
+recursive-include moonmining *.py
+recursive-include moonmining/static *
+recursive-include moonmining/templates *

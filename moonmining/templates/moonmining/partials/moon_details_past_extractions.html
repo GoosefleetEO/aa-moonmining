@@ -1,0 +1,41 @@
+{% load i18n %}
+{% load humanize %}
+{% load moonmining %}
+
+<div class="panel panel-default">
+    <div class="panel-heading text-center">
+        <h3 class="panel-title">Past Extractions</h3>
+    </div>
+    <div class="panel-body">
+        {% if not perms.moonmining.extractions_access or moon.refinery == "" %}
+            <p class="text-muted">No refinery or no access</p>
+        {% else %}
+            <div class="table-responsive">
+                <table class="table table-striped" id="table_past_events">
+                    <thead>
+                        <th>Ready Time</th>
+                        <th>Volume</th>
+                        <th>Value est.</th>
+                    </thead>
+                    <tbody>
+                        {% if ppulls|length_is:"0" %}
+                            <tr>
+                                <td colspan="3">
+                                    <span class="text-muted">No past extractions recorded for this moon.</span>
+                                </td>
+                            </tr>
+                        {% else %}
+                            {% for pull in ppulls %}
+                                <tr>
+                                    <td>{{ pull.ready_time|datetime }}</td>
+                                    <td>{{ pull.volume|floatformat:"0"|intcomma }}</td>
+                                    <td>{{ pull.value|formatisk|default:"-" }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+</div>

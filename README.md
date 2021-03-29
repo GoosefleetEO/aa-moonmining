@@ -2,12 +2,12 @@
 
 An Alliance Auth app for tracking moon extractions and scouting new moons.
 
-[![release](https://img.shields.io/pypi/v/aa-moonplanner?label=release)](https://pypi.org/project/aa-moonplanner/)
-[![python](https://img.shields.io/pypi/pyversions/aa-moonplanner)](https://pypi.org/project/aa-moonplanner/)
-[![django](https://img.shields.io/pypi/djversions/aa-moonplanner?label=django)](https://pypi.org/project/aa-moonplanner/)
-[![pipeline](https://gitlab.com/ErikKalkoken/aa-moonplanner/badges/master/pipeline.svg)](https://gitlab.com/ErikKalkoken/aa-moonplanner/-/pipelines)
-[![codecov](https://codecov.io/gl/ErikKalkoken/aa-moonplanner/branch/master/graph/badge.svg?token=QHMCUAFZBV)](https://codecov.io/gl/ErikKalkoken/aa-moonplanner)
-[![license](https://img.shields.io/badge/license-MIT-green)](https://gitlab.com/ErikKalkoken/aa-moonplanner/-/blob/master/LICENSE)
+[![release](https://img.shields.io/pypi/v/aa-moonmining?label=release)](https://pypi.org/project/aa-moonmining/)
+[![python](https://img.shields.io/pypi/pyversions/aa-moonmining)](https://pypi.org/project/aa-moonmining/)
+[![django](https://img.shields.io/pypi/djversions/aa-moonmining?label=django)](https://pypi.org/project/aa-moonmining/)
+[![pipeline](https://gitlab.com/ErikKalkoken/aa-moonmining/badges/master/pipeline.svg)](https://gitlab.com/ErikKalkoken/aa-moonmining/-/pipelines)
+[![codecov](https://codecov.io/gl/ErikKalkoken/aa-moonmining/branch/master/graph/badge.svg?token=QHMCUAFZBV)](https://codecov.io/gl/ErikKalkoken/aa-moonmining)
+[![license](https://img.shields.io/badge/license-MIT-green)](https://gitlab.com/ErikKalkoken/aa-moonmining/-/blob/master/LICENSE)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![chat](https://img.shields.io/discord/790364535294132234)](https://discord.gg/zmh52wnfvM)
@@ -18,7 +18,6 @@ An Alliance Auth app for tracking moon extractions and scouting new moons.
 - [Installation](#installation)
 - [Permissions](#permissions)
 - [Settings](#settings)
-- [Management Commands](#management-commands)
 - [Change Log](CHANGELOG.md)
 
 ## Features
@@ -47,23 +46,23 @@ An Alliance Auth app for tracking moon extractions and scouting new moons.
 Make sure you are in the virtual environment (venv) of your Alliance Auth installation. Then install the newest release from PyPI:
 
 ```bash
-pip install aa-moonplanner
+pip install aa-moonmining
 ```
 
 ### Step 2 - Configure Auth settings
 
 Configure your Auth settings (`local.py`) as follows:
 
-- Add `'moonplanner'` to `INSTALLED_APPS`
+- Add `'moonmining'` to `INSTALLED_APPS`
 - Add below lines to your settings file:
 
 ```python
-CELERYBEAT_SCHEDULE['moonplanner_run_regular_updates'] = {
-    'task': 'moonplanner.tasks.run_regular_updates',
+CELERYBEAT_SCHEDULE['moonmining_run_regular_updates'] = {
+    'task': 'moonmining.tasks.run_regular_updates',
     'schedule': crontab(minute='0', minute='*/30'),
 }
-CELERYBEAT_SCHEDULE['moonplanner_run_value_updates'] = {
- 'task': 'moonplanner.tasks.run_calculated_properties_update',
+CELERYBEAT_SCHEDULE['moonmining_run_value_updates'] = {
+ 'task': 'moonmining.tasks.run_calculated_properties_update',
  'schedule': crontab(minute=30, hour=3)
 }
 
@@ -91,29 +90,7 @@ Update the Eve Online API app used for authentication in your AA installation to
 - `esi-universe.read_structures.v1`
 - `esi-characters.read_notifications.v1`
 
-### Step 5 - Load Eve Universe map data
-
-In order to be able to select solar systems and ships types for trackers you need to load that data from ESI once.
-
-Load Eve Online map:
-
-> **Hint**:  If you already have run those commands previously, e.g. while installing another app that uses eveuniverse, you can skip this step.
-
-```bash
-python manage.py eveuniverse_load_data map
-```
-
-Load data specific for Moon Planner:
-
-```bash
-python manage.py moonplanner_load_eve
-```
-
-You may want to wait until all data loading is complete before continuing.
-
-> **Hint**: These command will spawn a thousands of tasks. One easy way to monitor the progress is to watch the number of tasks shown on the Dashboard.
-
-### Step 6 - Setup permissions
+### Step 5 - Setup permissions
 
 Finally you want to setup permission to define which users / groups will have access to which parts of the app. Check out [permissions](#permissions) for details.
 
@@ -125,11 +102,11 @@ Here is an overview of all permissions:
 
 Name  | Description
 -- | --
-`moonplanner.basic_access` | This is access permission, users without this permission will be unable to access the plugin.
-`moonplanner.upload_moon_scan` | This permission allows users to upload moon scan data.
-`moonplanner.extractions_access` | User can access extractions and view owned moons
-`moonplanner.access_all_moons` | User gets access to all moons in the database
-`moonplanner.add_corporation` | This permission is allows users to add their tokens to be pulled from when checking for new extraction events.
+`moonmining.basic_access` | This is access permission, users without this permission will be unable to access the plugin.
+`moonmining.upload_moon_scan` | This permission allows users to upload moon scan data.
+`moonmining.extractions_access` | User can access extractions and view owned moons
+`moonmining.access_all_moons` | User gets access to all moons in the database
+`moonmining.add_corporation` | This permission is allows users to add their tokens to be pulled from when checking for new extraction events.
 
 ## Settings
 
@@ -139,16 +116,6 @@ Note that all settings are optional and the app will use the documented default 
 
 Name | Description | Default
 -- | -- | --
-`MOONPLANNER_EXTRACTIONS_HOURS_UNTIL_STALE`| Number of hours an extractions that has passed its ready time is still shown on the upcoming extractions tab. | `12`
-`MOONPLANNER_REPROCESSING_YIELD`| Reprocessing yield used for calculating all values | `0.7`
-`MOONPLANNER_VOLUME_PER_MONTH`| Total ore volume per month used for calculating moon values. | `14557923`
-
-## Management Commands
-
-The following management commands are available to perform administrative tasks:
-
-> **Hint**:<br>Run any command with `--help` to see all options
-
-### moonplanner_load_eve
-
-Pre-loads data required for this app from ESI to improve app performance.
+`MOONMINING_EXTRACTIONS_HOURS_UNTIL_STALE`| Number of hours an extractions that has passed its ready time is still shown on the upcoming extractions tab. | `12`
+`MOONMINING_REPROCESSING_YIELD`| Reprocessing yield used for calculating all values | `0.7`
+`MOONMINING_VOLUME_PER_MONTH`| Total ore volume per month used for calculating moon values. | `14557923`

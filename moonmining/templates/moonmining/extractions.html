@@ -1,0 +1,116 @@
+{% extends 'moonmining/base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block details %}
+    <ul id="myTabs" class="nav nav-tabs" role="tablist">
+        <li role="presentation">
+            <a href="#tab_{{ ExtractionsCategory.UPCOMING }}" aria-controls="tab_{{ ExtractionsCategory.UPCOMING }}" role="tab" data-toggle="tab">Upcoming Extractions</a>
+        </li>
+        <li role="presentation"><a href="#tab_{{ ExtractionsCategory.PAST }}" aria-controls="tab_{{ ExtractionsCategory.PAST }}" role="tab" data-toggle="tab">Past Extractions</a></li>
+    </ul>
+
+    <div class="panel panel-default panel-tabs">
+        <div class="panel-body">
+            <div class="tab-content">
+                {% include "moonmining/partials/extractions_tab.html" with category=ExtractionsCategory.UPCOMING %}
+                {% include "moonmining/partials/extractions_tab.html" with category=ExtractionsCategory.PAST %}
+            </div>
+            {% include 'moonmining/partials/value_estimate_legend.html' %}
+            <p class="text-muted">All times displayed are EVE/UTC • Extractions will be shown on the upcoming tab until {{ stale_hours }} hours after their ready time.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_javascript %}
+    {% include 'bundles/datatables-js.html' %}
+    <script type="text/javascript" src="{% static 'js/filterDropDown/filterDropDown.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'moonmining/js/global.js' %}"></script>
+    <script type="text/javascript">
+        $(function() {
+            var def = {
+                ajax: {
+                    url: '',
+                    dataSrc: '',
+                    cache: true
+                },
+                columns: [
+                    {
+                        data: 'ready_time',
+                        render: { _: 'display', sort: 'sort'}
+                    },
+                    { data: 'moon' },
+                    {
+                        data: 'corporation',
+                        render: { _: 'display', sort: 'sort'}
+                    },
+                    {
+                        data: 'volume',
+                        render: $.fn.dataTable.render.number(',', '.', 0)
+                    },
+                    {
+                        data: 'value',
+                        render: $.fn.dataTable.render.formatisk()
+                    },
+                    { data: 'details' },
+
+                    { data: 'corporation_name' },
+                    { data: 'alliance_name' },
+                    { data: 'is_jackpot_str' },
+                ],
+                lengthMenu: DEFAULT_LENGTH_MENU,
+                pageLength: DEFAULT_PAGE_LENGTH,
+                order: [ [0, "asc"] ],
+                columnDefs: [
+                    { "orderable": false, "targets": [ 5 ] },
+                    { "visible": false, "targets": [ 6, 7, 8 ] },
+                ],
+                filterDropDown: {
+                    columns: [
+                        {
+                            idx: 7,
+                            title: "Alliance"
+                        },
+                        {
+                            idx: 6,
+                            title: "Corporation"
+                        },
+                        {
+                            idx: 8,
+                            title: "Jackpot?"
+                        }
+                    ],
+                    bootstrap: true,
+                    autoSize: false
+                },
+                createdRow: function( row, data, dataIndex )
+                {
+                    if (!data['is_ready'])
+                    {
+                        $(row).addClass('info');
+                    }
+                }
+            };
+
+            /* upcoming extractions*/
+            def.ajax.url = '{% url "moonmining:extractions_data" ExtractionsCategory.UPCOMING %}'
+            var table = $('#table_{{ ExtractionsCategory.UPCOMING }}').DataTable(def);
+
+            /* past extractions */
+            def.ajax.url = '{% url "moonmining:extractions_data" ExtractionsCategory.PAST %}'
+            var table = $('#table_{{ ExtractionsCategory.PAST }}').DataTable(def);
+
+            $('#myTabs a[href="#tab_{{ ExtractionsCategory.UPCOMING }}"]').tab('show')
+        });
+
+    </script>
+{% endblock %}
+
+{% block extra_css %}
+    {% include 'bundles/datatables-css.html' %}
+    <link href="{% static 'moonmining/css/global.css' %}" type="text/css" rel="stylesheet">
+    <link href="{% static 'moonmining/css/extractions.css' %}" type="text/css" rel="stylesheet">
+{% endblock %}
+
+{% block extra_script %}
+{% endblock %}
