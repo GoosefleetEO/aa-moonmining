@@ -311,7 +311,7 @@ class TestViewsAreWorking(TestCase):
         request = self.factory.get(reverse("moonmining:index"))
         request.user = self.user
         # when
-        response = views.extractions(request)
+        response = views.index(request)
         # then
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse("moonmining:moons"))

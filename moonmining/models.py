@@ -20,7 +20,7 @@ from app_utils.views import bootstrap_icon_plus_name_html, bootstrap_label_html
 
 from . import __title__, constants
 from .app_settings import MOONMINING_REPROCESSING_YIELD, MOONMINING_VOLUME_PER_MONTH
-from .managers import EveOreTypeManger, MoonManager
+from .managers import EveOreTypeManger, ExtractionManager, MoonManager
 from .providers import esi
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
@@ -608,6 +608,8 @@ class Extraction(models.Model):
         related_name="+",
         help_text="Eve character who started this extraction",
     )
+
+    objects = ExtractionManager()
 
     class Meta:
         constraints = [

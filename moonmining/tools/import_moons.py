@@ -60,7 +60,6 @@ django.setup()
 
 """MAIN SCRIPT STARTS HERE"""
 import csv
-import datetime as dt
 import logging
 from concurrent import futures
 from functools import partial
@@ -70,7 +69,7 @@ from bravado.exception import HTTPBadGateway, HTTPGatewayTimeout, HTTPServiceUna
 
 from django.db import transaction
 from eveuniverse.core.esitools import is_esi_online
-from eveuniverse.models import EveMoon, EveType
+from eveuniverse.models import EveMoon
 
 from moonmining.models import EveOreType, Moon, MoonProduct
 
@@ -125,11 +124,6 @@ def fetch_missing_eve_objects(EveModel: type, ids_incoming: set, force_refetch: 
             "Failed to fetch all %s objects. Please try again", EveModel.__name__
         )
         exit(1)
-
-
-def thread_update_moons(moon_id):
-    moon = Moon.objects.get(pk=moon_id)
-    moon.update_calculated_properties()
 
 
 def main():
@@ -211,9 +205,9 @@ def main():
         logger.info(
             "Updating calculated properties for %d moons...", len(updated_moon_ids)
         )
-        with futures.ThreadPoolExecutor(max_workers=MAX_THREAD_WORKERS) as executor:
-            executor.map(thread_update_moons, list(updated_moon_ids))
-        logger.info("DONE")
+        Moon.objects.filter(pk__in=updated_moon_ids).update_calculated_properties()
+
+    logger.info("DONE")
 
 
 main()

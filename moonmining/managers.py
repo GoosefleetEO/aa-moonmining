@@ -1,4 +1,5 @@
 from collections import namedtuple
+from concurrent import futures
 from typing import Tuple
 
 from django.contrib.auth.models import User
@@ -13,6 +14,7 @@ from app_utils.logging import LoggerAddTag
 
 from . import __title__, constants
 
+MAX_THREAD_WORKERS = 20
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
 SurveyProcessResult = namedtuple(
@@ -32,7 +34,36 @@ class EveOreTypeManger(EveTypeManager):
         )
 
 
+class UpdateCalculatedPropertiesMixin:
+    """Mixin for updating all calculated properties of a query set"""
+
+    def update_calculated_properties(self):
+        obj_pks = self.values_list("pk", flat=True)
+        logger.info(
+            "Updating calculated properties for %d %ss ...",
+            len(obj_pks),
+            self.model.__name__.lower(),
+        )
+        with futures.ThreadPoolExecutor(max_workers=MAX_THREAD_WORKERS) as executor:
+            executor.map(self._thread_update_obj, list(obj_pks))
+        logger.info("Completed calculating properties.")
+
+    def _thread_update_obj(self, pk):
+        logger.info(
+            "Updating calculated properties for %s %d...", self.model.__name__, pk
+        )
+        obj = self.get(pk=pk)
+        obj.update_calculated_properties()
+
+
+class MoonQuerySet(models.QuerySet, UpdateCalculatedPropertiesMixin):
+    pass
+
+
 class MoonManager(models.Manager):
+    def get_queryset(self) -> models.QuerySet:
+        return MoonQuerySet(self.model, using=self._db)
+
     def update_moons_from_survey(self, scans: str, user: User = None) -> bool:
         """Update moons from survey input.
 
@@ -183,3 +214,12 @@ class MoonManager(models.Manager):
             level="success" if success else "danger",
         )
         return success
+
+
+class ExtractionQuerySet(models.QuerySet, UpdateCalculatedPropertiesMixin):
+    pass
+
+
+class ExtractionManager(models.Manager):
+    def get_queryset(self) -> models.QuerySet:
+        return ExtractionQuerySet(self.model, using=self._db)
