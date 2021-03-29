@@ -63,7 +63,7 @@ class OwnerAdmin(admin.ModelAdmin):
 
     def update_owner(self, request, queryset):
         for obj in queryset:
-            tasks.update_owner.delay(corporation_pk=obj.pk)
+            tasks.update_owner.delay(obj.pk)
             text = f"Started updating owner: {obj}. "
             self.message_user(request, text)
 

@@ -23,44 +23,44 @@ def process_survey_input(scans, user_pk=None) -> bool:
 @shared_task
 def run_regular_updates():
     """Run main tasks for regular updates."""
-    corporations_to_update = Owner.objects.filter(is_enabled=True)
-    corporation_pks = corporations_to_update.values_list("pk", flat=True)
-    logger.info("Updating %d owners...", len(corporation_pks))
-    corporations_to_update.update(last_update_ok=None, last_update_at=now())
-    for corporation_pk in corporation_pks:
-        update_owner.delay(corporation_pk)
+    owners_to_update = Owner.objects.filter(is_enabled=True)
+    owner_pks = owners_to_update.values_list("pk", flat=True)
+    logger.info("Updating %d owners...", len(owner_pks))
+    owners_to_update.update(last_update_ok=None, last_update_at=now())
+    for owner_pk in owner_pks:
+        update_owner.delay(owner_pk)
 
 
 @shared_task
-def update_owner(corporation_pk):
+def update_owner(owner_pk):
     """Update refineries and extractions for given owner."""
     chain(
-        update_refineries_from_esi.si(corporation_pk),
-        update_extractions_from_esi.si(corporation_pk),
-        mark_successful_update.si(corporation_pk),
+        update_refineries_from_esi.si(owner_pk),
+        update_extractions_from_esi.si(owner_pk),
+        mark_successful_update.si(owner_pk),
     ).delay()
 
 
 @shared_task
-def update_refineries_from_esi(corporation_pk):
+def update_refineries_from_esi(owner_pk):
     """Update refineries for a owner from ESI."""
-    mining_corp = Owner.objects.get(pk=corporation_pk)
-    mining_corp.update_refineries_from_esi()
+    owner = Owner.objects.get(pk=owner_pk)
+    owner.update_refineries_from_esi()
 
 
 @shared_task
-def update_extractions_from_esi(corporation_pk):
+def update_extractions_from_esi(owner_pk):
     """Update extractions for a owner from ESI."""
-    mining_corp = Owner.objects.get(pk=corporation_pk)
-    mining_corp.update_extractions_from_esi()
+    owner = Owner.objects.get(pk=owner_pk)
+    owner.update_extractions_from_esi()
 
 
 @shared_task
-def mark_successful_update(corporation_pk):
+def mark_successful_update(owner_pk):
     """Mark a successful update for this corporation."""
-    mining_corp = Owner.objects.get(pk=corporation_pk)
-    mining_corp.last_update_ok = True
-    mining_corp.save()
+    owner = Owner.objects.get(pk=owner_pk)
+    owner.last_update_ok = True
+    owner.save()
 
 
 @shared_task

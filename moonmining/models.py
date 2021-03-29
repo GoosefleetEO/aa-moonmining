@@ -377,6 +377,7 @@ class Owner(models.Model):
 
     def update_refineries_from_esi(self):
         """Update all refineries from ESI."""
+        logger.info("%s: Updating refineries...", self)
         token = self.fetch_token()
         refineries = self._fetch_refineries_from_esi(token)
         for structure_id, _ in refineries.items():
@@ -426,6 +427,7 @@ class Owner(models.Model):
 
     def update_extractions_from_esi(self):
         """Update all extractions from ESI."""
+        logger.info("%s: Updating extractions...", self)
         notifications = self._fetch_moon_notifications_from_esi()
         if not notifications:
             logger.info("%s: No moon notifications received", self)
