@@ -32,7 +32,7 @@ from .app_settings import (
 )
 from .forms import MoonScanForm
 from .helpers import HttpResponseUnauthorized
-from .models import Extraction, MiningCorporation, Moon, MoonProduct, OreRarityClass
+from .models import Extraction, Moon, MoonProduct, OreRarityClass, Owner
 
 # from django.views.decorators.cache import cache_page
 
@@ -94,9 +94,9 @@ def extractions_data(request, category):
     extractions = Extraction.objects.select_related(
         "refinery",
         "refinery__moon",
-        "refinery__corporation",
-        "refinery__corporation__eve_corporation",
-        "refinery__corporation__eve_corporation__alliance",
+        "refinery__owner",
+        "refinery__owner__corporation",
+        "refinery__owner__corporation__alliance",
     ).annotate(volume=Sum("products__volume"))
     if category == ExtractionsCategory.PAST:
         extractions = extractions.filter(ready_time__lt=cutover_dt)
@@ -105,9 +105,9 @@ def extractions_data(request, category):
     else:
         extractions = Extraction.objects.none()
     for extraction in extractions:
-        corporation_html = extraction.refinery.corporation.name_html
-        corporation_name = extraction.refinery.corporation.name
-        alliance_name = extraction.refinery.corporation.alliance_name
+        corporation_html = extraction.refinery.owner.name_html
+        corporation_name = extraction.refinery.owner.name
+        alliance_name = extraction.refinery.owner.alliance_name
         data.append(
             {
                 "id": extraction.pk,
@@ -262,9 +262,9 @@ def moons_data(request, category):
         "eve_moon__eve_planet__eve_solar_system",
         "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
         "refinery",
-        "refinery__corporation",
-        "refinery__corporation__eve_corporation",
-        "refinery__corporation__eve_corporation__alliance",
+        "refinery__owner",
+        "refinery__owner__corporation",
+        "refinery__owner__corporation__alliance",
     )
     if category == MoonsCategory.ALL and request.user.has_perm(
         "moonmining.view_all_moons"
@@ -288,9 +288,9 @@ def moons_data(request, category):
         )
         has_refinery = hasattr(moon, "refinery")
         if has_refinery:
-            corporation_html = moon.refinery.corporation.name_html
-            corporation_name = moon.refinery.corporation.name
-            alliance_name = moon.refinery.corporation.alliance_name
+            corporation_html = moon.refinery.owner.name_html
+            corporation_name = moon.refinery.owner.name
+            alliance_name = moon.refinery.owner.alliance_name
             has_details_access = request.user.has_perm(
                 "moonmining.extractions_access"
             ) or request.user.has_perm("moonmining.view_all_moons")
@@ -324,10 +324,10 @@ def moons_data(request, category):
     return JsonResponse(data, safe=False)
 
 
-@permission_required(["moonmining.add_corporation", "moonmining.basic_access"])
-@token_required(scopes=MiningCorporation.esi_scopes())
+@permission_required(["moonmining.add_owner", "moonmining.basic_access"])
+@token_required(scopes=Owner.esi_scopes())
 @login_required
-def add_corporation(request, token):
+def add_owner(request, token):
     try:
         character_ownership = request.user.character_ownerships.select_related(
             "character"
@@ -335,23 +335,21 @@ def add_corporation(request, token):
     except CharacterOwnership.DoesNotExist:
         return HttpResponseNotFound()
     try:
-        eve_corporation = EveCorporationInfo.objects.get(
+        corporation = EveCorporationInfo.objects.get(
             corporation_id=character_ownership.character.corporation_id
         )
     except EveCorporationInfo.DoesNotExist:
-        eve_corporation = EveCorporationInfo.objects.create_corporation(
+        corporation = EveCorporationInfo.objects.create_corporation(
             corp_id=character_ownership.character.corporation_id
         )
-        eve_corporation.save()
+        corporation.save()
 
-    corporation, _ = MiningCorporation.objects.update_or_create(
-        eve_corporation=eve_corporation,
+    owner, _ = Owner.objects.update_or_create(
+        corporation=corporation,
         defaults={"character_ownership": character_ownership},
     )
-    tasks.update_mining_corporation.delay(corporation.pk)
-    messages_plus.success(
-        request, f"Update of refineres started for {eve_corporation}."
-    )
+    tasks.update_owner.delay(owner.pk)
+    messages_plus.success(request, f"Update of refineres started for {owner}.")
     return redirect("moonmining:extractions")
 
 
@@ -374,13 +372,13 @@ def report_owned_value_data(request):
         "eve_moon__eve_planet__eve_solar_system",
         "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
         "refinery",
-        "refinery__corporation",
-        "refinery__corporation__eve_corporation",
-        "refinery__corporation__eve_corporation__alliance",
+        "refinery__owner",
+        "refinery__owner__corporation",
+        "refinery__owner__corporation__alliance",
     ).filter(refinery__isnull=False)
     corporation_moons = defaultdict(lambda: {"moons": list(), "total": 0})
     for moon in moon_query.order_by("eve_moon__name"):
-        corporation_name = moon.refinery.corporation.name
+        corporation_name = moon.refinery.owner.name
         corporation_moons[corporation_name]["moons"].append(moon)
         corporation_moons[corporation_name]["total"] += default_if_none(moon.value, 0)
 

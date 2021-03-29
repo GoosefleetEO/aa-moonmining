@@ -14,11 +14,11 @@ from ..models import (
     EveOreType,
     Extraction,
     ExtractionProduct,
-    MiningCorporation,
     Moon,
     MoonProduct,
     OreQualityClass,
     OreRarityClass,
+    Owner,
     Refinery,
 )
 from . import helpers
@@ -144,8 +144,8 @@ class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
         load_eveuniverse()
         load_allianceauth()
         _, character_ownership = helpers.create_default_user_1001()
-        cls.mining_corporation = MiningCorporation.objects.create(
-            eve_corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+        cls.owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
 
@@ -157,7 +157,7 @@ class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
         mock_esi.client = esi_client_stub
         my_eve_moon = EveMoon.objects.get(id=40161708)
         # when
-        self.mining_corporation.update_refineries_from_esi()
+        self.owner.update_refineries_from_esi()
         # then
         refinery = Refinery.objects.get(id=1000000000001)
         self.assertEqual(refinery.name, "Auga - Paradise Alpha")
@@ -178,7 +178,7 @@ class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
             OSError
         )
         # when
-        self.mining_corporation.update_refineries_from_esi()
+        self.owner.update_refineries_from_esi()
         # then
         self.assertEqual(
             mock_esi.client.Universe.get_universe_structures_structure_id.call_count, 2
@@ -192,7 +192,7 @@ class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
         mock_esi.client = esi_client_stub
         mock_nearest_celestial.side_effect = OSError
         # when
-        self.mining_corporation.update_refineries_from_esi()
+        self.owner.update_refineries_from_esi()
         # then
         refinery = Refinery.objects.get(id=1000000000001)
         self.assertIsNone(refinery.moon)
@@ -207,14 +207,14 @@ class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
         Refinery.objects.create(
             id=1990000000001,
             moon=None,
-            corporation=self.mining_corporation,
+            owner=self.owner,
             eve_type=helpers.eve_type_athanor(),
         )
         # when
-        self.mining_corporation.update_refineries_from_esi()
+        self.owner.update_refineries_from_esi()
         # then
         self.assertSetEqual(
-            set(self.mining_corporation.refineries.values_list("id", flat=True)),
+            set(self.owner.refineries.values_list("id", flat=True)),
             {1000000000001, 1000000000002},
         )
 
@@ -233,18 +233,18 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
         # given
         mock_esi.client = esi_client_stub
         _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
-        mining_corporation = MiningCorporation.objects.create(
-            eve_corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
         refinery = Refinery.objects.create(
             id=1000000000001,
             moon=self.moon,
-            corporation=mining_corporation,
+            owner=owner,
             eve_type=helpers.eve_type_athanor(),
         )
         # when
-        mining_corporation.update_extractions_from_esi()
+        owner.update_extractions_from_esi()
         # then
         self.assertEqual(refinery.extractions.count(), 1)
         extraction = refinery.extractions.first()
@@ -271,18 +271,18 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
         # given
         mock_esi.client = esi_client_stub
         _, character_ownership = helpers.create_default_user_from_evecharacter(1002)
-        mining_corporation = MiningCorporation.objects.create(
-            eve_corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
         refinery = Refinery.objects.create(
             id=1000000000001,
             moon=self.moon,
-            corporation=mining_corporation,
+            owner=owner,
             eve_type=helpers.eve_type_athanor(),
         )
         # when
-        mining_corporation.update_extractions_from_esi()
+        owner.update_extractions_from_esi()
         # then
         self.assertEqual(refinery.extractions.count(), 0)
 
@@ -290,14 +290,14 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
         # given
         mock_esi.client = esi_client_stub
         _, character_ownership = helpers.create_default_user_from_evecharacter(1004)
-        mining_corporation = MiningCorporation.objects.create(
-            eve_corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
         refinery = Refinery.objects.create(
             id=1000000000001,
             moon=self.moon,
-            corporation=mining_corporation,
+            owner=owner,
             eve_type=helpers.eve_type_athanor(),
         )
         Extraction.objects.create(
@@ -306,7 +306,7 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
             auto_time=dt.datetime(2019, 11, 20, 3, 1, 0, 105915, tzinfo=pytz.UTC),
         )
         # when
-        mining_corporation.update_extractions_from_esi()
+        owner.update_extractions_from_esi()
         # then
         self.assertEqual(refinery.extractions.count(), 2)
 
@@ -316,18 +316,18 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
         # given
         mock_esi.client = esi_client_stub
         _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
-        mining_corporation = MiningCorporation.objects.create(
-            eve_corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
         Refinery.objects.create(
             id=1000000000001,
             moon=None,
-            corporation=mining_corporation,
+            owner=owner,
             eve_type=helpers.eve_type_athanor(),
         )
         # when
-        mining_corporation.update_extractions_from_esi()
+        owner.update_extractions_from_esi()
         # then
         obj = Refinery.objects.get(id=1000000000001)
         self.assertEqual(obj.moon, self.moon)
@@ -344,7 +344,7 @@ class TestProcessSurveyInput(NoSocketsTestCase):
             permissions=[
                 "moonmining.basic_access",
                 "moonmining.extractions_access",
-                "moonmining.add_corporation",
+                "moonmining.add_owner",
             ],
             scopes=[
                 "esi-industry.read_corporation_mining.v1",
@@ -475,12 +475,12 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
         super().setUpClass()
         load_eveuniverse()
         load_allianceauth()
-        cls.moon = helpers.create_moon_40161708()
-        cls.corporation = MiningCorporation.objects.create(
-            eve_corporation=EveCorporationInfo.objects.get(corporation_id=2001)
+        moon = helpers.create_moon_40161708()
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001)
         )
         cls.refinery = Refinery.objects.create(
-            id=40161708, moon=cls.moon, corporation=cls.corporation, eve_type_id=35835
+            id=40161708, moon=moon, owner=owner, eve_type_id=35835
         )
         cls.ore_quality_regular = EveOreType.objects.get(id=45490)
         cls.ore_quality_improved = EveOreType.objects.get(id=46280)

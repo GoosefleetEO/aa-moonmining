@@ -127,7 +127,7 @@ class General(models.Model):
             ("reports_access", "Can access reports"),
             ("view_all_moons", "Can view all known moons"),
             ("upload_moon_scan", "Can upload moon scans"),
-            ("add_corporation", "Can add mining corporations"),
+            ("add_refinery_owner", "Can add refinery owner"),
         )
 
 
@@ -308,10 +308,10 @@ class MoonProduct(models.Model):
         )
 
 
-class MiningCorporation(models.Model):
-    """An EVE Online corporation running mining operations."""
+class Owner(models.Model):
+    """A EVE Online corporation owning refineries."""
 
-    eve_corporation = models.OneToOneField(
+    corporation = models.OneToOneField(
         EveCorporationInfo,
         on_delete=models.CASCADE,
         primary_key=True,
@@ -342,24 +342,22 @@ class MiningCorporation(models.Model):
     @property
     def name(self) -> str:
         alliance_ticker_str = (
-            f" [{self.eve_corporation.alliance.alliance_ticker}]"
-            if self.eve_corporation.alliance
+            f" [{self.corporation.alliance.alliance_ticker}]"
+            if self.corporation.alliance
             else ""
         )
-        return f"{self.eve_corporation}{alliance_ticker_str}"
+        return f"{self.corporation}{alliance_ticker_str}"
 
     @property
     def alliance_name(self) -> str:
         return (
-            self.eve_corporation.alliance.alliance_name
-            if self.eve_corporation.alliance
-            else ""
+            self.corporation.alliance.alliance_name if self.corporation.alliance else ""
         )
 
     @property
     def name_html(self):
         return bootstrap_icon_plus_name_html(
-            self.eve_corporation.logo_url(size=constants.IconSize.SMALL),
+            self.corporation.logo_url(size=constants.IconSize.SMALL),
             self.name,
             size=constants.IconSize.SMALL,
         )
@@ -392,7 +390,7 @@ class MiningCorporation(models.Model):
     def _fetch_refineries_from_esi(self, token: Token) -> dict:
         logger.info("%s: Fetching refineries from ESI...", self)
         structures = esi.client.Corporation.get_corporations_corporation_id_structures(
-            corporation_id=self.eve_corporation.corporation_id,
+            corporation_id=self.corporation.corporation_id,
             token=token.valid_access_token(),
         ).result()
         refineries = dict()
@@ -419,7 +417,7 @@ class MiningCorporation(models.Model):
             defaults={
                 "name": structure_info["name"],
                 "eve_type": EveType.objects.get(id=structure_info["type_id"]),
-                "corporation": self,
+                "owner": self,
             },
         )
         if not refinery.moon:
@@ -540,11 +538,11 @@ class Refinery(models.Model):
         related_name="refinery",
         help_text="The moon this refinery is anchored at (if any)",
     )
-    corporation = models.ForeignKey(
-        MiningCorporation,
+    owner = models.ForeignKey(
+        Owner,
         on_delete=models.CASCADE,
         related_name="refineries",
-        help_text="Mining corporation that owns this refinery",
+        help_text="Corporation that owns this refinery",
     )
     eve_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
 

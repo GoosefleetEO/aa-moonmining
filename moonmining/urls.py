@@ -6,7 +6,7 @@ app_name = "moonmining"
 
 urlpatterns = [
     path("", views.index, name="index"),
-    path("add_corporation", views.add_corporation, name="add_corporation"),
+    path("add_owner", views.add_owner, name="add_owner"),
     path("upload_survey", views.upload_survey, name="upload_survey"),
     path("extractions", views.extractions, name="extractions"),
     path(

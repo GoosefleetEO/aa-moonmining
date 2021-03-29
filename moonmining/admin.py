@@ -1,18 +1,14 @@
 from django.contrib import admin
 
 from . import tasks
-from .models import Extraction, MiningCorporation, Moon, Refinery
+from .models import Extraction, Moon, Owner, Refinery
 
 
 @admin.register(Extraction)
 class ExtractionAdmin(admin.ModelAdmin):
-    list_display = ("ready_time", "_corporation", "refinery")
+    list_display = ("ready_time", "_owner", "refinery")
     ordering = ("-ready_time",)
-    list_filter = (
-        "ready_time",
-        "refinery__corporation",
-        "refinery",
-    )
+    list_filter = ("ready_time", "refinery__owner", "refinery")
     search_fields = ("refinery__moon__eve_moon__name",)
 
     actions = ["update_calculated_properties"]
@@ -31,8 +27,8 @@ class ExtractionAdmin(admin.ModelAdmin):
         "Update calculated properties for selected extrations."
     )
 
-    def _corporation(self, obj):
-        return obj.refinery.corporation
+    def _owner(self, obj):
+        return obj.refinery.owner
 
     def has_change_permission(self, request, obj=None):
         return False
@@ -41,8 +37,8 @@ class ExtractionAdmin(admin.ModelAdmin):
         return False
 
 
-@admin.register(MiningCorporation)
-class MiningCorporationAdmin(admin.ModelAdmin):
+@admin.register(Owner)
+class OwnerAdmin(admin.ModelAdmin):
     list_display = (
         "__str__",
         "_alliance",
@@ -51,29 +47,27 @@ class MiningCorporationAdmin(admin.ModelAdmin):
         "last_update_at",
         "last_update_ok",
     )
-    ordering = ["eve_corporation"]
+    ordering = ["corporation"]
     search_fields = ("refinery__moon__eve_moon__name",)
     list_filter = (
         "is_enabled",
         "last_update_ok",
-        "eve_corporation__alliance",
+        "corporation__alliance",
     )
-    actions = ["update_mining_corporation"]
+    actions = ["update_owner"]
 
     def _alliance(self, obj):
-        return obj.eve_corporation.alliance
+        return obj.corporation.alliance
 
-    _alliance.admin_order_field = "eve_corporation__alliance__alliance_name"
+    _alliance.admin_order_field = "corporation__alliance__alliance_name"
 
-    def update_mining_corporation(self, request, queryset):
+    def update_owner(self, request, queryset):
         for obj in queryset:
-            tasks.update_mining_corporation.delay(corporation_pk=obj.pk)
-            text = f"Started updating mining corporation: {obj}. "
+            tasks.update_owner.delay(corporation_pk=obj.pk)
+            text = f"Started updating owner: {obj}. "
             self.message_user(request, text)
 
-    update_mining_corporation.short_description = (
-        "Update refineres from ESI for selected mining corporations"
-    )
+    update_owner.short_description = "Update refineres from ESI for selected owners"
 
     def has_change_permission(self, request, obj=None):
         return False
@@ -84,12 +78,9 @@ class MiningCorporationAdmin(admin.ModelAdmin):
 
 @admin.register(Refinery)
 class RefineryAdmin(admin.ModelAdmin):
-    list_display = ("name", "moon", "corporation", "eve_type")
+    list_display = ("name", "moon", "owner", "eve_type")
     ordering = ["name"]
-    list_filter = (
-        ("eve_type", admin.RelatedOnlyFieldListFilter),
-        "corporation__eve_corporation",
-    )
+    list_filter = (("eve_type", admin.RelatedOnlyFieldListFilter), "owner__corporation")
 
     def has_change_permission(self, request, obj=None):
         return False

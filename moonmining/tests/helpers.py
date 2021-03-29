@@ -8,14 +8,7 @@ from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from app_utils.testing import create_user_from_evecharacter
 
 from ..app_settings import MOONMINING_VOLUME_PER_MONTH
-from ..models import (
-    Extraction,
-    ExtractionProduct,
-    MiningCorporation,
-    Moon,
-    MoonProduct,
-    Refinery,
-)
+from ..models import Extraction, ExtractionProduct, Moon, MoonProduct, Owner, Refinery
 
 
 def create_moon_40161708() -> EveMoon:
@@ -36,27 +29,27 @@ def create_moon_40161708() -> EveMoon:
     return moon
 
 
-def create_corporation_from_character_ownership(
+def create_owner_from_character_ownership(
     character_ownership,
-) -> MiningCorporation:
-    corporation, _ = MiningCorporation.objects.get_or_create(
-        eve_corporation=EveCorporationInfo.objects.get(
+) -> Owner:
+    owner, _ = Owner.objects.get_or_create(
+        corporation=EveCorporationInfo.objects.get(
             corporation_id=character_ownership.character.corporation_id
         ),
         character_ownership=character_ownership,
     )
-    return corporation
+    return owner
 
 
-def add_refinery(moon: Moon, corporation: MiningCorporation = None) -> Refinery:
-    if not corporation:
-        corporation, _ = MiningCorporation.objects.get_or_create(
-            eve_corporation=EveCorporationInfo.objects.get(corporation_id=2001)
+def add_refinery(moon: Moon, owner: Owner = None) -> Refinery:
+    if not owner:
+        owner, _ = Owner.objects.get_or_create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001)
         )
     refinery = Refinery.objects.create(
         id=moon.eve_moon_id,
         moon=moon,
-        corporation=corporation,
+        owner=owner,
         eve_type=EveType.objects.get(id=35835),
     )
     extraction = Extraction.objects.create(
@@ -80,9 +73,9 @@ def create_default_user_from_evecharacter(character_id):
             "moonmining.basic_access",
             "moonmining.upload_moon_scan",
             "moonmining.extractions_access",
-            "moonmining.add_corporation",
+            "moonmining.add_owner",
         ],
-        scopes=MiningCorporation.esi_scopes(),
+        scopes=Owner.esi_scopes(),
     )
 
 

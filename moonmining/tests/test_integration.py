@@ -12,7 +12,7 @@ from eveuniverse.models import EveMarketPrice, EveType
 from app_utils.testing import create_user_from_evecharacter
 
 from .. import tasks
-from ..models import MiningCorporation, Refinery
+from ..models import Owner, Refinery
 from . import helpers
 from .testdata.esi_client_stub import esi_client_stub
 from .testdata.load_allianceauth import load_allianceauth
@@ -65,7 +65,7 @@ class TestUpdateTasks(TestCase):
         # given
         mock_esi.client = esi_client_stub
         moon = helpers.create_moon_40161708()
-        corporation_2001 = helpers.create_corporation_from_character_ownership(
+        corporation_2001 = helpers.create_owner_from_character_ownership(
             self.character_ownership
         )
         # when
@@ -87,7 +87,7 @@ class TestUpdateTasks(TestCase):
         mock_esi.client.Corporation.get_corporations_corporation_id_structures.side_effect = (
             OSError
         )
-        corporation_2001 = helpers.create_corporation_from_character_ownership(
+        corporation_2001 = helpers.create_owner_from_character_ownership(
             self.character_ownership
         )
         # when
@@ -106,7 +106,7 @@ class TestUpdateTasks(TestCase):
         # given
         mock_esi.client = esi_client_stub
         helpers.create_moon_40161708()
-        corporation_2001 = helpers.create_corporation_from_character_ownership(
+        corporation_2001 = helpers.create_owner_from_character_ownership(
             self.character_ownership
         )
         _, character_ownership_1003 = create_user_from_evecharacter(
@@ -114,11 +114,11 @@ class TestUpdateTasks(TestCase):
             permissions=[
                 "moonmining.basic_access",
                 "moonmining.extractions_access",
-                "moonmining.add_corporation",
+                "moonmining.add_owner",
             ],
-            scopes=MiningCorporation.esi_scopes(),
+            scopes=Owner.esi_scopes(),
         )
-        corporation_2002 = helpers.create_corporation_from_character_ownership(
+        corporation_2002 = helpers.create_owner_from_character_ownership(
             character_ownership_1003
         )
         my_date = dt.datetime(2020, 1, 11, 12, 30, tzinfo=pytz.UTC)
@@ -169,9 +169,9 @@ class TestProcessSurveyInput(TestCase):
             permissions=[
                 "moonmining.basic_access",
                 "moonmining.extractions_access",
-                "moonmining.add_corporation",
+                "moonmining.add_owner",
             ],
-            scopes=MiningCorporation.esi_scopes(),
+            scopes=Owner.esi_scopes(),
         )
         cls.survey_data = fetch_survey_data()
 

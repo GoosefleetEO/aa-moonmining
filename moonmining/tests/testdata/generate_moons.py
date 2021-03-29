@@ -38,7 +38,7 @@ from pathlib import Path
 
 from django.contrib.auth.models import User
 from django.utils.timezone import now
-from eveuniverse.models import EveEntity, EveMoon, EveType
+from eveuniverse.models import EveEntity, EveMarketPrice, EveMoon, EveType
 
 from allianceauth.eveonline.models import EveCorporationInfo
 
@@ -47,14 +47,14 @@ from moonmining.models import (
     EveOreType,
     Extraction,
     ExtractionProduct,
-    MiningCorporation,
     Moon,
     MoonProduct,
+    Owner,
     Refinery,
 )
 
-MAX_MOONS = 5
-MAX_REFINERIES = 2
+MAX_MOONS = 10
+MAX_REFINERIES = 3
 DUMMY_CORPORATION_ID = 1000127  # Guristas
 DUMMY_CHARACTER_ID = 3019491  # Guristas CEO
 
@@ -83,6 +83,7 @@ def generate_extraction(refinery, ready_time, started_by):
             ore_type=product.ore_type,
             volume=MOONMINING_VOLUME_PER_MONTH * product.amount,
         )
+    return extraction
 
 
 data_path = Path(__file__).parent / "generate_moons.json"
@@ -93,17 +94,18 @@ ore_type_ids = [int(obj["type_id"]) for obj in data["ore_type_ids"]]
 
 print(f"Generating {MAX_MOONS} moons...")
 random_user = User.objects.order_by("?").first()
+my_moons = list()
 for moon_id in random.choices(moon_ids, k=MAX_MOONS):
     print(f"Creating moon {moon_id}")
     eve_moon, _ = EveMoon.objects.get_or_create_esi(id=moon_id)
     moon, created = Moon.objects.get_or_create(
         eve_moon=eve_moon,
         defaults={
-            "value": random.randint(100000000, 10000000000),
             "products_updated_at": now(),
             "products_updated_by": random_user,
         },
     )
+    my_moons.append(moon)
     if created:
         percentages = random_percentages(4)
         for ore_type_id in random.choices(ore_type_ids, k=4):
@@ -111,45 +113,54 @@ for moon_id in random.choices(moon_ids, k=MAX_MOONS):
             MoonProduct.objects.create(
                 moon=moon, ore_type=ore_type, amount=percentages.pop() / 100
             )
+        moon.update_calculated_properties()
 print(f"Generating {MAX_REFINERIES} refineries...")
 try:
-    eve_corporation = EveCorporationInfo.objects.get(
-        corporation_id=DUMMY_CORPORATION_ID
-    )
+    corporation = EveCorporationInfo.objects.get(corporation_id=DUMMY_CORPORATION_ID)
 except EveCorporationInfo.DoesNotExist:
-    eve_corporation = EveCorporationInfo.objects.create_corporation(
+    corporation = EveCorporationInfo.objects.create_corporation(
         corp_id=DUMMY_CORPORATION_ID
     )
-corporation, _ = MiningCorporation.objects.get_or_create(
-    eve_corporation=eve_corporation
-)
-Refinery.objects.filter(corporation=corporation).delete()
+owner, _ = Owner.objects.get_or_create(corporation=corporation)
+Refinery.objects.filter(owner=owner).delete()
 eve_type, _ = EveType.objects.get_or_create_esi(id=35835)
 character, _ = EveEntity.objects.get_or_create_esi(id=DUMMY_CHARACTER_ID)
-for moon in Moon.objects.order_by("?")[:MAX_REFINERIES]:
+my_extractions = list()
+for moon in random.choices(my_moons, k=MAX_REFINERIES):
     if not hasattr(moon, "refinery"):
         print(f"Creating refinery for moon: {moon}")
         refinery = Refinery.objects.create(
             id=moon.eve_moon.id,
             name=f"Test Refinery #{moon.eve_moon.id}",
             moon=moon,
-            corporation=corporation,
+            owner=owner,
             eve_type=eve_type,
         )
-        generate_extraction(
-            refinery=refinery,
-            ready_time=now() + dt.timedelta(days=random.randint(7, 30)),
-            started_by=character,
+        my_extractions.append(
+            generate_extraction(
+                refinery=refinery,
+                ready_time=now() + dt.timedelta(days=random.randint(7, 30)),
+                started_by=character,
+            )
         )
-        generate_extraction(
-            refinery=refinery,
-            ready_time=now() + dt.timedelta(days=-random.randint(7, 30)),
-            started_by=character,
+        my_extractions.append(
+            generate_extraction(
+                refinery=refinery,
+                ready_time=now() + dt.timedelta(days=-random.randint(7, 30)),
+                started_by=character,
+            )
         )
-        generate_extraction(
-            refinery=refinery,
-            ready_time=now() + dt.timedelta(days=-random.randint(7, 30)),
-            started_by=character,
+        my_extractions.append(
+            generate_extraction(
+                refinery=refinery,
+                ready_time=now() + dt.timedelta(days=-random.randint(7, 30)),
+                started_by=character,
+            )
         )
-
+print(f"Updating calculated properties...")
+EveMarketPrice.objects.update_from_esi()
+for moon in my_moons:
+    moon.update_calculated_properties()
+for extraction in my_extractions:
+    extraction.update_calculated_properties()
 print("DONE")

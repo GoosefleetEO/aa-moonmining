@@ -14,7 +14,7 @@ from allianceauth.eveonline.models import EveCorporationInfo
 from app_utils.testing import create_user_from_evecharacter, json_response_to_dict
 
 from .. import views
-from ..models import Extraction, MiningCorporation, Moon, Refinery
+from ..models import Extraction, Moon, Owner, Refinery
 from . import helpers
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
@@ -30,75 +30,71 @@ class TestAddMinningCorporation(TestCase):
         load_eveuniverse()
         cls.factory = RequestFactory()
         cls.user, cls.character_ownership = create_user_from_evecharacter(
-            1001, permissions=["moonmining.add_corporation"]
+            1001, permissions=["moonmining.add_owner"]
         )
 
-    @patch(MODULE_PATH + ".tasks.update_mining_corporation")
+    @patch(MODULE_PATH + ".tasks.update_owner")
     @patch(MODULE_PATH + ".messages_plus")
-    def test_should_add_new_corporation(
-        self, mock_messages, mock_update_mining_corporation
-    ):
+    def test_should_add_new_corporation(self, mock_messages, mock_update_owner):
         # given
         token = Mock(spec=Token)
         token.character_id = self.character_ownership.character.character_id
-        request = self.factory.get(reverse("moonmining:add_corporation"))
+        request = self.factory.get(reverse("moonmining:add_owner"))
         request.user = self.user
         request.token = token
         middleware = SessionMiddleware()
         middleware.process_request(request)
-        orig_view = views.add_corporation.__wrapped__.__wrapped__.__wrapped__
+        orig_view = views.add_owner.__wrapped__.__wrapped__.__wrapped__
         # when
         response = orig_view(request, token)
         # then
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse("moonmining:extractions"))
         self.assertTrue(mock_messages.success.called)
-        self.assertTrue(mock_update_mining_corporation.delay.called)
-        obj = MiningCorporation.objects.get(eve_corporation__corporation_id=2001)
+        self.assertTrue(mock_update_owner.delay.called)
+        obj = Owner.objects.get(corporation__corporation_id=2001)
         self.assertEqual(obj.character_ownership, self.character_ownership)
 
-    @patch(MODULE_PATH + ".tasks.update_mining_corporation")
+    @patch(MODULE_PATH + ".tasks.update_owner")
     @patch(MODULE_PATH + ".messages_plus")
-    def test_should_update_existing_corporation(
-        self, mock_messages, mock_update_mining_corporation
-    ):
+    def test_should_update_existing_corporation(self, mock_messages, mock_update_owner):
         # given
-        MiningCorporation.objects.create(
-            eve_corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+        Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=None,
         )
         token = Mock(spec=Token)
         token.character_id = self.character_ownership.character.character_id
-        request = self.factory.get(reverse("moonmining:add_corporation"))
+        request = self.factory.get(reverse("moonmining:add_owner"))
         request.user = self.user
         request.token = token
         middleware = SessionMiddleware()
         middleware.process_request(request)
-        orig_view = views.add_corporation.__wrapped__.__wrapped__.__wrapped__
+        orig_view = views.add_owner.__wrapped__.__wrapped__.__wrapped__
         # when
         response = orig_view(request, token)
         # then
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse("moonmining:extractions"))
         self.assertTrue(mock_messages.success.called)
-        self.assertTrue(mock_update_mining_corporation.delay.called)
-        obj = MiningCorporation.objects.get(eve_corporation__corporation_id=2001)
+        self.assertTrue(mock_update_owner.delay.called)
+        obj = Owner.objects.get(corporation__corporation_id=2001)
         self.assertEqual(obj.character_ownership, self.character_ownership)
 
-    @patch(MODULE_PATH + ".tasks.update_mining_corporation")
+    @patch(MODULE_PATH + ".tasks.update_owner")
     @patch(MODULE_PATH + ".messages_plus")
     def test_should_raise_404_if_character_ownership_not_found(
-        self, mock_messages, mock_update_mining_corporation
+        self, mock_messages, mock_update_owner
     ):
         # given
         token = Mock(spec=Token)
         token.character_id = 1099
-        request = self.factory.get(reverse("moonmining:add_corporation"))
+        request = self.factory.get(reverse("moonmining:add_owner"))
         request.user = self.user
         request.token = token
         middleware = SessionMiddleware()
         middleware.process_request(request)
-        orig_view = views.add_corporation.__wrapped__.__wrapped__.__wrapped__
+        orig_view = views.add_owner.__wrapped__.__wrapped__.__wrapped__
         # when
         response = orig_view(request, token)
         # then
@@ -121,7 +117,7 @@ class TestMoonsData(TestCase):
         user, _ = create_user_from_evecharacter(
             1001,
             permissions=["moonmining.basic_access", "moonmining.view_all_moons"],
-            scopes=MiningCorporation.esi_scopes(),
+            scopes=Owner.esi_scopes(),
         )
         request = self.factory.get(
             reverse("moonmining:moons_data", args={"category": views.MoonsCategory.ALL})
@@ -146,7 +142,7 @@ class TestMoonsData(TestCase):
         user, _ = create_user_from_evecharacter(
             1001,
             permissions=["moonmining.basic_access", "moonmining.extractions_access"],
-            scopes=MiningCorporation.esi_scopes(),
+            scopes=Owner.esi_scopes(),
         )
         request.user = user
         moon = Moon.objects.get(pk=40131695)
@@ -168,16 +164,13 @@ class TestMoonsData(TestCase):
         user, _ = create_user_from_evecharacter(
             1001,
             permissions=["moonmining.basic_access", "moonmining.extractions_access"],
-            scopes=MiningCorporation.esi_scopes(),
+            scopes=Owner.esi_scopes(),
         )
         request.user = user
         moon = Moon.objects.get(pk=40131695)
         refinery = helpers.add_refinery(moon)
         Refinery.objects.create(
-            id=99,
-            name="Empty refinery",
-            corporation=refinery.corporation,
-            eve_type_id=35835,
+            id=99, name="Empty refinery", owner=refinery.owner, eve_type_id=35835
         )
         # when
         response = views.moons_data(request, category=views.MoonsCategory.OURS)
@@ -191,7 +184,7 @@ class TestMoonsData(TestCase):
         user, _ = create_user_from_evecharacter(
             1001,
             permissions=["moonmining.basic_access", "moonmining.extractions_access"],
-            scopes=MiningCorporation.esi_scopes(),
+            scopes=Owner.esi_scopes(),
         )
         request = self.factory.get(
             reverse("moonmining:moons_data", args={"category": views.MoonsCategory.ALL})
@@ -209,7 +202,7 @@ class TestMoonsData(TestCase):
         user, _ = create_user_from_evecharacter(
             1001,
             permissions=["moonmining.basic_access"],
-            scopes=MiningCorporation.esi_scopes(),
+            scopes=Owner.esi_scopes(),
         )
         request = self.factory.get(
             reverse(
@@ -235,7 +228,7 @@ class TestMoonsData(TestCase):
     #     user, _ = create_user_from_evecharacter(
     #         1001,
     #         permissions=["moonmining.basic_access", "moonmining.upload_moon_scan"],
-    #         scopes=MiningCorporation.esi_scopes(),
+    #         scopes=Owner.esi_scopes(),
     #     )
     #     request.user = user
     #     self.moon.products_updated_by = user
@@ -262,7 +255,7 @@ class TestMoonInfo(TestCase):
                 "moonmining.extractions_access",
                 "moonmining.view_all_moons",
                 "moonmining.upload_moon_scan",
-                "moonmining.add_corporation",
+                "moonmining.add_owner",
             ],
             scopes=[
                 "esi-industry.read_corporation_mining.v1",
@@ -301,7 +294,7 @@ class TestViewsAreWorking(TestCase):
                 "moonmining.reports_access",
                 "moonmining.view_all_moons",
                 "moonmining.upload_moon_scan",
-                "moonmining.add_corporation",
+                "moonmining.add_owner",
             ],
             scopes=[
                 "esi-industry.read_corporation_mining.v1",
@@ -356,7 +349,7 @@ class TestViewsAreWorking(TestCase):
         refinery = Refinery.objects.create(
             id=99,
             name="Empty refinery",
-            corporation=self.refinery.corporation,
+            owner=self.refinery.owner,
             eve_type_id=35835,
         )
         Extraction.objects.create(
@@ -386,7 +379,7 @@ class TestExtractionsData(TestCase):
         user, _ = create_user_from_evecharacter(
             1001,
             permissions=["moonmining.basic_access", "moonmining.extractions_access"],
-            scopes=MiningCorporation.esi_scopes(),
+            scopes=Owner.esi_scopes(),
         )
         extraction = Extraction.objects.create(
             refinery=self.refinery,
@@ -430,7 +423,7 @@ class TestReportsData(TestCase):
         user, _ = create_user_from_evecharacter(
             1001,
             permissions=["moonmining.basic_access", "moonmining.reports_access"],
-            scopes=MiningCorporation.esi_scopes(),
+            scopes=Owner.esi_scopes(),
         )
         request = self.factory.get(reverse("moonmining:report_owned_value_data"))
         request.user = user
