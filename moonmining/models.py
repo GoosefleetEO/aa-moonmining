@@ -119,7 +119,7 @@ class OreQualityClass(models.TextChoices):
 class EveOreType(EveType):
     """Subset of EveType for all ore types.
 
-    Ensures Section.TYPE_MATERIALS is always enabled and allows adding methods to types.
+    Ensures TYPE_MATERIALS and DOGMAS is always enabled and allows adding methods to types.
     """
 
     URL_PROFILE_TYPE = "https://www.kalkoken.org/apps/eveitems/"
@@ -770,6 +770,7 @@ class Owner(models.Model):
 
         # create or update extractions from notifications by refinery
         for refinery in Refinery.objects.all():
+            extractions_count = 0
             extraction = None
             ores = None
             notifications_for_refinery = self.notifications.filter(
@@ -802,10 +803,11 @@ class Owner(models.Model):
                             extraction.status = Extraction.Status.CANCELED
                             extraction.canceled_at = notif.timestamp
                             extraction.canceled_by = eveentity_get_or_create_esi_safe(
-                                notif.details.get("canceledBy")
+                                notif.details.get("cancelledBy")
                             )
                             extraction._save_with_ores(ores)
                             extraction = ores = None
+                            extractions_count += 1
 
                         elif notif.notif_type == "MoonminingExtractionFinished":
                             extraction.status = Extraction.Status.FINISHED
@@ -822,6 +824,7 @@ class Owner(models.Model):
                             ores = notif.details["oreVolumeByType"]
                             extraction._save_with_ores(ores)
                             extraction = ores = None
+                            extractions_count += 1
 
                         elif notif.notif_type == "MoonminingAutomaticFracture":
                             extraction.status = Extraction.Status.FRACTURED
@@ -829,9 +832,14 @@ class Owner(models.Model):
                             ores = notif.details["oreVolumeByType"]
                             extraction._save_with_ores(ores)
                             extraction = ores = None
+                            extractions_count += 1
 
             if extraction:
                 extraction._save_with_ores(ores)
+                extractions_count += 1
+            logger.info(
+                "%s: %s: Updated %d extractions", self, refinery, extractions_count
+            )
 
     @classmethod
     def esi_scopes(cls):

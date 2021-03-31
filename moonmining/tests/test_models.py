@@ -229,7 +229,7 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         helpers.generate_eve_entities_from_allianceauth()
         cls.moon = helpers.create_moon_40161708()
 
-    def test_should_create_new_extraction_with_products(self, mock_esi):
+    def test_should_create_started_extraction_with_products(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
         _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
@@ -240,6 +240,7 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         owner.fetch_notifications_from_esi()
         refinery = Refinery.objects.create(
             id=1000000000001,
+            name="Test",
             moon=self.moon,
             owner=owner,
             eve_type=helpers.eve_type_athanor(),
@@ -264,10 +265,137 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         self.assertEqual(product.volume, 1288475.124715103)
         product = extraction.products.get(ore_type_id=46676)
         self.assertEqual(product.volume, 544691.7637724016)
-        product = extraction.products.get(ore_type_id=46678)
+        product = extraction.products.get(ore_type_id=22)
         self.assertEqual(product.volume, 526825.4047522942)
         product = extraction.products.get(ore_type_id=46689)
         self.assertEqual(product.volume, 528996.6386983792)
+
+    def test_should_create_canceled_extraction_with_products(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        owner.fetch_notifications_from_esi()
+        refinery = Refinery.objects.create(
+            id=1000000000002,
+            name="Test",
+            moon=self.moon,
+            owner=owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        # when
+        owner.update_extractions()
+        # then
+        self.assertEqual(refinery.extractions.count(), 1)
+        extraction = refinery.extractions.first()
+        self.assertEqual(extraction.status, Extraction.Status.CANCELED)
+        self.assertEqual(
+            extraction.canceled_at,
+            dt.datetime(2019, 11, 22, 2, tzinfo=pytz.UTC),
+        )
+        self.assertEqual(extraction.canceled_by_id, 1001)
+        self.assertEqual(
+            set(extraction.products.values_list("ore_type_id", flat=True)),
+            {45506, 46676, 22, 46689},
+        )
+
+    def test_should_create_finished_extraction_with_products(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        owner.fetch_notifications_from_esi()
+        refinery = Refinery.objects.create(
+            id=1000000000003,
+            name="Test",
+            moon=self.moon,
+            owner=owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        # when
+        owner.update_extractions()
+        # then
+        self.assertEqual(refinery.extractions.count(), 1)
+        extraction = refinery.extractions.first()
+        self.assertEqual(extraction.status, Extraction.Status.FINISHED)
+        self.assertEqual(
+            extraction.finished_at,
+            dt.datetime(2019, 11, 22, 3, tzinfo=pytz.UTC),
+        )
+        self.assertEqual(
+            set(extraction.products.values_list("ore_type_id", flat=True)),
+            {46311, 46676, 46678, 46689},
+        )
+
+    def test_should_create_manually_fractured_extraction_with_products(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        owner.fetch_notifications_from_esi()
+        refinery = Refinery.objects.create(
+            id=1000000000004,
+            name="Test",
+            moon=self.moon,
+            owner=owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        # when
+        owner.update_extractions()
+        # then
+        self.assertEqual(refinery.extractions.count(), 1)
+        extraction = refinery.extractions.first()
+        self.assertEqual(extraction.status, Extraction.Status.FRACTURED)
+        self.assertEqual(
+            extraction.finished_at,
+            dt.datetime(2019, 11, 22, 3, tzinfo=pytz.UTC),
+        )
+        self.assertEqual(extraction.fractured_by_id, 1001)
+        self.assertEqual(
+            set(extraction.products.values_list("ore_type_id", flat=True)),
+            {46311, 46676, 46678, 46689},
+        )
+
+    def test_should_create_auto_fractured_extraction_with_products(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        owner.fetch_notifications_from_esi()
+        refinery = Refinery.objects.create(
+            id=1000000000005,
+            name="Test",
+            moon=self.moon,
+            owner=owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        # when
+        owner.update_extractions()
+        # then
+        self.assertEqual(refinery.extractions.count(), 1)
+        extraction = refinery.extractions.first()
+        self.assertEqual(extraction.status, Extraction.Status.FRACTURED)
+        self.assertEqual(
+            extraction.finished_at,
+            dt.datetime(2019, 11, 22, 3, tzinfo=pytz.UTC),
+        )
+        self.assertIsNone(extraction.fractured_by)
+        self.assertEqual(
+            set(extraction.products.values_list("ore_type_id", flat=True)),
+            {46311, 46676, 46678},
+        )
 
     def test_should_cancel_existing_extraction(self, mock_esi):
         # given
@@ -374,11 +502,11 @@ class TestOwnerFetchNotifications(NoSocketsTestCase):
         owner.fetch_notifications_from_esi()
         # then
         self.assertEqual(owner.notifications.count(), 5)
-        obj = owner.notifications.get(notification_id=1000000401)
+        obj = owner.notifications.get(notification_id=1000000101)
         self.assertEqual(obj.notif_type, "MoonminingExtractionStarted")
         self.assertEqual(obj.sender_id, 2101)
         self.assertEqual(
-            obj.timestamp, dt.datetime(2019, 11, 13, 23, 33, tzinfo=pytz.UTC)
+            obj.timestamp, dt.datetime(2019, 11, 22, 1, 0, tzinfo=pytz.UTC)
         )
         self.assertEqual(obj.details["moonID"], 40161708)
         self.assertEqual(obj.details["structureID"], 1000000000001)
