@@ -35,28 +35,36 @@ def run_regular_updates():
 def update_owner(owner_pk):
     """Update refineries and extractions for given owner."""
     chain(
-        update_refineries_from_esi.si(owner_pk),
-        update_extractions_from_esi.si(owner_pk),
-        mark_successful_update.si(owner_pk),
+        update_refineries_from_esi_for_owner.si(owner_pk),
+        fetch_notifications_from_esi_for_owner.si(owner_pk),
+        update_extractions_for_owner.si(owner_pk),
+        mark_successful_update_for_owner.si(owner_pk),
     ).delay()
 
 
 @shared_task
-def update_refineries_from_esi(owner_pk):
+def update_refineries_from_esi_for_owner(owner_pk):
     """Update refineries for a owner from ESI."""
     owner = Owner.objects.get(pk=owner_pk)
     owner.update_refineries_from_esi()
 
 
 @shared_task
-def update_extractions_from_esi(owner_pk):
+def fetch_notifications_from_esi_for_owner(owner_pk):
     """Update extractions for a owner from ESI."""
     owner = Owner.objects.get(pk=owner_pk)
-    owner.update_extractions_from_esi()
+    owner.fetch_notifications_from_esi()
 
 
 @shared_task
-def mark_successful_update(owner_pk):
+def update_extractions_for_owner(owner_pk):
+    """Update extractions for a owner from ESI."""
+    owner = Owner.objects.get(pk=owner_pk)
+    owner.update_extractions()
+
+
+@shared_task
+def mark_successful_update_for_owner(owner_pk):
     """Mark a successful update for this corporation."""
     owner = Owner.objects.get(pk=owner_pk)
     owner.last_update_ok = True

@@ -137,7 +137,7 @@ class TestExtractionProduct(NoSocketsTestCase):
 
 
 @patch(MODELS_PATH + ".esi")
-class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
+class TestOwnerUpdateRefineries(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -220,7 +220,7 @@ class TestMiningCorporationUpdateRefineries(NoSocketsTestCase):
 
 
 @patch(MODELS_PATH + ".esi")
-class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
+class TestOwnerUpdateExtractions(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -237,6 +237,7 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
             corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
+        owner.fetch_notifications_from_esi()
         refinery = Refinery.objects.create(
             id=1000000000001,
             moon=self.moon,
@@ -244,10 +245,11 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
             eve_type=helpers.eve_type_athanor(),
         )
         # when
-        owner.update_extractions_from_esi()
+        owner.update_extractions()
         # then
         self.assertEqual(refinery.extractions.count(), 1)
         extraction = refinery.extractions.first()
+        self.assertEqual(extraction.status, Extraction.Status.STARTED)
         self.assertEqual(
             extraction.ready_time,
             dt.datetime(2019, 11, 20, 0, 1, 0, 105915, tzinfo=pytz.UTC),
@@ -275,18 +277,22 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
             corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
+        owner.fetch_notifications_from_esi()
         refinery = Refinery.objects.create(
             id=1000000000001,
             moon=self.moon,
             owner=owner,
+            name="Test",
             eve_type=helpers.eve_type_athanor(),
         )
         # when
-        owner.update_extractions_from_esi()
+        owner.update_extractions()
         # then
-        self.assertEqual(refinery.extractions.count(), 0)
+        self.assertEqual(refinery.extractions.count(), 1)
+        extraction = refinery.extractions.first()
+        self.assertEqual(extraction.status, Extraction.Status.CANCELED)
 
-    def test_should_create_one_new_extraction(self, mock_esi):
+    def test_should_cancel_existing_and_create_two_new(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
         _, character_ownership = helpers.create_default_user_from_evecharacter(1004)
@@ -294,21 +300,34 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
             corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
+        owner.fetch_notifications_from_esi()
         refinery = Refinery.objects.create(
             id=1000000000001,
             moon=self.moon,
             owner=owner,
+            name="Test",
             eve_type=helpers.eve_type_athanor(),
         )
-        Extraction.objects.create(
+        ready_time_1 = dt.datetime(2019, 11, 21, 10, tzinfo=pytz.UTC)
+        ready_time_2 = dt.datetime(2019, 11, 21, 11, tzinfo=pytz.UTC)
+        ready_time_3 = dt.datetime(2019, 11, 21, 12, tzinfo=pytz.UTC)
+        extraction_1 = Extraction.objects.create(
             refinery=refinery,
-            ready_time=dt.datetime(2019, 11, 20, 0, 1, 0, 105915, tzinfo=pytz.UTC),
+            ready_time=ready_time_1,
             auto_time=dt.datetime(2019, 11, 20, 3, 1, 0, 105915, tzinfo=pytz.UTC),
+            started_at=ready_time_1 - dt.timedelta(days=14),
+            status=Extraction.Status.STARTED,
         )
         # when
-        owner.update_extractions_from_esi()
+        owner.update_extractions()
         # then
-        self.assertEqual(refinery.extractions.count(), 2)
+        self.assertEqual(refinery.extractions.count(), 3)
+        extraction_1.refresh_from_db()
+        self.assertEqual(extraction_1.status, Extraction.Status.CANCELED)
+        extraction_2 = refinery.extractions.get(ready_time=ready_time_2)
+        self.assertEqual(extraction_2.status, Extraction.Status.FRACTURED)
+        extraction_3 = refinery.extractions.get(ready_time=ready_time_3)
+        self.assertEqual(extraction_3.status, Extraction.Status.STARTED)
 
     def test_should_update_refinery_with_moon_from_notification_if_not_found(
         self, mock_esi
@@ -320,6 +339,7 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
             corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
+        owner.fetch_notifications_from_esi()
         Refinery.objects.create(
             id=1000000000001,
             moon=None,
@@ -327,10 +347,41 @@ class TestMiningCorporationUpdateExtractions(NoSocketsTestCase):
             eve_type=helpers.eve_type_athanor(),
         )
         # when
-        owner.update_extractions_from_esi()
+        owner.update_extractions()
         # then
         obj = Refinery.objects.get(id=1000000000001)
         self.assertEqual(obj.moon, self.moon)
+
+
+@patch(MODELS_PATH + ".esi")
+class TestOwnerFetchNotifications(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        load_allianceauth()
+        helpers.generate_eve_entities_from_allianceauth()
+
+    def test_should_create_new_notifications_from_esi(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1005)
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        # when
+        owner.fetch_notifications_from_esi()
+        # then
+        self.assertEqual(owner.notifications.count(), 5)
+        obj = owner.notifications.get(notification_id=1000000401)
+        self.assertEqual(obj.notif_type, "MoonminingExtractionStarted")
+        self.assertEqual(obj.sender_id, 2101)
+        self.assertEqual(
+            obj.timestamp, dt.datetime(2019, 11, 13, 23, 33, tzinfo=pytz.UTC)
+        )
+        self.assertEqual(obj.details["moonID"], 40161708)
+        self.assertEqual(obj.details["structureID"], 1000000000001)
 
 
 class TestProcessSurveyInput(NoSocketsTestCase):
@@ -493,6 +544,8 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
             refinery=self.refinery,
             ready_time=now() + dt.timedelta(days=3),
             auto_time=now() + dt.timedelta(days=4),
+            started_at=now() - dt.timedelta(days=3),
+            status=Extraction.Status.STARTED,
         )
         ExtractionProduct.objects.create(
             extraction=extraction,
@@ -515,6 +568,8 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
             refinery=self.refinery,
             ready_time=now() + dt.timedelta(days=3),
             auto_time=now() + dt.timedelta(days=4),
+            started_at=now() - dt.timedelta(days=3),
+            status=Extraction.Status.STARTED,
         )
         ExtractionProduct.objects.create(
             extraction=extraction,
@@ -537,6 +592,8 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
             refinery=self.refinery,
             ready_time=now() + dt.timedelta(days=3),
             auto_time=now() + dt.timedelta(days=4),
+            started_at=now() - dt.timedelta(days=3),
+            status=Extraction.Status.STARTED,
         )
         ExtractionProduct.objects.create(
             extraction=extraction,
@@ -559,6 +616,8 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
             refinery=self.refinery,
             ready_time=now() + dt.timedelta(days=3),
             auto_time=now() + dt.timedelta(days=4),
+            started_at=now() - dt.timedelta(days=3),
+            status=Extraction.Status.STARTED,
         )
         ExtractionProduct.objects.create(
             extraction=extraction,

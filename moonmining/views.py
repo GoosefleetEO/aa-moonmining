@@ -122,6 +122,7 @@ def extractions_data(request, category):
                     "sort": extraction.ready_time,
                 },
                 "moon": str(extraction.refinery.moon),
+                "status": extraction.get_status_display(),
                 "corporation": {"display": corporation_html, "sort": corporation_name},
                 "volume": extraction.volume,
                 "value": extraction.value if extraction.value else None,

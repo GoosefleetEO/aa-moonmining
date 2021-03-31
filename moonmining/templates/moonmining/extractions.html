@@ -40,6 +40,7 @@
                         render: { _: 'display', sort: 'sort'}
                     },
                     { data: 'moon' },
+                    { data: 'status' },
                     {
                         data: 'corporation',
                         render: { _: 'display', sort: 'sort'}
@@ -63,20 +64,20 @@
                 order: [ [0, "asc"] ],
                 columnDefs: [
                     { "orderable": false, "targets": [ 5 ] },
-                    { "visible": false, "targets": [ 6, 7, 8 ] },
+                    { "visible": false, "targets": [ 7, 8, 9 ] },
                 ],
                 filterDropDown: {
                     columns: [
                         {
-                            idx: 7,
+                            idx: 8,
                             title: "Alliance"
                         },
                         {
-                            idx: 6,
+                            idx: 7,
                             title: "Corporation"
                         },
                         {
-                            idx: 8,
+                            idx: 9,
                             title: "Jackpot?"
                         }
                     ],
@@ -93,7 +94,7 @@
                 footerCallback: function (row, data, start, end, display) {
                     var api = this.api(), data;
 
-                    const columnVolume = 3
+                    const columnVolume = 4
                     var total_1 = api
                         .column(columnVolume)
                         .data()
@@ -106,7 +107,7 @@
                         total_1.toLocaleString('en-US', {maximumFractionDigits: 0})
                     );
 
-                    const columnValue = 4
+                    const columnValue = 5
                     var total_2 = api
                         .column(columnValue)
                         .data()

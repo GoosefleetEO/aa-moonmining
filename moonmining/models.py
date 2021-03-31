@@ -5,7 +5,7 @@ import yaml
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.utils.functional import cached_property
 from django.utils.timezone import now
 from esi.models import Token
@@ -20,6 +20,7 @@ from app_utils.views import bootstrap_icon_plus_name_html, bootstrap_label_html
 
 from . import __title__, constants
 from .app_settings import MOONMINING_REPROCESSING_YIELD, MOONMINING_VOLUME_PER_MONTH
+from .helpers import eveentity_get_or_create_esi_safe
 from .managers import EveOreTypeManger, ExtractionManager, MoonManager
 from .providers import esi
 
@@ -115,22 +116,6 @@ class OreQualityClass(models.TextChoices):
             return cls.UNDEFINED
 
 
-class General(models.Model):
-    """Meta model for global app permissions"""
-
-    class Meta:
-        managed = False
-        default_permissions = ()
-        permissions = (
-            ("basic_access", "Can access the moonmining app"),
-            ("extractions_access", "Can access extractions and view owned moons"),
-            ("reports_access", "Can access reports"),
-            ("view_all_moons", "Can view all known moons"),
-            ("upload_moon_scan", "Can upload moon scans"),
-            ("add_refinery_owner", "Can add refinery owner"),
-        )
-
-
 class EveOreType(EveType):
     """Subset of EveType for all ore types.
 
@@ -188,6 +173,194 @@ class EveOreType(EveType):
         enabled_sections.add(cls.Section.TYPE_MATERIALS)
         enabled_sections.add(cls.Section.DOGMAS)
         return enabled_sections
+
+
+class Extraction(models.Model):
+    """A mining extraction."""
+
+    class Status(models.TextChoices):
+        STARTED = "ST", "started"
+        CANCELED = "CN", "canceled"
+        FINISHED = "FN", "finished"
+        FRACTURED = "FR", "fractured"
+        UNDEFINED = "UN", "undefined"
+
+    # PK
+    refinery = models.ForeignKey(
+        "Refinery", on_delete=models.CASCADE, related_name="extractions"
+    )
+    ready_time = models.DateTimeField(
+        db_index=True, help_text="when this extraction is ready to be fractured"
+    )
+    # normal properties
+    auto_time = models.DateTimeField(
+        help_text="when this extraction will be automatically fractured"
+    )
+    canceled_at = models.DateTimeField(
+        null=True, default=None, help_text="when this extraction was canceled"
+    )
+    canceled_by = models.ForeignKey(
+        EveEntity,
+        on_delete=models.SET_DEFAULT,
+        null=True,
+        default=None,
+        related_name="+",
+        help_text="Eve character who canceled this extraction",
+    )
+    finished_at = models.DateTimeField(
+        null=True, default=None, help_text="when this extraction finished"
+    )
+    fractured_at = models.DateTimeField(
+        null=True, default=None, help_text="when this extraction was fractured"
+    )
+    fractured_by = models.ForeignKey(
+        EveEntity,
+        on_delete=models.SET_DEFAULT,
+        null=True,
+        default=None,
+        related_name="+",
+        help_text="Eve character who fractured this extraction (if any)",
+    )
+    is_jackpot = models.BooleanField(
+        default=None,
+        null=True,
+        help_text="Whether this is a jackpot extraction (calculated)",
+    )
+    started_at = models.DateTimeField(help_text="when this extraction was started")
+    started_by = models.ForeignKey(
+        EveEntity,
+        on_delete=models.SET_DEFAULT,
+        null=True,
+        default=None,
+        related_name="+",
+        help_text="Eve character who started this extraction",
+    )
+    status = models.CharField(
+        max_length=2, choices=Status.choices, default=Status.UNDEFINED
+    )
+    value = models.FloatField(
+        null=True,
+        default=None,
+        validators=[MinValueValidator(0.0)],
+        help_text="Estimated value of this extraction (calculated)",
+    )
+
+    objects = ExtractionManager()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["refinery", "ready_time"], name="functional_pk_extraction"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.refinery} - {self.ready_time} - {self.status}"
+
+    def calc_value(self) -> Optional[float]:
+        """Calculate value estimate and return result."""
+        try:
+            return sum(
+                [
+                    product.calc_value()
+                    for product in self.products.select_related("ore_type")
+                ]
+            )
+        except ObjectDoesNotExist:
+            return None
+
+    def calc_is_jackpot(self) -> Optional[bool]:
+        """Calculate if extraction is jackpot and return result"""
+        try:
+            return all(
+                [
+                    product.ore_type.quality_class == OreQualityClass.EXCELLENT
+                    for product in self.products.select_related("ore_type").all()
+                ]
+            )
+        except ObjectDoesNotExist:
+            return None
+
+    def update_calculated_properties(self) -> float:
+        """Update calculated properties for this extraction."""
+        self.value = self.calc_value()
+        self.is_jackpot = self.calc_is_jackpot()
+        self.save()
+
+    def _save_with_ores(self, ores):
+        # preload eve ore types before transaction starts
+        for ore_type_id in ores:
+            EveOreType.objects.get_or_create_esi(id=ore_type_id)
+
+        with transaction.atomic():
+            db_obj = (
+                Extraction.objects.select_for_update()
+                .filter(refinery=self.refinery, ready_time=self.ready_time)
+                .first()
+            )
+            if db_obj:
+                if db_obj.status == self.status:
+                    return
+                else:
+                    self.pk = db_obj.pk
+
+            self.save()
+            ExtractionProduct.objects.filter(extraction=self).delete()
+            for ore_type_id, ore_volume in ores.items():
+                ExtractionProduct.objects.create(
+                    extraction=self, ore_type_id=ore_type_id, volume=ore_volume
+                )
+
+
+class ExtractionProduct(models.Model):
+    """A product within a mining extraction."""
+
+    extraction = models.ForeignKey(
+        Extraction, on_delete=models.CASCADE, related_name="products"
+    )
+    ore_type = models.ForeignKey(EveOreType, on_delete=models.CASCADE, related_name="+")
+
+    volume = models.FloatField(validators=[MinValueValidator(0.0)])
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["extraction", "ore_type"],
+                name="functional_pk_extractionproduct",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.extraction} - {self.ore_type}"
+
+    def calc_value(self, reprocessing_yield=None) -> float:
+        """returns calculated value estimate in ISK
+
+        Args:
+            reprocessing_yield: expected average yield for ore reprocessing
+        Returns:
+            value estimate or None if prices are missing
+
+        """
+        return self.ore_type.calc_refined_value(
+            volume=self.volume, reprocessing_yield=reprocessing_yield
+        )
+
+
+class General(models.Model):
+    """Meta model for global app permissions"""
+
+    class Meta:
+        managed = False
+        default_permissions = ()
+        permissions = (
+            ("basic_access", "Can access the moonmining app"),
+            ("extractions_access", "Can access extractions and view owned moons"),
+            ("reports_access", "Can access reports"),
+            ("view_all_moons", "Can view all known moons"),
+            ("upload_moon_scan", "Can upload moon scans"),
+            ("add_refinery_owner", "Can add refinery owner"),
+        )
 
 
 class Moon(models.Model):
@@ -309,6 +482,58 @@ class MoonProduct(models.Model):
         )
 
 
+class Notification(models.Model):
+    """An EVE Online notification about structures."""
+
+    notification_id = models.PositiveBigIntegerField(verbose_name="id")
+    owner = models.ForeignKey(
+        "Owner",
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        help_text="Corporation that received this notification",
+    )
+
+    created = models.DateTimeField(
+        null=True,
+        default=None,
+        help_text="Date when this notification was first received from ESI",
+    )
+    details = models.JSONField(default=dict)
+    notif_type = models.CharField(
+        max_length=100,
+        default="",
+        db_index=True,
+        verbose_name="type",
+        help_text="type of this notification as reported by ESI",
+    )
+    is_read = models.BooleanField(
+        null=True,
+        default=None,
+        help_text="True when this notification has read in the eve client",
+    )
+    last_updated = models.DateTimeField(
+        help_text="Date when this notification has last been updated from ESI"
+    )
+    sender = models.ForeignKey(
+        EveEntity, on_delete=models.CASCADE, null=True, default=None, related_name="+"
+    )
+    timestamp = models.DateTimeField(db_index=True)
+
+    # class Meta:
+    #     unique_together = (("notification_id", "owner"),)
+
+    def __str__(self) -> str:
+        return str(self.notification_id)
+
+    def __repr__(self) -> str:
+        return "%s(notification_id=%d, owner='%s', notif_type='%s')" % (
+            self.__class__.__name__,
+            self.notification_id,
+            self.owner,
+            self.notif_type,
+        )
+
+
 class Owner(models.Model):
     """A EVE Online corporation owning refineries."""
 
@@ -425,78 +650,39 @@ class Owner(models.Model):
         if not refinery.moon:
             refinery.update_moon_from_structure_info(structure_info)
 
-    def update_extractions_from_esi(self):
-        """Update all extractions from ESI."""
-        logger.info("%s: Updating extractions...", self)
+    # def _fetch_moon_notifications_from_esi(self):
+    #     logger.info("%s: Fetching moon notifications from ESI...", self)
+    #     token = self.fetch_token()
+    #     all_notifications = (
+    #         esi.client.Character.get_characters_character_id_notifications(
+    #             character_id=self.character_ownership.character.character_id,
+    #             token=token.valid_access_token(),
+    #         ).result()
+    #     )
+    #     moon_notifications = [
+    #         notif
+    #         for notif in all_notifications
+    #         if notif.notif_type
+    #         in {
+    #             "MoonminingAutomaticFracture",
+    #             "MoonminingExtractionCancelled",
+    #             "MoonminingExtractionFinished",
+    #             "MoonminingExtractionStarted",
+    #             "MoonminingLaserFired",
+    #         }
+    #     ]
+    #     for notif in moon_notifications:
+    #         notif["details"] = yaml.safe_load(notif["text"])
+    #     return moon_notifications
+
+    def fetch_notifications_from_esi(self) -> bool:
+        """fetches notification for the current owners and proceses them"""
         notifications = self._fetch_moon_notifications_from_esi()
-        if not notifications:
-            logger.info("%s: No moon notifications received", self)
-            return
+        self._store_notifications(notifications)
 
-        # add extractions for refineries if any are found
-        logger.info(
-            "%s: Process extraction events from %d moon notifications",
-            self,
-            len(notifications),
-        )
-        last_extraction_started = dict()
-        for notification in sorted(notifications, key=lambda k: k["timestamp"]):
-            parsed_text = yaml.safe_load(notification["text"])
-            structure_id = parsed_text["structureID"]
-            try:
-                refinery = Refinery.objects.get(id=structure_id)
-            except Refinery.DoesNotExist:
-                refinery = None
-            # update the refinery's moon from notification
-            # in case it was not found by nearest_celestial
-            if refinery and not refinery.moon:
-                refinery.update_moon_from_eve_id(parsed_text["moonID"])
-
-            if notification["type"] == "MoonminingExtractionStarted":
-                if not refinery:
-                    continue  # we ignore notifications for unknown refineries
-                started_by_id = parsed_text.get("startedBy")
-                if started_by_id:
-                    try:
-                        started_by, _ = EveEntity.objects.get_or_create_esi(
-                            id=started_by_id
-                        )
-                    except OSError:
-                        started_by = None
-                else:
-                    started_by = None
-                extraction, _ = Extraction.objects.get_or_create(
-                    refinery=refinery,
-                    ready_time=ldap_time_2_datetime(parsed_text["readyTime"]),
-                    defaults={
-                        "auto_time": ldap_time_2_datetime(parsed_text["autoTime"]),
-                        "started_by": started_by,
-                    },
-                )
-                last_extraction_started[structure_id] = extraction
-                ore_volume_by_type = parsed_text["oreVolumeByType"].items()
-                for ore_type_id, ore_volume in ore_volume_by_type:
-                    ore_type, _ = EveOreType.objects.get_or_create_esi(id=ore_type_id)
-                    ExtractionProduct.objects.get_or_create(
-                        extraction=extraction,
-                        ore_type=ore_type,
-                        defaults={"volume": ore_volume},
-                    )
-                extraction.update_calculated_properties()
-
-            # remove latest started extraction if it was canceled
-            # and not finished
-            if notification["type"] == "MoonminingExtractionCancelled":
-                if structure_id in last_extraction_started:
-                    extraction = last_extraction_started[structure_id]
-                    extraction.delete()
-
-            if notification["type"] == "MoonminingExtractionFinished":
-                if structure_id in last_extraction_started:
-                    del last_extraction_started[structure_id]
-
-    def _fetch_moon_notifications_from_esi(self):
-        logger.info("%s: Fetching moon notifications from ESI...", self)
+    def _fetch_moon_notifications_from_esi(self) -> dict:
+        """Fetch all notifications from ESI for current owner."""
+        logger.info("%s: Fetching notifications from ESI...", self)
         token = self.fetch_token()
         all_notifications = (
             esi.client.Character.get_characters_character_id_notifications(
@@ -504,7 +690,7 @@ class Owner(models.Model):
                 token=token.valid_access_token(),
             ).result()
         )
-        return [
+        moon_notifications = [
             notif
             for notif in all_notifications
             if notif["type"]
@@ -516,6 +702,136 @@ class Owner(models.Model):
                 "MoonminingLaserFired",
             }
         ]
+        return moon_notifications
+
+    def _store_notifications(self, notifications: list) -> int:
+        """Store new notifications in database and return count of new objects."""
+        # identify new notifications
+        existing_notification_ids = set(
+            self.notifications.values_list("notification_id", flat=True)
+        )
+        new_notifications = [
+            obj
+            for obj in notifications
+            if obj["notification_id"] not in existing_notification_ids
+        ]
+        # create new notif objects
+        sender_type_map = {
+            "character": EveEntity.CATEGORY_CHARACTER,
+            "corporation": EveEntity.CATEGORY_CORPORATION,
+            "alliance": EveEntity.CATEGORY_ALLIANCE,
+        }
+        new_notification_objects = list()
+        for notification in new_notifications:
+            known_sender_type = sender_type_map.get(notification["sender_type"])
+            if known_sender_type:
+                sender, _ = EveEntity.objects.get_or_create_esi(
+                    id=notification["sender_id"]
+                )
+            else:
+                sender = None
+            text = notification["text"] if "text" in notification else None
+            is_read = notification["is_read"] if "is_read" in notification else None
+            new_notification_objects.append(
+                Notification(
+                    notification_id=notification["notification_id"],
+                    owner=self,
+                    created=now(),
+                    details=yaml.safe_load(text),
+                    is_read=is_read,
+                    last_updated=now(),
+                    # at least one type has a trailing white space
+                    # which we need to remove
+                    notif_type=notification["type"].strip(),
+                    sender=sender,
+                    timestamp=notification["timestamp"],
+                )
+            )
+
+        Notification.objects.bulk_create(new_notification_objects)
+        if len(new_notification_objects) > 0:
+            logger.info(
+                "%s: Received %d new notifications from ESI",
+                self,
+                len(new_notification_objects),
+            )
+        else:
+            logger.info("%s: No new notifications received from ESI", self)
+        return len(new_notification_objects)
+
+    def update_extractions(self):
+        """Update all extractions from stored notifications."""
+        logger.info("%s: Updating extractions...", self)
+        notifications_count = self.notifications.count()
+        if not notifications_count:
+            logger.info("%s: No moon notifications", self)
+            return
+        logger.info("%s: Processing %d moon notifications", self, notifications_count)
+
+        # create or update extractions from notifications by refinery
+        for refinery in Refinery.objects.all():
+            extraction = None
+            ores = None
+            notifications_for_refinery = self.notifications.filter(
+                details__structureID=refinery.id
+            )
+            if not refinery.moon and notifications_for_refinery.exists():
+                """Update the refinery's moon from notification in case
+                it was not found by nearest_celestial.
+                """
+                notif = notifications_for_refinery.first()
+                refinery.update_moon_from_eve_id(notif.details["moonID"])
+            for notif in notifications_for_refinery.order_by("timestamp"):
+                if notif.notif_type == "MoonminingExtractionStarted":
+                    started_by = eveentity_get_or_create_esi_safe(
+                        notif.details.get("startedBy")
+                    )
+                    extraction = Extraction(
+                        status=Extraction.Status.STARTED,
+                        refinery=refinery,
+                        ready_time=ldap_time_2_datetime(notif.details["readyTime"]),
+                        auto_time=ldap_time_2_datetime(notif.details["autoTime"]),
+                        started_by=started_by,
+                        started_at=notif.timestamp,
+                    )
+                    ores = notif.details["oreVolumeByType"]
+
+                elif extraction:
+                    if extraction.status == Extraction.Status.STARTED:
+                        if notif.notif_type == "MoonminingExtractionCancelled":
+                            extraction.status = Extraction.Status.CANCELED
+                            extraction.canceled_at = notif.timestamp
+                            extraction.canceled_by = eveentity_get_or_create_esi_safe(
+                                notif.details.get("canceledBy")
+                            )
+                            extraction._save_with_ores(ores)
+                            extraction = ores = None
+
+                        elif notif.notif_type == "MoonminingExtractionFinished":
+                            extraction.status = Extraction.Status.FINISHED
+                            extraction.finished_at = notif.timestamp
+                            ores = notif.details["oreVolumeByType"]
+
+                    elif extraction.status == Extraction.Status.FINISHED:
+                        if notif.notif_type == "MoonminingLaserFired":
+                            extraction.status = Extraction.Status.FRACTURED
+                            extraction.fractured_at = notif.timestamp
+                            extraction.fractured_by = eveentity_get_or_create_esi_safe(
+                                notif.details.get("firedBy")
+                            )
+                            ores = notif.details["oreVolumeByType"]
+                            extraction._save_with_ores(ores)
+                            extraction = ores = None
+
+                        elif notif.notif_type == "MoonminingAutomaticFracture":
+                            extraction.status = Extraction.Status.FRACTURED
+                            extraction.fractured_at = notif.timestamp
+                            ores = notif.details["oreVolumeByType"]
+                            extraction._save_with_ores(ores)
+                            extraction = ores = None
+
+            if extraction:
+                extraction._save_with_ores(ores)
 
     @classmethod
     def esi_scopes(cls):
@@ -531,7 +847,7 @@ class Owner(models.Model):
 class Refinery(models.Model):
     """An Eve Online refinery structure."""
 
-    id = models.BigIntegerField(primary_key=True)
+    id = models.PositiveBigIntegerField(primary_key=True)
     name = models.CharField(max_length=150, db_index=True)
     moon = models.OneToOneField(
         Moon,
@@ -584,106 +900,3 @@ class Refinery(models.Model):
         moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
         self.moon = moon
         self.save()
-
-
-class Extraction(models.Model):
-    """A mining extraction."""
-
-    refinery = models.ForeignKey(
-        Refinery, on_delete=models.CASCADE, related_name="extractions"
-    )
-    ready_time = models.DateTimeField(db_index=True)
-
-    auto_time = models.DateTimeField()
-    value = models.FloatField(
-        null=True,
-        default=None,
-        validators=[MinValueValidator(0.0)],
-        help_text="Calculated value estimate",
-    )
-    is_jackpot = models.BooleanField(default=None, null=True)
-    started_by = models.ForeignKey(
-        EveEntity,
-        on_delete=models.SET_DEFAULT,
-        default=None,
-        null=True,
-        related_name="+",
-        help_text="Eve character who started this extraction",
-    )
-
-    objects = ExtractionManager()
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["refinery", "ready_time"], name="functional_pk_extraction"
-            )
-        ]
-
-    def __str__(self) -> str:
-        return f"{self.refinery} - {self.ready_time}"
-
-    def calc_value(self) -> Optional[float]:
-        """Calculate value estimate and return result."""
-        try:
-            return sum(
-                [
-                    product.calc_value()
-                    for product in self.products.select_related("ore_type")
-                ]
-            )
-        except ObjectDoesNotExist:
-            return None
-
-    def calc_is_jackpot(self) -> Optional[bool]:
-        """Calculate if extraction is jackpot and return result"""
-        try:
-            return all(
-                [
-                    product.ore_type.quality_class == OreQualityClass.EXCELLENT
-                    for product in self.products.select_related("ore_type").all()
-                ]
-            )
-        except ObjectDoesNotExist:
-            return None
-
-    def update_calculated_properties(self) -> float:
-        """Update calculated properties for this extraction."""
-        self.value = self.calc_value()
-        self.is_jackpot = self.calc_is_jackpot()
-        self.save()
-
-
-class ExtractionProduct(models.Model):
-    """A product within a mining extraction."""
-
-    extraction = models.ForeignKey(
-        Extraction, on_delete=models.CASCADE, related_name="products"
-    )
-    ore_type = models.ForeignKey(EveOreType, on_delete=models.CASCADE, related_name="+")
-
-    volume = models.FloatField(validators=[MinValueValidator(0.0)])
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["extraction", "ore_type"],
-                name="functional_pk_extractionproduct",
-            )
-        ]
-
-    def __str__(self) -> str:
-        return f"{self.extraction} - {self.ore_type}"
-
-    def calc_value(self, reprocessing_yield=None) -> float:
-        """returns calculated value estimate in ISK
-
-        Args:
-            reprocessing_yield: expected average yield for ore reprocessing
-        Returns:
-            value estimate or None if prices are missing
-
-        """
-        return self.ore_type.calc_refined_value(
-            volume=self.volume, reprocessing_yield=reprocessing_yield
-        )

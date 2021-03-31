@@ -366,6 +366,8 @@ class TestViewsAreWorking(TestCase):
             refinery=refinery,
             ready_time=now() + dt.timedelta(days=1),
             auto_time=now() + dt.timedelta(days=1),
+            started_at=now() - dt.timedelta(days=3),
+            status=Extraction.Status.STARTED,
         )
         # when
         response = views.extractions(request)
@@ -396,6 +398,8 @@ class TestExtractionsData(TestCase):
             ready_time=dt.datetime(2019, 11, 20, 0, 1, 0, tzinfo=pytz.UTC),
             auto_time=dt.datetime(2019, 11, 20, 3, 1, 0, tzinfo=pytz.UTC),
             started_by_id=1001,
+            started_at=now() - dt.timedelta(days=3),
+            status=Extraction.Status.STARTED,
         )
         request = self.factory.get(
             reverse(

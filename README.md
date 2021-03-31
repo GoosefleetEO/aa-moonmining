@@ -83,7 +83,7 @@ Configure your Auth settings (`local.py`) as follows:
 ```python
 CELERYBEAT_SCHEDULE['moonmining_run_regular_updates'] = {
     'task': 'moonmining.tasks.run_regular_updates',
-    'schedule': crontab(minute='0', minute='*/30'),
+    'schedule': crontab(minute='*/10'),
 }
 CELERYBEAT_SCHEDULE['moonmining_run_value_updates'] = {
  'task': 'moonmining.tasks.run_calculated_properties_update',

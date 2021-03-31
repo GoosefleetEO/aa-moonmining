@@ -1,4 +1,5 @@
 from django.http import HttpResponse
+from eveuniverse.models import EveEntity
 
 
 class EnumToDict:
@@ -15,3 +16,14 @@ class EnumToDict:
 
 class HttpResponseUnauthorized(HttpResponse):
     status_code = 401
+
+
+def eveentity_get_or_create_esi_safe(id):
+    """Get or Create EveEntity with given ID safely and return it. Else return None."""
+    if id:
+        try:
+            entity, _ = EveEntity.objects.get_or_create_esi(id=id)
+            return entity
+        except OSError:
+            pass
+    return None

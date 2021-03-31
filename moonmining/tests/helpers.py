@@ -56,6 +56,8 @@ def add_refinery(moon: Moon, owner: Owner = None) -> Refinery:
         refinery=refinery,
         ready_time=now() + dt.timedelta(days=3),
         auto_time=now() + dt.timedelta(days=3, hours=12),
+        started_at=now() - dt.timedelta(days=3),
+        status=Extraction.Status.STARTED,
     )
     for product in moon.products.all():
         ExtractionProduct.objects.create(
