@@ -55,7 +55,7 @@ def moon_details_button_html(moon: Moon) -> str:
     return fontawesome_link_button_html(
         url=reverse("moonmining:moon_details", args=[moon.pk]),
         fa_code="fas fa-moon",
-        tooltip="Show details in current window",
+        tooltip="Show details for this moon.",
         button_type="default",
     )
 
@@ -112,6 +112,7 @@ def extractions_data(request, category):
         actions_html = (
             '<button type="button" class="btn btn-default" '
             'data-toggle="modal" data-target="#modalExtractionDetails" '
+            'title="Show details for this extraction." '
             f"data-ajax_url={ajax_url}>"
             '<i class="fas fa-hammer"></i></button>'
         )
@@ -166,25 +167,6 @@ def moon_details(request, moon_pk: int):
         "moonmining.view_all_moons"
     ) and not request.user.has_perm("moonmining.extractions_access"):
         return HttpResponseUnauthorized()
-
-    try:
-        product_rows = [
-            {
-                "ore_type_name": product.ore_type.name,
-                "ore_type_url": product.ore_type.profile_url,
-                "ore_rarity_tag": product.ore_type.rarity_class.bootstrap_tag_html,
-                "image_url": product.ore_type.icon_url(constants.IconSize.MEDIUM),
-                "amount": int(round(product.amount * 100)),
-                "value": product.calc_value(),
-            }
-            for product in (
-                moon.products.select_related(
-                    "ore_type", "ore_type__eve_group"
-                ).order_by("-ore_type__eve_group_id")
-            )
-        ]
-    except ObjectDoesNotExist:
-        product_rows = list()
     try:
         extraction = (
             moon.refinery.extractions.annotate_volume()
@@ -197,14 +179,15 @@ def moon_details(request, moon_pk: int):
     except ObjectDoesNotExist:
         extraction = None
     try:
-        ppulls_data = moon.refinery.extractions.filter(ready_time__lt=now())
+        ppulls_data = moon.refinery.extractions.annotate_volume().filter(
+            ready_time__lt=now()
+        )
     except ObjectDoesNotExist:
         ppulls_data = None
 
     context = {
         "page_title": "Moon Details",
         "moon": moon,
-        "product_rows": product_rows,
         "extraction": extraction,
         "ppulls": ppulls_data,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,

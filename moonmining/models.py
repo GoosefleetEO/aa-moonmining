@@ -431,6 +431,12 @@ class Moon(models.Model):
     def rarity_tag_html(self) -> str:
         return OreRarityClass(self.rarity_class).bootstrap_tag_html
 
+    @cached_property
+    def products_sorted(self):
+        return self.products.select_related("ore_type", "ore_type__eve_group").order_by(
+            "-ore_type__eve_group_id"
+        )
+
     def calc_rarity_class(self) -> Optional[OreRarityClass]:
         try:
             return max(
@@ -481,6 +487,16 @@ class MoonProduct(models.Model):
                 fields=["moon", "ore_type"], name="functional_pk_moonproduct"
             )
         ]
+
+    @cached_property
+    def value(self):
+        """Return the calculated value for this product."""
+        return self.calc_value()
+
+    @property
+    def amount_percent(self) -> float:
+        """Return the amount of this product as percent"""
+        return self.amount * 100
 
     def calc_value(self, total_volume=None, reprocessing_yield=None) -> float:
         """Return calculated value estimate for given parameters.
