@@ -518,13 +518,13 @@ class MoonProduct(models.Model):
 class Notification(models.Model):
     """An EVE Online notification about structures."""
 
-    notification_id = models.PositiveBigIntegerField(verbose_name="id")
     owner = models.ForeignKey(
         "Owner",
         on_delete=models.CASCADE,
         related_name="notifications",
         help_text="Corporation that received this notification",
     )
+    notification_id = models.PositiveBigIntegerField(verbose_name="id")
 
     created = models.DateTimeField(
         null=True,
@@ -552,8 +552,12 @@ class Notification(models.Model):
     )
     timestamp = models.DateTimeField(db_index=True)
 
-    # class Meta:
-    #     unique_together = (("notification_id", "owner"),)
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "notification_id"], name="functional_pk_notification"
+            )
+        ]
 
     def __str__(self) -> str:
         return str(self.notification_id)

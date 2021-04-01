@@ -78,7 +78,7 @@ class NotificationAdmin(admin.ModelAdmin):
         "created",
         "last_updated",
     )
-    ordering = ["-timestamp", "-notification_id"]
+    ordering = ["-timestamp"]
     list_filter = ("owner", "notif_type")
 
     def has_change_permission(self, request, obj=None):
