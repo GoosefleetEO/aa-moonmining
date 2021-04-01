@@ -41,7 +41,7 @@
                         render: { _: 'display', sort: 'sort'}
                     },
                     { data: 'moon' },
-                    { data: 'status' },
+                    { data: 'status_str' },
                     {
                         data: 'corporation',
                         render: { _: 'display', sort: 'sort'}
@@ -87,9 +87,14 @@
                 },
                 createdRow: function( row, data, dataIndex )
                 {
-                    if (!data['is_ready'])
-                    {
+                    if (data['status'] == "ST") {
                         $(row).addClass('info');
+                    }
+                    else if (data['status'] == "CN") {
+                        $(row).addClass('active');
+                    }
+                    else if (data['status'] == "FN") {
+                        $(row).addClass('warning');
                     }
                 },
                 footerCallback: function (row, data, start, end, display) {

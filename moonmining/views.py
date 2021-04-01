@@ -4,6 +4,8 @@ from enum import Enum
 
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ObjectDoesNotExist
+
+# from django.db.models import Count, Q
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -60,6 +62,18 @@ def moon_details_button_html(moon: Moon) -> str:
     )
 
 
+def extraction_details_button_html(extraction: Extraction) -> str:
+    ajax_url = reverse("moonmining:extraction_details", args=[extraction.pk])
+    actions_html = (
+        '<button type="button" class="btn btn-default" '
+        'data-toggle="modal" data-target="#modalExtractionDetails" '
+        'title="Show details for this extraction." '
+        f"data-ajax_url={ajax_url}>"
+        '<i class="fas fa-hammer"></i></button>'
+    )
+    return actions_html
+
+
 def default_if_none(value, default):
     """Return given default if value is None"""
     if value is None:
@@ -108,15 +122,8 @@ def extractions_data(request, category):
         corporation_html = extraction.refinery.owner.name_html
         corporation_name = extraction.refinery.owner.name
         alliance_name = extraction.refinery.owner.alliance_name
-        ajax_url = reverse("moonmining:extraction_details", args=[extraction.pk])
-        actions_html = (
-            '<button type="button" class="btn btn-default" '
-            'data-toggle="modal" data-target="#modalExtractionDetails" '
-            'title="Show details for this extraction." '
-            f"data-ajax_url={ajax_url}>"
-            '<i class="fas fa-hammer"></i></button>'
-        )
-        actions_html += "&nbsp;" + moon_details_button_html(extraction.refinery.moon)
+        actions_html = moon_details_button_html(extraction.refinery.moon)
+        actions_html += "&nbsp;" + extraction_details_button_html(extraction)
         data.append(
             {
                 "id": extraction.pk,
@@ -131,7 +138,7 @@ def extractions_data(request, category):
                     "sort": extraction.ready_time,
                 },
                 "moon": str(extraction.refinery.moon),
-                "status": extraction.get_status_display(),
+                "status_str": extraction.get_status_display(),
                 "corporation": {"display": corporation_html, "sort": corporation_name},
                 "volume": extraction.volume,
                 "value": extraction.value if extraction.value else None,
@@ -140,6 +147,7 @@ def extractions_data(request, category):
                 "alliance_name": alliance_name,
                 "is_jackpot_str": yesno_str(extraction.is_jackpot),
                 "is_ready": extraction.ready_time <= now(),
+                "status": extraction.status,
             }
         )
     return JsonResponse(data, safe=False)
@@ -269,21 +277,37 @@ def moons_data(request, category):
         solar_system_link = link_html(
             dotlan.solar_system_url(solar_system_name), solar_system_name
         )
-        has_refinery = hasattr(moon, "refinery")
-        if has_refinery:
-            corporation_html = moon.refinery.owner.name_html
-            corporation_name = moon.refinery.owner.name
-            alliance_name = moon.refinery.owner.alliance_name
+        try:
+            refinery = moon.refinery
+        except ObjectDoesNotExist:
+            has_refinery = False
+            corporation_html = corporation_name = alliance_name = ""
+            has_details_access = request.user.has_perm("moonmining.view_all_moons")
+            extraction = None
+        else:
+            has_refinery = True
+            corporation_html = refinery.owner.name_html
+            corporation_name = refinery.owner.name
+            alliance_name = refinery.owner.alliance_name
             has_details_access = request.user.has_perm(
                 "moonmining.extractions_access"
             ) or request.user.has_perm("moonmining.view_all_moons")
-        else:
-            corporation_html = corporation_name = alliance_name = ""
-            has_details_access = request.user.has_perm("moonmining.view_all_moons")
+            extraction = refinery.extractions.filter(
+                status__in=[Extraction.Status.STARTED, Extraction.Status.FINISHED]
+            ).first()
+
         region_name = (
             moon.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region.name
         )
-        details_html = moon_details_button_html(moon) if has_details_access else ""
+        if has_details_access:
+            details_html = moon_details_button_html(moon)
+            details_html += (
+                "&nbsp;" + extraction_details_button_html(extraction)
+                if extraction
+                else ""
+            )
+        else:
+            details_html = ""
         moon_data = {
             "id": moon.pk,
             "moon_name": moon.eve_moon.name,
@@ -296,7 +320,8 @@ def moons_data(request, category):
                 "sort": moon.rarity_class,
             },
             "details": details_html,
-            "has_refinery_str": "yes" if has_refinery else "no",
+            "has_refinery_str": yesno_str(has_refinery),
+            "has_extraction_str": yesno_str(extraction is not None),
             "solar_system_name": solar_system_name,
             "corporation_name": corporation_name,
             "alliance_name": alliance_name,

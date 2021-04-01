@@ -34,10 +34,10 @@
                                 style="width: {{ product.amount_percent }}%; line-height: 20px;"
                             >
                                 <span class="sr-only">
-                                    {{ product.amount_percent }}% {{ product.ore_type.name }}
+                                    {{ product.amount_percent|floatformat:"0" }}% {{ product.ore_type.name }}
                                 </span>
                                 <h5 class="media-heading" style="padding-top: 2px">
-                                    {{ product.amount_percent }}%
+                                    {{ product.amount_percent|floatformat:"0" }}%
                                 </h5>
                             </div>
                         </div>

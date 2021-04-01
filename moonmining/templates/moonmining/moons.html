@@ -47,6 +47,9 @@
     {% elif perms.moonmining.upload_moon_scan %}
         <script>var defaultTab = "tab_{{MoonsCategory.UPLOADS}}";</script>
     {% endif %}
+
+    <!-- Modals -->
+    {% include "moonmining/modals/extraction_details.html" %}
 {% endblock %}
 
 {% block extra_javascript %}
@@ -86,13 +89,14 @@
                     { data: 'corporation_name' },
                     { data: 'alliance_name' },
                     { data: 'rarity_class_label' },
+                    { data: 'has_extraction_str' },
                 ],
                 lengthMenu: DEFAULT_LENGTH_MENU,
                 pageLength: DEFAULT_PAGE_LENGTH,
                 order: [ [0, "asc"] ],
                 columnDefs: [
                     { "orderable": false, "targets": [ 6 ] },
-                    { "visible": false, "targets": [ 7, 8, 9, 10, 11 ] },
+                    { "visible": false, "targets": [ 7, 8, 9, 10, 11, 12 ] },
                 ],
                 filterDropDown: {
                     columns: [
@@ -118,6 +122,10 @@
                         {
                             idx: 8,
                             title: "Our moon"
+                        },
+                        {
+                            idx: 12,
+                            title: "Active Extraction?"
                         }
                     ],
                     bootstrap: true,
@@ -160,6 +168,13 @@
             } );
 
             $('#myTabs a[href="#' + defaultTab + '"]').tab('show')
+
+            /* extraction details modal */
+            $('#modalExtractionDetails').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget)
+                var ajax_url = button.data('ajax_url');
+                $("#modalExtractionDetailsContent").load(ajax_url)
+            });
 
         });
     </script>
