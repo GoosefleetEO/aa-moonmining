@@ -157,6 +157,10 @@ class EveOreType(EveType):
         return value
 
     @property
+    def icon_url_32(self) -> str:
+        return self.icon_url(32)
+
+    @property
     def rarity_class(self) -> OreRarityClass:
         return OreRarityClass.from_eve_type(self)
 
@@ -257,6 +261,15 @@ class Extraction(models.Model):
     def __str__(self) -> str:
         return f"{self.refinery} - {self.ready_time} - {self.status}"
 
+    @cached_property
+    def products_sorted(self):
+        try:
+            return self.products.select_related(
+                "ore_type", "ore_type__eve_group"
+            ).order_by("-ore_type__eve_group_id")
+        except ObjectDoesNotExist:
+            return ExtractionProduct.objects.none()
+
     def calc_value(self) -> Optional[float]:
         """Calculate value estimate and return result."""
         try:
@@ -332,6 +345,10 @@ class ExtractionProduct(models.Model):
 
     def __str__(self) -> str:
         return f"{self.extraction} - {self.ore_type}"
+
+    @cached_property
+    def value(self) -> float:
+        return self.calc_value()
 
     def calc_value(self, reprocessing_yield=None) -> float:
         """returns calculated value estimate in ISK

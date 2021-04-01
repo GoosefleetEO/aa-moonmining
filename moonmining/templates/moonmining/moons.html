@@ -50,9 +50,7 @@
 {% endblock %}
 
 {% block extra_javascript %}
-    {% include 'bundles/datatables-js.html' %}
-    <script type="text/javascript" src="{% static 'js/filterDropDown/filterDropDown.min.js' %}"></script>
-    <script type="text/javascript" src="{% static 'moonmining/js/global.js' %}"></script>
+    {{ block.super }}
     <script type="text/javascript">
         $(function(){
             var def = {
@@ -168,8 +166,7 @@
 {% endblock %}
 
 {% block extra_css %}
-    {% include 'bundles/datatables-css.html' %}
-    <link href="{% static 'moonmining/css/global.css' %}" type="text/css" rel="stylesheet">
+    {{ block.super }}
     <link href="{% static 'moonmining/css/moons.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}
 

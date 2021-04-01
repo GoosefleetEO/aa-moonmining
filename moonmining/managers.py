@@ -4,6 +4,7 @@ from typing import Tuple
 
 from django.contrib.auth.models import User
 from django.db import models, transaction
+from django.db.models import Sum
 from django.utils.timezone import now
 from eveuniverse.managers import EveTypeManager
 from eveuniverse.models import EveMoon
@@ -221,5 +222,9 @@ class ExtractionQuerySet(models.QuerySet, UpdateCalculatedPropertiesMixin):
 
 
 class ExtractionManager(models.Manager):
+    def annotate_volume(self) -> models.QuerySet:
+        """Add volume of all products"""
+        return self.annotate(volume=Sum("products__volume"))
+
     def get_queryset(self) -> models.QuerySet:
         return ExtractionQuerySet(self.model, using=self._db)

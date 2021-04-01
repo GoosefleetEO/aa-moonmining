@@ -1,5 +1,7 @@
 {% extends 'allianceauth/base.html' %}
+{% load static %}
 {% load i18n %}
+
 {% block page_title %}{% trans 'Moon Mining' %}{% endblock %}
 
 {% block content %}
@@ -7,4 +9,16 @@
     {% include 'moonmining/partials/menu.html' %}
     <h2>{{ page_title }}</h2>
     {% block details %}{% endblock %}
+{% endblock %}
+
+{% block extra_javascript %}
+    {% include 'bundles/datatables-js.html' %}
+    <script type="text/javascript" src="{% static 'js/filterDropDown/filterDropDown.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'moonmining/js/global.js' %}"></script>
+{% endblock %}
+
+{% block extra_css %}
+    {% include 'bundles/datatables-css.html' %}
+    <link href="{% static 'moonmining/css/global.css' %}" type="text/css" rel="stylesheet">
+    <link href="{% static 'moonmining/css/moonmining.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}

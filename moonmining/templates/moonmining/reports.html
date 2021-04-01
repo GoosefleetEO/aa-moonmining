@@ -20,10 +20,7 @@
 {% endblock %}
 
 {% block extra_javascript %}
-    {% include 'bundles/datatables-js.html' %}
-    <script type="application/javascript" src="{% static 'moonmining/vendor/datatables/plugins/dataTables.rowGroup.min.js' %}"></script>
-    <script type="text/javascript" src="{% static 'moonmining/js/global.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/filterDropDown/filterDropDown.min.js' %}"></script>
+    {{ block.super }}
     <script type="text/javascript">
         $(function() {
 
@@ -106,9 +103,8 @@
 {% endblock %}
 
 {% block extra_css %}
-    {% include 'bundles/datatables-css.html' %}
+    {{ block.super }}
     <link rel="stylesheet" href="{% static 'memberaudit/vendor/datatables/plugins/rowGroup.dataTables.min.css' %}" type="text/css">
-    <link href="{% static 'moonmining/css/global.css' %}" type="text/css" rel="stylesheet">
     <link href="{% static 'moonmining/css/reports.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}
 

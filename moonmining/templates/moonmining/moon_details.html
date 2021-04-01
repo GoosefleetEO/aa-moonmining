@@ -18,7 +18,7 @@
 {% endblock %}
 
 {% block extra_javascript %}
-    {% include 'bundles/datatables-js.html' %}
+    {{ block.super }}
     <script>
         $(document).ready(function(){
             $('#table_past_events').DataTable({
@@ -29,9 +29,8 @@
 {% endblock %}
 
 {% block extra_css %}
-    {% include 'bundles/datatables-css.html' %}
-     <link href="{% static 'moonmining/css/global.css' %}" type="text/css" rel="stylesheet">
-     <link href="{% static 'moonmining/css/moon_details.css' %}" type="text/css" rel="stylesheet">
+    {{ block.super }}
+    <link href="{% static 'moonmining/css/moon_details.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}
 
 {% block extra_script %}

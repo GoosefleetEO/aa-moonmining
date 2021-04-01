@@ -3,7 +3,6 @@ from collections import defaultdict
 from enum import Enum
 
 from django.contrib.auth.decorators import login_required, permission_required
-from django.db.models import Sum
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -54,7 +53,7 @@ class MoonsCategory(str, helpers.EnumToDict, Enum):
 def moon_details_button_html(moon: Moon) -> str:
     return fontawesome_link_button_html(
         url=reverse("moonmining:moon_details", args=[moon.pk]),
-        fa_code="fas fa-eye",
+        fa_code="fas fa-moon",
         tooltip="Show details in current window",
         button_type="default",
     )
@@ -91,13 +90,13 @@ def extractions(request):
 def extractions_data(request, category):
     data = list()
     cutover_dt = now() - dt.timedelta(hours=MOONMINING_EXTRACTIONS_HOURS_UNTIL_STALE)
-    extractions = Extraction.objects.select_related(
+    extractions = Extraction.objects.annotate_volume().select_related(
         "refinery",
         "refinery__moon",
         "refinery__owner",
         "refinery__owner__corporation",
         "refinery__owner__corporation__alliance",
-    ).annotate(volume=Sum("products__volume"))
+    )
     if category == ExtractionsCategory.PAST:
         extractions = extractions.filter(ready_time__lt=cutover_dt)
     elif category == ExtractionsCategory.UPCOMING:
@@ -108,6 +107,14 @@ def extractions_data(request, category):
         corporation_html = extraction.refinery.owner.name_html
         corporation_name = extraction.refinery.owner.name
         alliance_name = extraction.refinery.owner.alliance_name
+        ajax_url = reverse("moonmining:extraction_details", args=[extraction.pk])
+        actions_html = (
+            '<button type="button" class="btn btn-default" '
+            'data-toggle="modal" data-target="#modalExtractionDetails" '
+            f"data-ajax_url={ajax_url}>"
+            '<i class="fas fa-hammer"></i></button>'
+        )
+        actions_html += "&nbsp;" + moon_details_button_html(extraction.refinery.moon)
         data.append(
             {
                 "id": extraction.pk,
@@ -126,7 +133,7 @@ def extractions_data(request, category):
                 "corporation": {"display": corporation_html, "sort": corporation_name},
                 "volume": extraction.volume,
                 "value": extraction.value if extraction.value else None,
-                "details": moon_details_button_html(extraction.refinery.moon),
+                "details": actions_html,
                 "corporation_name": corporation_name,
                 "alliance_name": alliance_name,
                 "is_jackpot_str": yesno_str(extraction.is_jackpot),
@@ -134,6 +141,17 @@ def extractions_data(request, category):
             }
         )
     return JsonResponse(data, safe=False)
+
+
+@login_required
+@permission_required(["moonmining.extractions_access", "moonmining.basic_access"])
+def extraction_details(request, extraction_pk: int):
+    try:
+        extraction = Extraction.objects.annotate_volume().get(pk=extraction_pk)
+    except Extraction.DoesNotExist:
+        return HttpResponseNotFound()
+    context = {"extraction": extraction}
+    return render(request, "moonmining/modals/extraction_details_content.html", context)
 
 
 @login_required
@@ -163,50 +181,21 @@ def moon_details(request, moon_pk: int):
             .order_by("-ore_type__eve_group_id")
         )
     ]
-    next_pull_data = None
+    extraction = None
     ppulls_data = None
     if hasattr(moon, "refinery"):
-        next_pull = Extraction.objects.filter(
+        extraction = Extraction.objects.filter(
             refinery=moon.refinery, ready_time__gte=now()
         ).first()
-        if next_pull:
-            next_pull_product_rows = list()
-            total_value = 0
-            total_volume = 0
-            for product in next_pull.products.select_related(
-                "ore_type", "ore_type__eve_group"
-            ).order_by("-ore_type__eve_group_id"):
-                value = product.calc_value()
-                total_value += default_if_none(value, 0)
-                total_volume += product.volume
-                ore_type = product.ore_type
-                next_pull_product_rows.append(
-                    {
-                        "ore_type_name": ore_type.name,
-                        "ore_type_url": ore_type.profile_url,
-                        "ore_quality_tag": ore_type.quality_class.bootstrap_tag_html,
-                        "image_url": ore_type.icon_url(constants.IconSize.SMALL),
-                        "volume": product.volume,
-                        "value": value,
-                    }
-                )
-            next_pull_data = {
-                "ready_time": next_pull.ready_time,
-                "auto_time": next_pull.auto_time,
-                "started_by": next_pull.started_by,
-                "total_value": total_value,
-                "total_volume": total_volume,
-                "products": next_pull_product_rows,
-            }
-            ppulls_data = Extraction.objects.filter(
-                refinery=moon.refinery, ready_time__lt=now()
-            )
+        ppulls_data = Extraction.objects.filter(
+            refinery=moon.refinery, ready_time__lt=now()
+        )
 
     context = {
         "page_title": "Moon Details",
         "moon": moon,
         "product_rows": product_rows,
-        "next_pull": next_pull_data,
+        "extraction": extraction,
         "ppulls": ppulls_data,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,

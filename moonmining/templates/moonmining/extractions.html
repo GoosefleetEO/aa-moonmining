@@ -20,12 +20,13 @@
             <p class="text-muted">All times displayed are EVE/UTC • Extractions will be shown on the upcoming tab until {{ stale_hours }} hours after their ready time.</p>
         </div>
     </div>
+
+    <!-- Modals -->
+    {% include "moonmining/modals/extraction_details.html" %}
 {% endblock %}
 
 {% block extra_javascript %}
-    {% include 'bundles/datatables-js.html' %}
-    <script type="text/javascript" src="{% static 'js/filterDropDown/filterDropDown.min.js' %}"></script>
-    <script type="text/javascript" src="{% static 'moonmining/js/global.js' %}"></script>
+    {{ block.super }}
     <script type="text/javascript">
         $(function() {
             var def = {
@@ -129,14 +130,20 @@
             var table = $('#table_{{ ExtractionsCategory.PAST }}').DataTable(def);
 
             $('#myTabs a[href="#tab_{{ ExtractionsCategory.UPCOMING }}"]').tab('show')
+
+            /* extraction details modal */
+            $('#modalExtractionDetails').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget)
+                var ajax_url = button.data('ajax_url');
+                $("#modalExtractionDetailsContent").load(ajax_url)
+            });
         });
 
     </script>
 {% endblock %}
 
 {% block extra_css %}
-    {% include 'bundles/datatables-css.html' %}
-    <link href="{% static 'moonmining/css/global.css' %}" type="text/css" rel="stylesheet">
+    {{ block.super }}
     <link href="{% static 'moonmining/css/extractions.css' %}" type="text/css" rel="stylesheet">
 {% endblock %}
 

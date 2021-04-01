@@ -76,6 +76,8 @@ def generate_extraction(refinery, ready_time, started_by):
         ready_time=ready_time,
         auto_time=ready_time + dt.timedelta(hours=4),
         started_by=started_by,
+        started_at=ready_time - dt.timedelta(days=14),
+        status=Extraction.Status.STARTED,
     )
     for product in moon.products.all():
         ExtractionProduct.objects.create(
@@ -95,7 +97,7 @@ ore_type_ids = [int(obj["type_id"]) for obj in data["ore_type_ids"]]
 print(f"Generating {MAX_MOONS} moons...")
 random_user = User.objects.order_by("?").first()
 my_moons = list()
-for moon_id in random.choices(moon_ids, k=MAX_MOONS):
+for moon_id in random.sample(moon_ids, k=MAX_MOONS):
     print(f"Creating moon {moon_id}")
     eve_moon, _ = EveMoon.objects.get_or_create_esi(id=moon_id)
     moon, created = Moon.objects.get_or_create(
@@ -108,7 +110,7 @@ for moon_id in random.choices(moon_ids, k=MAX_MOONS):
     my_moons.append(moon)
     if created:
         percentages = random_percentages(4)
-        for ore_type_id in random.choices(ore_type_ids, k=4):
+        for ore_type_id in random.sample(ore_type_ids, k=4):
             ore_type, _ = EveOreType.objects.get_or_create_esi(id=ore_type_id)
             MoonProduct.objects.create(
                 moon=moon, ore_type=ore_type, amount=percentages.pop() / 100
