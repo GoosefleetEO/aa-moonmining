@@ -22,31 +22,67 @@
     </div>
 </div>
 
+<div class="row">
+    <div class="col-md-3">
+        <p><strong>Started:</strong></p>
+    </div>
+    <div class="col-md-9">
+        <p>{{ extraction.started_at|datetime|default:"?" }} ({{ extraction.started_at|naturaltime|default:"?" }}) by {{ extraction.started_by|default:"?" }}</p>
+    </div>
+</div>
+
+{% if extraction.status == extraction.Status.CANCELED %}
+    <div class="row">
+        <div class="col-md-3">
+            <p><strong>Canceled:</strong></p>
+        </div>
+        <div class="col-md-9">
+            <p>{{ extraction.canceled_at|datetime|default:"?" }} by {{ extraction.canceled_by|default:"?" }}</p>
+        </div>
+    </div>
+{% endif %}
 
 <div class="row">
     <div class="col-md-3">
-        <p><strong>Ready Time:</strong></p>
+        <p><strong>Ready:</strong></p>
     </div>
     <div class="col-md-9">
-        <p>{{ extraction.ready_time|datetime }}</p>
+        <p>{{ extraction.ready_time|datetime }}
+        {% if extraction.status == extraction.Status.STARTED %}
+            ({{ extraction.ready_time|timeuntil }})</p>
+        {% endif %}
     </div>
 </div>
 
 <div class="row">
-    <div class="col-md-3">
-        <p><strong>Auto Fracture Time:</strong></p>
-    </div>
-    <div class="col-md-9">
-        <p>{{ extraction.auto_time|datetime }}</p>
-    </div>
+    {% if extraction.status != extraction.Status.FRACTURED %}
+        <div class="col-md-3">
+            <p><strong>Auto fracture:</strong></p>
+        </div>
+        <div class="col-md-9">
+            <p>
+                {{ extraction.auto_time|datetime }}
+                {% if extraction.status == extraction.Status.STARTED or extraction.status == extraction.Status.FINISHED %}
+                    ({{ extraction.auto_time|timeuntil }})
+                {% endif %}
+            </p>
+        </div>
+    {% else %}
+        <div class="col-md-3">
+            <p><strong>Fractured:</strong></p>
+        </div>
+        <div class="col-md-9">
+            <p>{{ extraction.fractured_at|datetime|default:"?" }} by {{ extraction.fractured_by|default:"?" }}</p>
+        </div>
+    {% endif %}
 </div>
 
 <div class="row">
     <div class="col-md-3">
-        <p><strong>Started By:</strong></p>
+        <p><strong>Jackpot:</strong></p>
     </div>
     <div class="col-md-9">
-        <p>{{ extraction.started_by|default:"?" }}</p>
+        <p>{{ extraction.is_jackpot|yesno }}</p>
     </div>
 </div>
 

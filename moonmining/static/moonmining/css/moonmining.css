@@ -1,14 +1,8 @@
-#table_extraction_details thead th {
+#table_extraction_details thead th:nth-child(3) {
 	text-align: center;
-	vertical-align: top;
 }
-#table_extraction_details tbody td {
+#table_extraction_details thead th:nth-child(4) {
 	text-align: center;
-	vertical-align: top;
-}
-#table_extraction_details tfoot th {
-	text-align: center;
-	vertical-align: top;
 }
 #table_extraction_details tbody td:nth-child(3) {
 	text-align: right;

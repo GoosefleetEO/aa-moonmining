@@ -3,6 +3,7 @@ from collections import defaultdict
 from enum import Enum
 
 from django.contrib.auth.decorators import login_required, permission_required
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -31,7 +32,7 @@ from .app_settings import (
 )
 from .forms import MoonScanForm
 from .helpers import HttpResponseUnauthorized
-from .models import Extraction, Moon, MoonProduct, OreRarityClass, Owner
+from .models import Extraction, Moon, OreRarityClass, Owner
 
 # from django.views.decorators.cache import cache_page
 
@@ -166,30 +167,39 @@ def moon_details(request, moon_pk: int):
     ) and not request.user.has_perm("moonmining.extractions_access"):
         return HttpResponseUnauthorized()
 
-    product_rows = [
-        {
-            "ore_type_name": product.ore_type.name,
-            "ore_type_url": product.ore_type.profile_url,
-            "ore_rarity_tag": product.ore_type.rarity_class.bootstrap_tag_html,
-            "image_url": product.ore_type.icon_url(constants.IconSize.MEDIUM),
-            "amount": int(round(product.amount * 100)),
-            "value": product.calc_value(),
-        }
-        for product in (
-            MoonProduct.objects.select_related("ore_type", "ore_type__eve_group")
-            .filter(moon=moon)
-            .order_by("-ore_type__eve_group_id")
+    try:
+        product_rows = [
+            {
+                "ore_type_name": product.ore_type.name,
+                "ore_type_url": product.ore_type.profile_url,
+                "ore_rarity_tag": product.ore_type.rarity_class.bootstrap_tag_html,
+                "image_url": product.ore_type.icon_url(constants.IconSize.MEDIUM),
+                "amount": int(round(product.amount * 100)),
+                "value": product.calc_value(),
+            }
+            for product in (
+                moon.products.select_related(
+                    "ore_type", "ore_type__eve_group"
+                ).order_by("-ore_type__eve_group_id")
+            )
+        ]
+    except ObjectDoesNotExist:
+        product_rows = list()
+    try:
+        extraction = (
+            moon.refinery.extractions.annotate_volume()
+            .filter(
+                ready_time__gte=now(),
+                status__in=[Extraction.Status.STARTED, Extraction.Status.FINISHED],
+            )
+            .first()
         )
-    ]
-    extraction = None
-    ppulls_data = None
-    if hasattr(moon, "refinery"):
-        extraction = Extraction.objects.filter(
-            refinery=moon.refinery, ready_time__gte=now()
-        ).first()
-        ppulls_data = Extraction.objects.filter(
-            refinery=moon.refinery, ready_time__lt=now()
-        )
+    except ObjectDoesNotExist:
+        extraction = None
+    try:
+        ppulls_data = moon.refinery.extractions.filter(ready_time__lt=now())
+    except ObjectDoesNotExist:
+        ppulls_data = None
 
     context = {
         "page_title": "Moon Details",
