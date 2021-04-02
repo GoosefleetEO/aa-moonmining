@@ -525,7 +525,7 @@ class TestProcessSurveyInput(NoSocketsTestCase):
             permissions=[
                 "moonmining.basic_access",
                 "moonmining.extractions_access",
-                "moonmining.add_owner",
+                "moonmining.add_refinery_owner",
             ],
             scopes=[
                 "esi-industry.read_corporation_mining.v1",

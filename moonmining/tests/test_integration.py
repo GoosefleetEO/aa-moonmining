@@ -114,7 +114,7 @@ class TestUpdateTasks(TestCase):
             permissions=[
                 "moonmining.basic_access",
                 "moonmining.extractions_access",
-                "moonmining.add_owner",
+                "moonmining.add_refinery_owner",
             ],
             scopes=Owner.esi_scopes(),
         )
@@ -169,7 +169,7 @@ class TestProcessSurveyInput(TestCase):
             permissions=[
                 "moonmining.basic_access",
                 "moonmining.extractions_access",
-                "moonmining.add_owner",
+                "moonmining.add_refinery_owner",
             ],
             scopes=Owner.esi_scopes(),
         )

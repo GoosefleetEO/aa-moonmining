@@ -678,7 +678,7 @@ class Owner(models.Model):
         structures = esi.client.Corporation.get_corporations_corporation_id_structures(
             corporation_id=self.corporation.corporation_id,
             token=token.valid_access_token(),
-        ).result()
+        ).results()
         refineries = dict()
         for structure_info in structures:
             eve_type, _ = EveType.objects.get_or_create_esi(
@@ -694,7 +694,7 @@ class Owner(models.Model):
         try:
             structure_info = esi.client.Universe.get_universe_structures_structure_id(
                 structure_id=structure_id, token=token.valid_access_token()
-            ).result()
+            ).results()
         except OSError:
             logger.exception("%s: Failed to fetch refinery #%d", self, structure_id)
             return
@@ -722,7 +722,7 @@ class Owner(models.Model):
             esi.client.Character.get_characters_character_id_notifications(
                 character_id=self.character_ownership.character.character_id,
                 token=token.valid_access_token(),
-            ).result()
+            ).results()
         )
         moon_notifications = [
             notif

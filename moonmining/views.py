@@ -261,7 +261,7 @@ def moons_data(request, category):
     return JsonResponse(data, safe=False)
 
 
-@permission_required(["moonmining.add_owner", "moonmining.basic_access"])
+@permission_required(["moonmining.add_refinery_owner", "moonmining.basic_access"])
 @token_required(scopes=Owner.esi_scopes())
 @login_required
 def add_owner(request, token):
@@ -287,7 +287,7 @@ def add_owner(request, token):
     )
     tasks.update_owner.delay(owner.pk)
     messages_plus.success(request, f"Update of refineres started for {owner}.")
-    return redirect("moonmining:extractions")
+    return redirect("moonmining:index")
 
 
 @login_required

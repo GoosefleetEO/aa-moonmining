@@ -30,7 +30,7 @@ class TestOwner(TestCase):
         load_eveuniverse()
         cls.factory = RequestFactory()
         cls.user, cls.character_ownership = create_user_from_evecharacter(
-            1001, permissions=["moonmining.add_owner"]
+            1001, permissions=["moonmining.add_refinery_owner"]
         )
 
     @patch(MODULE_PATH + ".tasks.update_owner")
@@ -49,7 +49,7 @@ class TestOwner(TestCase):
         response = orig_view(request, token)
         # then
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, reverse("moonmining:extractions"))
+        self.assertEqual(response.url, reverse("moonmining:index"))
         self.assertTrue(mock_messages.success.called)
         self.assertTrue(mock_update_owner.delay.called)
         obj = Owner.objects.get(corporation__corporation_id=2001)
@@ -75,7 +75,7 @@ class TestOwner(TestCase):
         response = orig_view(request, token)
         # then
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, reverse("moonmining:extractions"))
+        self.assertEqual(response.url, reverse("moonmining:index"))
         self.assertTrue(mock_messages.success.called)
         self.assertTrue(mock_update_owner.delay.called)
         obj = Owner.objects.get(corporation__corporation_id=2001)
@@ -255,7 +255,7 @@ class TestMoonInfo(TestCase):
                 "moonmining.extractions_access",
                 "moonmining.view_all_moons",
                 "moonmining.upload_moon_scan",
-                "moonmining.add_owner",
+                "moonmining.add_refinery_owner",
             ],
             scopes=[
                 "esi-industry.read_corporation_mining.v1",
@@ -294,7 +294,7 @@ class TestViewsAreWorking(TestCase):
                 "moonmining.reports_access",
                 "moonmining.view_all_moons",
                 "moonmining.upload_moon_scan",
-                "moonmining.add_owner",
+                "moonmining.add_refinery_owner",
             ],
             scopes=[
                 "esi-industry.read_corporation_mining.v1",

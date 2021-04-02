@@ -75,7 +75,7 @@ def create_default_user_from_evecharacter(character_id):
             "moonmining.basic_access",
             "moonmining.upload_moon_scan",
             "moonmining.extractions_access",
-            "moonmining.add_owner",
+            "moonmining.add_refinery_owner",
         ],
         scopes=Owner.esi_scopes(),
     )
