@@ -325,6 +325,29 @@ class TestViewsAreWorking(TestCase):
         # then
         self.assertEqual(response.status_code, 200)
 
+    def test_should_open_moon_details_page(self):
+        # given
+        request = self.factory.get(
+            reverse("moonmining:moon_details", args=[self.moon.pk])
+        )
+        request.user = self.user
+        # when
+        response = views.moon_details(request, self.moon.pk)
+        # then
+        self.assertEqual(response.status_code, 200)
+
+    def test_should_open_extraction_details_page(self):
+        # given
+        extraction = self.refinery.extractions.first()
+        request = self.factory.get(
+            reverse("moonmining:extraction_details", args=[extraction.pk])
+        )
+        request.user = self.user
+        # when
+        response = views.extraction_details(request, extraction.pk)
+        # then
+        self.assertEqual(response.status_code, 200)
+
     def test_should_open_add_moon_scan_page(self):
         # given
         request = self.factory.get(reverse("moonmining:upload_survey"))

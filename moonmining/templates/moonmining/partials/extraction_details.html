@@ -55,14 +55,14 @@
 </div>
 
 <div class="row">
-    {% if extraction.status != extraction.Status.FRACTURED %}
+    {% if extraction.status != extraction.Status.COMPLETED %}
         <div class="col-md-3">
             <p><strong>Auto fracture:</strong></p>
         </div>
         <div class="col-md-9">
             <p>
                 {{ extraction.auto_time|datetime }}
-                {% if extraction.status == extraction.Status.STARTED or extraction.status == extraction.Status.FINISHED %}
+                {% if extraction.status == extraction.Status.STARTED or extraction.status == extraction.Status.READY %}
                     ({{ extraction.auto_time|timeuntil }})
                 {% endif %}
             </p>

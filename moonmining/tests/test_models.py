@@ -323,7 +323,7 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         # then
         self.assertEqual(refinery.extractions.count(), 1)
         extraction = refinery.extractions.first()
-        self.assertEqual(extraction.status, Extraction.Status.FINISHED)
+        self.assertEqual(extraction.status, Extraction.Status.READY)
         self.assertEqual(
             extraction.finished_at,
             dt.datetime(2019, 11, 22, 3, tzinfo=pytz.UTC),
@@ -354,7 +354,7 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         # then
         self.assertEqual(refinery.extractions.count(), 1)
         extraction = refinery.extractions.first()
-        self.assertEqual(extraction.status, Extraction.Status.FRACTURED)
+        self.assertEqual(extraction.status, Extraction.Status.COMPLETED)
         self.assertEqual(
             extraction.finished_at,
             dt.datetime(2019, 11, 22, 3, tzinfo=pytz.UTC),
@@ -386,7 +386,7 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         # then
         self.assertEqual(refinery.extractions.count(), 1)
         extraction = refinery.extractions.first()
-        self.assertEqual(extraction.status, Extraction.Status.FRACTURED)
+        self.assertEqual(extraction.status, Extraction.Status.COMPLETED)
         self.assertEqual(
             extraction.finished_at,
             dt.datetime(2019, 11, 22, 3, tzinfo=pytz.UTC),
@@ -453,7 +453,7 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         extraction_1.refresh_from_db()
         self.assertEqual(extraction_1.status, Extraction.Status.CANCELED)
         extraction_2 = refinery.extractions.get(ready_time=ready_time_2)
-        self.assertEqual(extraction_2.status, Extraction.Status.FRACTURED)
+        self.assertEqual(extraction_2.status, Extraction.Status.COMPLETED)
         extraction_3 = refinery.extractions.get(ready_time=ready_time_3)
         self.assertEqual(extraction_3.status, Extraction.Status.STARTED)
 

@@ -183,11 +183,11 @@ class Extraction(models.Model):
     """A mining extraction."""
 
     class Status(models.TextChoices):
-        STARTED = "ST", "started"
-        CANCELED = "CN", "canceled"
-        FINISHED = "FN", "finished"
-        FRACTURED = "FR", "fractured"
-        UNDEFINED = "UN", "undefined"
+        STARTED = "ST", "started"  # has been started
+        CANCELED = "CN", "canceled"  # has been canceled
+        READY = "RD", "ready"  # has finished extraction and is ready to be fractured
+        COMPLETED = "CP", "completed"  # has been fractured
+        UNDEFINED = "UN", "undefined"  # unclear status
 
     # PK
     refinery = models.ForeignKey(
@@ -847,13 +847,13 @@ class Owner(models.Model):
                             extractions_count += 1
 
                         elif notif.notif_type == "MoonminingExtractionFinished":
-                            extraction.status = Extraction.Status.FINISHED
+                            extraction.status = Extraction.Status.READY
                             extraction.finished_at = notif.timestamp
                             ores = notif.details["oreVolumeByType"]
 
-                    elif extraction.status == Extraction.Status.FINISHED:
+                    elif extraction.status == Extraction.Status.READY:
                         if notif.notif_type == "MoonminingLaserFired":
-                            extraction.status = Extraction.Status.FRACTURED
+                            extraction.status = Extraction.Status.COMPLETED
                             extraction.fractured_at = notif.timestamp
                             extraction.fractured_by = eveentity_get_or_create_esi_safe(
                                 notif.details.get("firedBy")
@@ -864,7 +864,7 @@ class Owner(models.Model):
                             extractions_count += 1
 
                         elif notif.notif_type == "MoonminingAutomaticFracture":
-                            extraction.status = Extraction.Status.FRACTURED
+                            extraction.status = Extraction.Status.COMPLETED
                             extraction.fractured_at = notif.timestamp
                             ores = notif.details["oreVolumeByType"]
                             extraction._save_with_ores(ores)

@@ -190,7 +190,7 @@ def moon_details(request, moon_pk: int):
         extraction = (
             moon.refinery.extractions.annotate_volume()
             .filter(
-                status__in=[Extraction.Status.STARTED, Extraction.Status.FINISHED],
+                status__in=[Extraction.Status.STARTED, Extraction.Status.READY],
             )
             .first()
         )
@@ -200,7 +200,7 @@ def moon_details(request, moon_pk: int):
         past_extractions = (
             moon.refinery.extractions.annotate_volume()
             .exclude(
-                status__in=[Extraction.Status.STARTED, Extraction.Status.FINISHED],
+                status__in=[Extraction.Status.STARTED, Extraction.Status.READY],
             )
             .order_by("-ready_time")
         )
@@ -307,7 +307,7 @@ def moons_data(request, category):
                 "moonmining.extractions_access"
             ) or request.user.has_perm("moonmining.view_all_moons")
             extraction = refinery.extractions.filter(
-                status__in=[Extraction.Status.STARTED, Extraction.Status.FINISHED]
+                status__in=[Extraction.Status.STARTED, Extraction.Status.READY]
             ).first()
 
         region_name = (

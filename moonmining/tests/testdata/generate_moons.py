@@ -54,7 +54,7 @@ from moonmining.models import (
 )
 
 MAX_MOONS = 5
-MAX_REFINERIES = 1
+MAX_REFINERIES = 2
 DUMMY_CORPORATION_ID = 1000127  # Guristas
 DUMMY_CHARACTER_ID = 3019491  # Guristas CEO
 
@@ -159,7 +159,7 @@ for moon in random.choices(my_moons, k=MAX_REFINERIES):
                 refinery=refinery,
                 ready_time=now() - dt.timedelta(days=random.randint(7, 30)),
                 started_by=character,
-                status=Extraction.Status.FRACTURED,
+                status=Extraction.Status.COMPLETED,
             )
         )
 print(f"Updating calculated properties...")
