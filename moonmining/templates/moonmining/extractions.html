@@ -22,7 +22,8 @@
     </div>
 
     <!-- Modals -->
-    {% include "moonmining/modals/loader.html" with modal_id="modalExtractionDetails" modal_content_id="modalExtractionDetailsContent" %}
+    {% include "moonmining/modals/base.html" with modal_id="modalMoonDetails" modal_content_id="modalMoonDetailsContent" modal_size="modal-xl" %}
+    {% include "moonmining/modals/base.html" with modal_id="modalExtractionDetails" modal_content_id="modalExtractionDetailsContent" %}
 {% endblock %}
 
 {% block extra_javascript %}
@@ -136,9 +137,8 @@
 
             $('#myTabs a[href="#tab_{{ ExtractionsCategory.UPCOMING }}"]').tab('show')
 
-            handle_modal_events(
-                "modalExtractionDetails", "modalExtractionDetailsContent"
-            )
+            handle_modal_events("modalMoonDetails", "modalMoonDetailsContent")
+            handle_modal_events("modalExtractionDetails", "modalExtractionDetailsContent")
         });
 
     </script>

@@ -2,13 +2,13 @@
 
 <div class="panel panel-default">
     <div class="panel-heading text-center">
-        <h3 class="panel-title">Next Extraction</h3>
+        <h3 class="panel-title">Active Extraction</h3>
     </div>
     <div class="panel-body">
         {% if not perms.moonmining.extractions_access or moon.refinery == "" %}
             <p class="text-muted">No refinery or no access</p>
         {% elif extraction == None %}
-            <p>No extraction scheduled</p>
+            <p>No extraction scheduled.</p>
         {% else %}
             {% include "moonmining/partials/extraction_details.html" with hide_moon=True %}
         {% endif %}

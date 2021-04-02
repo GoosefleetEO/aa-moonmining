@@ -19,9 +19,8 @@ from allianceauth.eveonline.models import EveCorporationInfo
 from allianceauth.services.hooks import get_extension_logger
 from app_utils.logging import LoggerAddTag
 from app_utils.messages import messages_plus
-from app_utils.views import (
+from app_utils.views import (  # fontawesome_link_button_html,
     bootstrap_label_html,
-    fontawesome_link_button_html,
     link_html,
     yesno_str,
 )
@@ -53,13 +52,25 @@ class MoonsCategory(str, helpers.EnumToDict, Enum):
     OURS = "our_moons"
 
 
+# def moon_details_button_html(moon: Moon) -> str:
+#     return fontawesome_link_button_html(
+#         url=reverse("moonmining:moon_details", args=[moon.pk]),
+#         fa_code="fas fa-moon",
+#         tooltip="Show details for this moon.",
+#         button_type="default",
+#     )
+
+
 def moon_details_button_html(moon: Moon) -> str:
-    return fontawesome_link_button_html(
-        url=reverse("moonmining:moon_details", args=[moon.pk]),
-        fa_code="fas fa-moon",
-        tooltip="Show details for this moon.",
-        button_type="default",
+    ajax_url = reverse("moonmining:moon_details", args=[moon.pk])
+    actions_html = (
+        '<button type="button" class="btn btn-default" '
+        'data-toggle="modal" data-target="#modalMoonDetails" '
+        'title="Show details for this moon." '
+        f"data-ajax_url={ajax_url}>"
+        '<i class="fas fa-moon"></i></button>'
     )
+    return actions_html
 
 
 def extraction_details_button_html(extraction: Extraction) -> str:
@@ -179,7 +190,6 @@ def moon_details(request, moon_pk: int):
         extraction = (
             moon.refinery.extractions.annotate_volume()
             .filter(
-                ready_time__gte=now(),
                 status__in=[Extraction.Status.STARTED, Extraction.Status.FINISHED],
             )
             .first()
@@ -187,21 +197,25 @@ def moon_details(request, moon_pk: int):
     except ObjectDoesNotExist:
         extraction = None
     try:
-        ppulls_data = moon.refinery.extractions.annotate_volume().filter(
-            ready_time__lt=now()
+        past_extractions = (
+            moon.refinery.extractions.annotate_volume()
+            .exclude(
+                status__in=[Extraction.Status.STARTED, Extraction.Status.FINISHED],
+            )
+            .order_by("-ready_time")
         )
     except ObjectDoesNotExist:
-        ppulls_data = None
+        past_extractions = None
 
     context = {
         "page_title": "Moon Details",
         "moon": moon,
         "extraction": extraction,
-        "ppulls": ppulls_data,
+        "past_extractions": past_extractions,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
     }
-    return render(request, "moonmining/moon_details.html", context)
+    return render(request, "moonmining/modals/moon_details.html", context)
 
 
 @permission_required(["moonmining.basic_access", "moonmining.upload_moon_scan"])

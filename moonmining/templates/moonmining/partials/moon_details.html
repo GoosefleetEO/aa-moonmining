@@ -1,0 +1,23 @@
+{% load i18n %}
+{% load static %}
+
+<div class="row">
+    <div class="col-md-6  mr-md-1">
+        {% include 'moonmining/partials/moon_details_moon.html' %}
+        {% include 'moonmining/partials/moon_details_products.html' %}
+        {% include 'moonmining/partials/value_estimate_legend.html' %}
+    </div>
+
+    <div class="col-md-6">
+        {% include 'moonmining/partials/moon_details_next_extraction.html' %}
+        {% include 'moonmining/partials/moon_details_past_extractions.html' %}
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        $('#table_past_extractions').DataTable({
+            order: [ [0, "desc"] ]
+        });
+    });
+</script>

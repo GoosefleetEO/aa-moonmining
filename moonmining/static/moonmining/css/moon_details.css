@@ -1,9 +1,0 @@
-#table_past_events tbody td:nth-child(1) {
-	text-align: left;
-}
-#table_past_events tbody td:nth-child(2) {
-	text-align: right;
-}
-#table_past_events tbody td:nth-child(3) {
-	text-align: right;
-}

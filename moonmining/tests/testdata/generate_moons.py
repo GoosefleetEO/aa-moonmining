@@ -53,8 +53,8 @@ from moonmining.models import (
     Refinery,
 )
 
-MAX_MOONS = 10
-MAX_REFINERIES = 3
+MAX_MOONS = 5
+MAX_REFINERIES = 1
 DUMMY_CORPORATION_ID = 1000127  # Guristas
 DUMMY_CHARACTER_ID = 3019491  # Guristas CEO
 
@@ -70,14 +70,14 @@ def random_percentages(parts) -> list:
     return percentages
 
 
-def generate_extraction(refinery, ready_time, started_by):
+def generate_extraction(refinery, ready_time, started_by, status):
     extraction = Extraction.objects.create(
         refinery=refinery,
         ready_time=ready_time,
         auto_time=ready_time + dt.timedelta(hours=4),
         started_by=started_by,
         started_at=ready_time - dt.timedelta(days=14),
-        status=Extraction.Status.STARTED,
+        status=status,
     )
     for product in moon.products.all():
         ExtractionProduct.objects.create(
@@ -143,20 +143,23 @@ for moon in random.choices(my_moons, k=MAX_REFINERIES):
                 refinery=refinery,
                 ready_time=now() + dt.timedelta(days=random.randint(7, 30)),
                 started_by=character,
+                status=Extraction.Status.STARTED,
             )
         )
         my_extractions.append(
             generate_extraction(
                 refinery=refinery,
-                ready_time=now() + dt.timedelta(days=-random.randint(7, 30)),
+                ready_time=now() - dt.timedelta(days=random.randint(7, 30)),
                 started_by=character,
+                status=Extraction.Status.CANCELED,
             )
         )
         my_extractions.append(
             generate_extraction(
                 refinery=refinery,
-                ready_time=now() + dt.timedelta(days=-random.randint(7, 30)),
+                ready_time=now() - dt.timedelta(days=random.randint(7, 30)),
                 started_by=character,
+                status=Extraction.Status.FRACTURED,
             )
         )
 print(f"Updating calculated properties...")

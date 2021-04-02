@@ -11,23 +11,25 @@
             <p class="text-muted">No refinery or no access</p>
         {% else %}
             <div class="table-responsive">
-                <table class="table table-striped" id="table_past_events">
+                <table class="table table-striped" id="table_past_extractions">
                     <thead>
                         <th>Ready Time</th>
+                        <th>Status</th>
                         <th>Volume</th>
                         <th>Value est.</th>
                     </thead>
                     <tbody>
-                        {% if ppulls|length_is:"0" %}
+                        {% if past_extractions|length_is:"0" %}
                             <tr>
                                 <td colspan="3">
                                     <span class="text-muted">No past extractions recorded for this moon.</span>
                                 </td>
                             </tr>
                         {% else %}
-                            {% for pull in ppulls %}
+                            {% for pull in past_extractions %}
                                 <tr>
                                     <td>{{ pull.ready_time|datetime }}</td>
+                                    <td>{{ pull.get_status_display }}</td>
                                     <td>{{ pull.volume|floatformat:"0"|intcomma }}</td>
                                     <td>{{ pull.value|formatisk|default:"-" }}</td>
                                 </tr>
