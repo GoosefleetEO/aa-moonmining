@@ -121,10 +121,12 @@ def extractions_data(request, category):
         "refinery__owner__corporation",
         "refinery__owner__corporation__alliance",
     )
-    if category == ExtractionsCategory.PAST:
+    if category == ExtractionsCategory.UPCOMING:
+        extractions = extractions.filter(ready_time__gte=cutover_dt).exclude(
+            status=Extraction.Status.CANCELED
+        )
+    elif category == ExtractionsCategory.PAST:
         extractions = extractions.filter(ready_time__lt=cutover_dt)
-    elif category == ExtractionsCategory.UPCOMING:
-        extractions = extractions.filter(ready_time__gte=cutover_dt)
     else:
         extractions = Extraction.objects.none()
     for extraction in extractions:
@@ -437,4 +439,5 @@ def report_owned_value_data(request):
 
 @cache_page(3600)
 def modal_loader_body(request):
+    """Draw the loader body. Useful for showing a spinner while loading a modal."""
     return render(request, "moonmining/modals/loader_body.html")

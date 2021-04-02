@@ -63,7 +63,6 @@
                 ],
                 lengthMenu: DEFAULT_LENGTH_MENU,
                 pageLength: DEFAULT_PAGE_LENGTH,
-                order: [ [0, "asc"] ],
                 columnDefs: [
                     { "orderable": false, "targets": [ 5 ] },
                     { "visible": false, "targets": [ 7, 8, 9 ] },
@@ -81,6 +80,9 @@
                         {
                             idx: 9,
                             title: "Jackpot?"
+                        },
+                        {
+                            idx: 1
                         }
                     ],
                     bootstrap: true,
@@ -129,10 +131,12 @@
 
             /* upcoming extractions*/
             def.ajax.url = '{% url "moonmining:extractions_data" ExtractionsCategory.UPCOMING %}'
+            def.order = [ [0, "asc"] ]
             var table = $('#table_{{ ExtractionsCategory.UPCOMING }}').DataTable(def);
 
             /* past extractions */
             def.ajax.url = '{% url "moonmining:extractions_data" ExtractionsCategory.PAST %}'
+            def.order = [ [0, "desc"] ]
             var table = $('#table_{{ ExtractionsCategory.PAST }}').DataTable(def);
 
             $('#myTabs a[href="#tab_{{ ExtractionsCategory.UPCOMING }}"]').tab('show')

@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
-from django.utils.functional import cached_property
+from django.utils.functional import cached_property, classproperty
 from django.utils.timezone import now
 from esi.models import Token
 from eveuniverse.models import EveEntity, EveMoon, EveSolarSystem, EveType
@@ -188,6 +188,14 @@ class Extraction(models.Model):
         READY = "RD", "ready"  # has finished extraction and is ready to be fractured
         COMPLETED = "CP", "completed"  # has been fractured
         UNDEFINED = "UN", "undefined"  # unclear status
+
+        @classproperty
+        def considered_active(cls):
+            return [cls.STARTED, cls.READY]
+
+        @classproperty
+        def considered_inactive(cls):
+            return [cls.CANCELED, cls.COMPLETED]
 
     # PK
     refinery = models.ForeignKey(
