@@ -437,7 +437,7 @@ def report_owned_value_data(request):
     return JsonResponse(data, safe=False)
 
 
-@cache_page(3600)
+@cache_page(60 * 5)
 def modal_loader_body(request):
     """Draw the loader body. Useful for showing a spinner while loading a modal."""
     return render(request, "moonmining/modals/loader_body.html")
