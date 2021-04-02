@@ -49,7 +49,7 @@
     {% endif %}
 
     <!-- Modals -->
-    {% include "moonmining/modals/extraction_details.html" %}
+    {% include "moonmining/modals/loader.html" with modal_id="modalExtractionDetails" modal_content_id="modalExtractionDetailsContent" %}
 {% endblock %}
 
 {% block extra_javascript %}
@@ -169,12 +169,9 @@
 
             $('#myTabs a[href="#' + defaultTab + '"]').tab('show')
 
-            /* extraction details modal */
-            $('#modalExtractionDetails').on('show.bs.modal', function (event) {
-                var button = $(event.relatedTarget)
-                var ajax_url = button.data('ajax_url');
-                $("#modalExtractionDetailsContent").load(ajax_url)
-            });
+            handle_modal_events(
+                "modalExtractionDetails", "modalExtractionDetailsContent"
+            )
 
         });
     </script>

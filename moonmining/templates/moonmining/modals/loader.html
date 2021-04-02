@@ -1,0 +1,5 @@
+<!-- Base template for all modals. Creates a loader. -->
+
+<div class="modal" id="{{ modal_id }}" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    {% include "moonmining/modals/content_base.html" with modal_content_id=modal_content_id modal_body_url="moonmining/modals/loader_body.html" modal_title="Loading..." modal_size=modal_size %}
+</div>

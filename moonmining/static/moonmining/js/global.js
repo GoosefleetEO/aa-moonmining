@@ -35,3 +35,12 @@ $.fn.dataTable.render.formatisk = function () {
         return data;
     };
 };
+
+// wrap boiler plate code for handling modal events
+function handle_modal_events(modalId, modalContentId) {
+    $('#' + modalId ).on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget)
+        var ajax_url = button.data('ajax_url');
+        $('#' + modalContentId).load(ajax_url)
+    });
+}

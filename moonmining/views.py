@@ -161,7 +161,7 @@ def extraction_details(request, extraction_pk: int):
     except Extraction.DoesNotExist:
         return HttpResponseNotFound()
     context = {"extraction": extraction}
-    return render(request, "moonmining/modals/extraction_details_content.html", context)
+    return render(request, "moonmining/modals/extraction_details.html", context)
 
 
 @login_required

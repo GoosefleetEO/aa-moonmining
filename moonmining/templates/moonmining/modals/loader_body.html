@@ -1,0 +1,9 @@
+<!-- The body of the loader modal. -->
+
+{% load static %}
+
+{% if NIGHT_MODE %}
+    <img src="{% static 'moonmining/img/Spinner-1s-64px-dark.gif' %}"/>
+{% else %}
+    <img src="{% static 'moonmining/img/Spinner-1s-64px-light.gif' %}"/>
+{% endif %}
