@@ -234,14 +234,17 @@ def upload_survey(request):
                     "receive a notification once processing is complete."
                 ),
             )
-            return render(request, "moonmining/add_scan.html", context=context)
         else:
             messages_plus.error(
-                request, "Oh No! Something went wrong with your moon scan submission."
+                request,
+                (
+                    "Oh No! Something went wrong with your moon scan submission. "
+                    "Please try again."
+                ),
             )
-            return redirect("moonmining:moon_details")
+        return redirect("moonmining:moons")
     else:
-        return render(request, "moonmining/add_scan.html", context=context)
+        return render(request, "moonmining/modals/upload_survey.html", context=context)
 
 
 @login_required()

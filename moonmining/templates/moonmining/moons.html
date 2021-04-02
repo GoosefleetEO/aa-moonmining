@@ -5,10 +5,9 @@
 {% block details %}
     <span class="pull-right">
         {% if perms.moonmining.upload_moon_scan %}
-            <a class="btn btn-success btn-tabs"
-                href="{% url 'moonmining:upload_survey' %}">
+            <button type="button" class="btn btn-success btn-tabs" data-toggle="modal" data-target="#modalUploadSurvey" data-ajax_url="{% url 'moonmining:upload_survey' %}">
                 {% trans "Upload Moon Surveys" %}
-            </a>
+            </button>
         {% endif %}
     </span>
 
@@ -49,6 +48,7 @@
     {% endif %}
 
     <!-- Modals -->
+    {% include "moonmining/modals/base.html" with modal_id="modalUploadSurvey" modal_content_id="modalUploadSurveyContent" %}
     {% include "moonmining/modals/base.html" with modal_id="modalMoonDetails" modal_content_id="modalMoonDetailsContent" modal_size="modal-xl" %}
     {% include "moonmining/modals/base.html" with modal_id="modalExtractionDetails" modal_content_id="modalExtractionDetailsContent" %}
 {% endblock %}
@@ -170,6 +170,7 @@
 
             $('#myTabs a[href="#' + defaultTab + '"]').tab('show')
 
+            handle_modal_events("modalUploadSurvey", "modalUploadSurveyContent")
             handle_modal_events("modalMoonDetails", "modalMoonDetailsContent")
             handle_modal_events("modalExtractionDetails", "modalExtractionDetailsContent")
 
