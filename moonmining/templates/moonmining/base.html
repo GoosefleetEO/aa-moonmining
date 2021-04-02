@@ -14,7 +14,8 @@
 {% block extra_javascript %}
     {% include 'bundles/datatables-js.html' %}
     <script type="text/javascript" src="{% static 'js/filterDropDown/filterDropDown.min.js' %}"></script>
-    <script type="text/javascript" src="{% static 'moonmining/js/global.js' %}"></script>
+    {% include 'moonmining/partials/global_js.html' %}
+
 {% endblock %}
 
 {% block extra_css %}

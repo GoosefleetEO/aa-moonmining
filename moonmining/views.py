@@ -11,6 +11,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.timezone import now
+from django.views.decorators.cache import cache_page
 from esi.decorators import token_required
 
 from allianceauth.authentication.models import CharacterOwnership
@@ -34,9 +35,6 @@ from .app_settings import (
 from .forms import MoonScanForm
 from .helpers import HttpResponseUnauthorized
 from .models import Extraction, Moon, OreRarityClass, Owner
-
-# from django.views.decorators.cache import cache_page
-
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
@@ -186,32 +184,10 @@ def moon_details(request, moon_pk: int):
         "moonmining.view_all_moons"
     ) and not request.user.has_perm("moonmining.extractions_access"):
         return HttpResponseUnauthorized()
-    try:
-        extraction = (
-            moon.refinery.extractions.annotate_volume()
-            .filter(
-                status__in=[Extraction.Status.STARTED, Extraction.Status.READY],
-            )
-            .first()
-        )
-    except ObjectDoesNotExist:
-        extraction = None
-    try:
-        past_extractions = (
-            moon.refinery.extractions.annotate_volume()
-            .exclude(
-                status__in=[Extraction.Status.STARTED, Extraction.Status.READY],
-            )
-            .order_by("-ready_time")
-        )
-    except ObjectDoesNotExist:
-        past_extractions = None
 
     context = {
         "page_title": "Moon Details",
         "moon": moon,
-        "extraction": extraction,
-        "past_extractions": past_extractions,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
     }
@@ -457,3 +433,8 @@ def report_owned_value_data(request):
             }
         )
     return JsonResponse(data, safe=False)
+
+
+@cache_page(3600)
+def modal_loader_body(request):
+    return render(request, "moonmining/modals/loader_body.html")
