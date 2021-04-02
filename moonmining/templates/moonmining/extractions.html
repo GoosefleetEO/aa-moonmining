@@ -90,14 +90,14 @@
                 },
                 createdRow: function( row, data, dataIndex )
                 {
-                    if (data['status'] == "ST") {
+                    if (data['status'] == '{{ ExtractionsStatus.CANCELED }}') {
+                        $(row).addClass('danger');
+                    }
+                    else if (data['status'] == '{{ ExtractionsStatus.READY }}') {
                         $(row).addClass('info');
                     }
-                    else if (data['status'] == "CN") {
-                        $(row).addClass('active');
-                    }
-                    else if (data['status'] == "FN") {
-                        $(row).addClass('warning');
+                    else if (data['status'] == '{{ ExtractionsStatus.COMPLETED }}') {
+                        $(row).addClass('success');
                     }
                 },
                 footerCallback: function (row, data, start, end, display) {

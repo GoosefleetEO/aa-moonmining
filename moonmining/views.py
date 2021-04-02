@@ -70,6 +70,16 @@ def moon_details_button_html(moon: Moon) -> str:
     )
 
 
+def moon_link_html(moon: Moon) -> str:
+    return format_html(
+        '<a href="#" data-toggle="modal" data-target="#modalMoonDetails" '
+        'title="Show details for this moon." data-ajax_url={}>'
+        "{}</a>",
+        reverse("moonmining:moon_details", args=[moon.pk]),
+        moon.name,
+    )
+
+
 def extraction_details_button_html(extraction: Extraction) -> str:
     return format_html(
         '<button type="button" class="btn btn-default" '
@@ -100,6 +110,7 @@ def extractions(request):
     context = {
         "page_title": "Extractions",
         "ExtractionsCategory": ExtractionsCategory.to_dict(),
+        "ExtractionsStatus": Extraction.Status,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
         "stale_hours": MOONMINING_EXTRACTIONS_HOURS_UNTIL_STALE,
@@ -395,18 +406,10 @@ def report_owned_value_data(request):
                 else None
             )
             rank = moon_ranks[moon.pk] + 1 if moon.pk in moon_ranks else None
-            ajax_url = reverse("moonmining:moon_details", args=[moon.pk])
-            moon_link = format_html(
-                '<a href="#" data-toggle="modal" data-target="#modalMoonDetails" '
-                'title="Show details for this moon." data-ajax_url={}>'
-                "{}</a>",
-                ajax_url,
-                moon.name,
-            )
             data.append(
                 {
                     "corporation": corporation,
-                    "moon": {"display": moon_link, "sort": counter},
+                    "moon": {"display": moon_link_html(moon), "sort": counter},
                     "region": moon.region.name,
                     "rarity_class": moon.rarity_tag_html,
                     "value": moon.value,
