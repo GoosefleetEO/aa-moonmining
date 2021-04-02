@@ -156,71 +156,6 @@ def extractions_data(request, category):
     return JsonResponse(data, safe=False)
 
 
-@login_required
-@permission_required(["moonmining.extractions_access", "moonmining.basic_access"])
-def extraction_details(request, extraction_pk: int):
-    try:
-        extraction = (
-            Extraction.objects.annotate_volume()
-            .selected_related_defaults()
-            .get(pk=extraction_pk)
-        )
-    except Extraction.DoesNotExist:
-        return HttpResponseNotFound()
-    context = {"extraction": extraction}
-    return render(request, "moonmining/modals/extraction_details.html", context)
-
-
-@login_required
-@permission_required("moonmining.basic_access")
-def moon_details(request, moon_pk: int):
-    try:
-        moon = Moon.objects.selected_related_defaults().get(pk=moon_pk)
-    except Moon.DoesNotExist:
-        return HttpResponseNotFound()
-    if not request.user.has_perm(
-        "moonmining.view_all_moons"
-    ) and not request.user.has_perm("moonmining.extractions_access"):
-        return HttpResponseUnauthorized()
-
-    context = {
-        "page_title": "Moon Details",
-        "moon": moon,
-        "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
-        "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
-    }
-    return render(request, "moonmining/modals/moon_details.html", context)
-
-
-@permission_required(["moonmining.basic_access", "moonmining.upload_moon_scan"])
-@login_required()
-def upload_survey(request):
-    context = {"page_title": "Upload Moon Surveys"}
-    if request.method == "POST":
-        form = MoonScanForm(request.POST)
-        if form.is_valid():
-            scans = request.POST["scan"]
-            tasks.process_survey_input.delay(scans, request.user.pk)
-            messages_plus.success(
-                request,
-                (
-                    "Your scan has been submitted for processing. You will"
-                    "receive a notification once processing is complete."
-                ),
-            )
-        else:
-            messages_plus.error(
-                request,
-                (
-                    "Oh No! Something went wrong with your moon scan submission. "
-                    "Please try again."
-                ),
-            )
-        return redirect("moonmining:moons")
-    else:
-        return render(request, "moonmining/modals/upload_survey.html", context=context)
-
-
 @login_required()
 @permission_required("moonmining.basic_access")
 def moons(request):
@@ -344,6 +279,71 @@ def add_owner(request, token):
     return redirect("moonmining:extractions")
 
 
+@login_required
+@permission_required(["moonmining.extractions_access", "moonmining.basic_access"])
+def extraction_details(request, extraction_pk: int):
+    try:
+        extraction = (
+            Extraction.objects.annotate_volume()
+            .selected_related_defaults()
+            .get(pk=extraction_pk)
+        )
+    except Extraction.DoesNotExist:
+        return HttpResponseNotFound()
+    context = {"extraction": extraction}
+    return render(request, "moonmining/modals/extraction_details.html", context)
+
+
+@login_required
+@permission_required("moonmining.basic_access")
+def moon_details(request, moon_pk: int):
+    try:
+        moon = Moon.objects.selected_related_defaults().get(pk=moon_pk)
+    except Moon.DoesNotExist:
+        return HttpResponseNotFound()
+    if not request.user.has_perm(
+        "moonmining.view_all_moons"
+    ) and not request.user.has_perm("moonmining.extractions_access"):
+        return HttpResponseUnauthorized()
+
+    context = {
+        "page_title": "Moon Details",
+        "moon": moon,
+        "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
+        "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
+    }
+    return render(request, "moonmining/modals/moon_details.html", context)
+
+
+@permission_required(["moonmining.basic_access", "moonmining.upload_moon_scan"])
+@login_required()
+def upload_survey(request):
+    context = {"page_title": "Upload Moon Surveys"}
+    if request.method == "POST":
+        form = MoonScanForm(request.POST)
+        if form.is_valid():
+            scans = request.POST["scan"]
+            tasks.process_survey_input.delay(scans, request.user.pk)
+            messages_plus.success(
+                request,
+                (
+                    "Your scan has been submitted for processing. You will"
+                    "receive a notification once processing is complete."
+                ),
+            )
+        else:
+            messages_plus.error(
+                request,
+                (
+                    "Oh No! Something went wrong with your moon scan submission. "
+                    "Please try again."
+                ),
+            )
+        return redirect("moonmining:moons")
+    else:
+        return render(request, "moonmining/modals/upload_survey.html", context=context)
+
+
 @login_required()
 @permission_required(["moonmining.basic_access", "moonmining.reports_access"])
 def reports(request):
@@ -433,7 +433,7 @@ def report_owned_value_data(request):
     return JsonResponse(data, safe=False)
 
 
-@cache_page(60 * 5)
+@cache_page(3600)
 def modal_loader_body(request):
     """Draw the loader body. Useful for showing a spinner while loading a modal."""
     return render(request, "moonmining/modals/loader_body.html")

@@ -248,7 +248,7 @@ class Extraction(models.Model):
         help_text="Eve character who started this extraction",
     )
     status = models.CharField(
-        max_length=2, choices=Status.choices, default=Status.UNDEFINED
+        max_length=2, choices=Status.choices, default=Status.UNDEFINED, db_index=True
     )
     value = models.FloatField(
         null=True,
@@ -396,19 +396,11 @@ class Moon(models.Model):
     "Head" model for many of the other models
     """
 
+    # pk
     eve_moon = models.OneToOneField(
         EveMoon, on_delete=models.CASCADE, primary_key=True, related_name="known_moon"
     )
-    value = models.FloatField(
-        null=True,
-        default=None,
-        validators=[MinValueValidator(0.0)],
-        db_index=True,
-        help_text="Calculated value estimate",
-    )
-    rarity_class = models.PositiveIntegerField(
-        choices=OreRarityClass.choices, default=OreRarityClass.NONE
-    )
+    # regular
     products_updated_at = models.DateTimeField(
         null=True, default=None, help_text="Time the last moon survey was uploaded"
     )
@@ -418,6 +410,16 @@ class Moon(models.Model):
         null=True,
         default=None,
         help_text="User who uploaded the last moon survey",
+    )
+    rarity_class = models.PositiveIntegerField(
+        choices=OreRarityClass.choices, default=OreRarityClass.NONE
+    )
+    value = models.FloatField(
+        null=True,
+        default=None,
+        validators=[MinValueValidator(0.0)],
+        db_index=True,
+        help_text="Calculated value estimate",
     )
 
     objects = MoonManager()
@@ -484,6 +486,7 @@ class MoonProduct(models.Model):
 
     moon = models.ForeignKey(Moon, on_delete=models.CASCADE, related_name="products")
     ore_type = models.ForeignKey(EveOreType, on_delete=models.CASCADE, related_name="+")
+
     amount = models.FloatField(
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
     )
@@ -528,6 +531,7 @@ class MoonProduct(models.Model):
 class Notification(models.Model):
     """An EVE Online notification about structures."""
 
+    # pk
     owner = models.ForeignKey(
         "Owner",
         on_delete=models.CASCADE,
@@ -535,7 +539,7 @@ class Notification(models.Model):
         help_text="Corporation that received this notification",
     )
     notification_id = models.PositiveBigIntegerField(verbose_name="id")
-
+    # regular
     created = models.DateTimeField(
         null=True,
         default=None,
@@ -584,12 +588,14 @@ class Notification(models.Model):
 class Owner(models.Model):
     """A EVE Online corporation owning refineries."""
 
+    # pk
     corporation = models.OneToOneField(
         EveCorporationInfo,
         on_delete=models.CASCADE,
         primary_key=True,
         related_name="mining_corporation",
     )
+    # regular
     character_ownership = models.ForeignKey(
         CharacterOwnership,
         on_delete=models.SET_DEFAULT,
@@ -600,6 +606,7 @@ class Owner(models.Model):
     )
     is_enabled = models.BooleanField(
         default=True,
+        db_index=True,
         help_text="disabled corporations are excluded from the update process",
     )
     last_update_at = models.DateTimeField(
@@ -696,31 +703,6 @@ class Owner(models.Model):
         )
         if not refinery.moon:
             refinery.update_moon_from_structure_info(structure_info)
-
-    # def _fetch_moon_notifications_from_esi(self):
-    #     logger.info("%s: Fetching moon notifications from ESI...", self)
-    #     token = self.fetch_token()
-    #     all_notifications = (
-    #         esi.client.Character.get_characters_character_id_notifications(
-    #             character_id=self.character_ownership.character.character_id,
-    #             token=token.valid_access_token(),
-    #         ).result()
-    #     )
-    #     moon_notifications = [
-    #         notif
-    #         for notif in all_notifications
-    #         if notif.notif_type
-    #         in {
-    #             "MoonminingAutomaticFracture",
-    #             "MoonminingExtractionCancelled",
-    #             "MoonminingExtractionFinished",
-    #             "MoonminingExtractionStarted",
-    #             "MoonminingLaserFired",
-    #         }
-    #     ]
-    #     for notif in moon_notifications:
-    #         notif["details"] = yaml.safe_load(notif["text"])
-    #     return moon_notifications
 
     def fetch_notifications_from_esi(self) -> bool:
         """fetches notification for the current owners and proceses them"""
@@ -902,8 +884,10 @@ class Owner(models.Model):
 class Refinery(models.Model):
     """An Eve Online refinery structure."""
 
+    # pk
     id = models.PositiveBigIntegerField(primary_key=True)
-    name = models.CharField(max_length=150, db_index=True)
+    # regular
+    eve_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
     moon = models.OneToOneField(
         Moon,
         on_delete=models.SET_DEFAULT,
@@ -912,13 +896,13 @@ class Refinery(models.Model):
         related_name="refinery",
         help_text="The moon this refinery is anchored at (if any)",
     )
+    name = models.CharField(max_length=150, db_index=True)
     owner = models.ForeignKey(
         Owner,
         on_delete=models.CASCADE,
         related_name="refineries",
         help_text="Corporation that owns this refinery",
     )
-    eve_type = models.ForeignKey(EveType, on_delete=models.CASCADE, related_name="+")
 
     def __str__(self):
         return self.name
