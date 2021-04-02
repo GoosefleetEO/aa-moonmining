@@ -119,7 +119,7 @@
                 <th></th>
                 <th>TOTAL</th>
                 <th>{{ extraction.volume|floatformat:"0"|intcomma }}</th>
-                <th>{{ extraction.value|formatisk}}</th>
+                <th>{{ extraction.value|formatisk|default:""}}</th>
             </tr>
         </tfoot>
     </table>

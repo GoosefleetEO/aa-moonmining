@@ -198,14 +198,14 @@ def main():
                     )
             MoonProduct.objects.bulk_create(product_objects, batch_size=BULK_BATCH_SIZE)
 
-    updated_moon_ids = (
-        moons.keys() if args.force_update or args.force_calc else new_moons.keys()
-    )
-    if updated_moon_ids:
-        logger.info(
-            "Updating calculated properties for %d moons...", len(updated_moon_ids)
-        )
-        Moon.objects.filter(pk__in=updated_moon_ids).update_calculated_properties()
+    # updated_moon_ids = (
+    #     moons.keys() if args.force_update or args.force_calc else new_moons.keys()
+    # )
+    # if updated_moon_ids:
+    #     logger.info(
+    #         "Updating calculated properties for %d moons...", len(updated_moon_ids)
+    #     )
+    #     Moon.objects.filter(pk__in=updated_moon_ids).update_calculated_properties()
 
     logger.info("DONE")
 

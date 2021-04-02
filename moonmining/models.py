@@ -310,7 +310,11 @@ class Extraction(models.Model):
         self.is_jackpot = self.calc_is_jackpot()
         self.save()
 
-    def _save_with_ores(self, ores):
+    def save_when_changed(self, ores):
+        """Save extraction with provided ores if status has changed.
+
+        Will update existing extraction or create new as needed.
+        """
         # preload eve ore types before transaction starts
         for ore_type_id in ores:
             EveOreType.objects.get_or_create_esi(id=ore_type_id)
@@ -333,6 +337,7 @@ class Extraction(models.Model):
                 ExtractionProduct.objects.create(
                     extraction=self, ore_type_id=ore_type_id, volume=ore_volume
                 )
+            self.update_calculated_properties()
 
 
 class ExtractionProduct(models.Model):
@@ -834,7 +839,7 @@ class Owner(models.Model):
                             extraction.canceled_by = eveentity_get_or_create_esi_safe(
                                 notif.details.get("cancelledBy")
                             )
-                            extraction._save_with_ores(ores)
+                            extraction.save_when_changed(ores)
                             extraction = ores = None
                             extractions_count += 1
 
@@ -851,7 +856,7 @@ class Owner(models.Model):
                                 notif.details.get("firedBy")
                             )
                             ores = notif.details["oreVolumeByType"]
-                            extraction._save_with_ores(ores)
+                            extraction.save_when_changed(ores)
                             extraction = ores = None
                             extractions_count += 1
 
@@ -859,12 +864,12 @@ class Owner(models.Model):
                             extraction.status = Extraction.Status.COMPLETED
                             extraction.fractured_at = notif.timestamp
                             ores = notif.details["oreVolumeByType"]
-                            extraction._save_with_ores(ores)
+                            extraction.save_when_changed(ores)
                             extraction = ores = None
                             extractions_count += 1
 
             if extraction:
-                extraction._save_with_ores(ores)
+                extraction.save_when_changed(ores)
                 extractions_count += 1
             logger.info(
                 "%s: %s: Updated %d extractions", self, refinery, extractions_count

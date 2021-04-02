@@ -269,6 +269,8 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         self.assertEqual(product.volume, 526825.4047522942)
         product = extraction.products.get(ore_type_id=46689)
         self.assertEqual(product.volume, 528996.6386983792)
+        self.assertIsNotNone(extraction.value)
+        self.assertIsNotNone(extraction.is_jackpot)
 
     def test_should_create_canceled_extraction_with_products(self, mock_esi):
         # given
