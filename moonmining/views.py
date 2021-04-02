@@ -60,27 +60,25 @@ class MoonsCategory(str, helpers.EnumToDict, Enum):
 
 
 def moon_details_button_html(moon: Moon) -> str:
-    ajax_url = reverse("moonmining:moon_details", args=[moon.pk])
-    actions_html = (
+    return format_html(
         '<button type="button" class="btn btn-default" '
         'data-toggle="modal" data-target="#modalMoonDetails" '
         'title="Show details for this moon." '
-        f"data-ajax_url={ajax_url}>"
-        '<i class="fas fa-moon"></i></button>'
+        "data-ajax_url={}>"
+        '<i class="fas fa-moon"></i></button>',
+        reverse("moonmining:moon_details", args=[moon.pk]),
     )
-    return actions_html
 
 
 def extraction_details_button_html(extraction: Extraction) -> str:
-    ajax_url = reverse("moonmining:extraction_details", args=[extraction.pk])
-    actions_html = (
+    return format_html(
         '<button type="button" class="btn btn-default" '
         'data-toggle="modal" data-target="#modalExtractionDetails" '
         'title="Show details for this extraction." '
-        f"data-ajax_url={ajax_url}>"
-        '<i class="fas fa-hammer"></i></button>'
+        "data-ajax_url={}>"
+        '<i class="fas fa-hammer"></i></button>',
+        reverse("moonmining:extraction_details", args=[extraction.pk]),
     )
-    return actions_html
 
 
 def default_if_none(value, default):
@@ -407,10 +405,18 @@ def report_owned_value_data(request):
                 else None
             )
             rank = moon_ranks[moon.pk] + 1 if moon.pk in moon_ranks else None
+            ajax_url = reverse("moonmining:moon_details", args=[moon.pk])
+            moon_link = format_html(
+                '<a href="#" data-toggle="modal" data-target="#modalMoonDetails" '
+                'title="Show details for this moon." data-ajax_url={}>'
+                "{}</a>",
+                ajax_url,
+                moon.name,
+            )
             data.append(
                 {
                     "corporation": corporation,
-                    "moon": {"display": moon.name, "sort": counter},
+                    "moon": {"display": moon_link, "sort": counter},
                     "region": moon.region.name,
                     "rarity_class": moon.rarity_tag_html,
                     "value": moon.value,

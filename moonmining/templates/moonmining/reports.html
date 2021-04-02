@@ -17,6 +17,9 @@
             {% include 'moonmining/partials/value_estimate_legend.html' %}
         </div>
     </div>
+
+    <!-- Modals -->
+    {% include "moonmining/modals/base.html" with modal_id="modalMoonDetails" modal_content_id="modalMoonDetailsContent" %}
 {% endblock %}
 
 {% block extra_javascript %}
@@ -98,6 +101,8 @@
                     $(api.column(columnTotal).footer()).html(formatisk(total_value));
                 }
             });
+
+            handle_modal_events("modalMoonDetails", "modalMoonDetailsContent")
         });
     </script>
 {% endblock %}
