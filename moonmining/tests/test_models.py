@@ -502,7 +502,7 @@ class TestOwnerFetchNotifications(NoSocketsTestCase):
         owner.fetch_notifications_from_esi()
         # then
         self.assertEqual(owner.notifications.count(), 5)
-        obj = owner.notifications.get(notification_id=1000000101)
+        obj = owner.notifications.get(notification_id=1005000101)
         self.assertEqual(obj.notif_type, "MoonminingExtractionStarted")
         self.assertEqual(obj.sender_id, 2101)
         self.assertEqual(

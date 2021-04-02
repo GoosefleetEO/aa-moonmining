@@ -298,3 +298,6 @@ DEFAULT_FROM_EMAIL = ""
 #######################################
 
 Logging = None
+
+NOTIFICATIONS_REFRESH_TIME = 30
+NOTIFICATIONS_MAX_PER_USER = 50

@@ -3,7 +3,7 @@
         "get_characters_character_id_notifications": {
             "1001": [
                 {
-                    "notification_id": 1000000101,
+                    "notification_id": 1001000101,
                     "type": "MoonminingExtractionStarted",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -12,7 +12,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000201,
+                    "notification_id": 1001000201,
                     "type": "MoonminingExtractionStarted",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -21,7 +21,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000202,
+                    "notification_id": 1001000202,
                     "type": "MoonminingExtractionCancelled",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -30,7 +30,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000301,
+                    "notification_id": 1001000301,
                     "type": "MoonminingExtractionStarted",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -39,7 +39,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000303,
+                    "notification_id": 1001000303,
                     "type": "MoonminingExtractionFinished",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -48,7 +48,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000401,
+                    "notification_id": 1001000401,
                     "type": "MoonminingExtractionStarted",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -57,7 +57,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000403,
+                    "notification_id": 1001000403,
                     "type": "MoonminingExtractionFinished",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -66,7 +66,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000404,
+                    "notification_id": 1001000404,
                     "type": "MoonminingLaserFired",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -75,7 +75,7 @@
                     "is_read": true
                 },
                 {
-                    "notification_id": 1000000501,
+                    "notification_id": 1001000501,
                     "type": "MoonminingExtractionStarted",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -84,7 +84,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000503,
+                    "notification_id": 1001000503,
                     "type": "MoonminingExtractionFinished",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -93,7 +93,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000505,
+                    "notification_id": 1001000505,
                     "type": "MoonminingAutomaticFracture",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -104,7 +104,7 @@
             ],
             "1002": [
                 {
-                    "notification_id": 1000000401,
+                    "notification_id": 1002000401,
                     "type": "MoonminingExtractionStarted",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -113,7 +113,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000402,
+                    "notification_id": 1002000402,
                     "type": "MoonminingExtractionCancelled",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -124,7 +124,7 @@
             ],
             "1004": [
                 {
-                    "notification_id": 1000000401,
+                    "notification_id": 1004000401,
                     "type": "MoonminingExtractionStarted",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -133,7 +133,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000402,
+                    "notification_id": 1004000402,
                     "type": "MoonminingExtractionCancelled",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -142,7 +142,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000403,
+                    "notification_id": 1004000403,
                     "type": "MoonminingExtractionStarted",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -151,7 +151,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000404,
+                    "notification_id": 1004000404,
                     "type": "MoonminingExtractionFinished",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -160,7 +160,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000405,
+                    "notification_id": 1004000405,
                     "type": "MoonminingLaserFired",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -169,7 +169,7 @@
                     "is_read": true
                 },
                 {
-                    "notification_id": 1000000405,
+                    "notification_id": 1004000406,
                     "type": "MoonminingExtractionStarted",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -180,7 +180,7 @@
             ],
             "1005": [
                 {
-                    "notification_id": 1000000101,
+                    "notification_id": 1005000101,
                     "type": "MoonminingExtractionStarted",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -189,7 +189,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000102,
+                    "notification_id": 1005000102,
                     "type": "MoonminingExtractionCancelled",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -198,7 +198,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000103,
+                    "notification_id": 1005000103,
                     "type": "MoonminingExtractionFinished",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -207,7 +207,7 @@
                     "is_read": false
                 },
                 {
-                    "notification_id": 1000000104,
+                    "notification_id": 1005000104,
                     "type": "MoonminingLaserFired",
                     "sender_id": 2101,
                     "sender_type": "corporation",
@@ -216,7 +216,7 @@
                     "is_read": true
                 },
                 {
-                    "notification_id": 1000000105,
+                    "notification_id": 1005000105,
                     "type": "MoonminingAutomaticFracture",
                     "sender_id": 2101,
                     "sender_type": "corporation",
