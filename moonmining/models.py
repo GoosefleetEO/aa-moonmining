@@ -272,9 +272,11 @@ class Extraction(models.Model):
     @cached_property
     def products_sorted(self):
         try:
-            return self.products.select_related(
-                "ore_type", "ore_type__eve_group"
-            ).order_by("-ore_type__eve_group_id")
+            return (
+                self.products.select_related("ore_type", "ore_type__eve_group")
+                .prefetch_related("ore_type__dogma_attributes")
+                .order_by("-ore_type__eve_group_id")
+            )
         except ObjectDoesNotExist:
             return ExtractionProduct.objects.none()
 

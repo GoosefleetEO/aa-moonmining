@@ -65,6 +65,18 @@ class MoonManager(models.Manager):
     def get_queryset(self) -> models.QuerySet:
         return MoonQuerySet(self.model, using=self._db)
 
+    def selected_related_defaults(self) -> models.QuerySet:
+        return self.select_related(
+            "eve_moon",
+            "eve_moon__eve_planet__eve_solar_system",
+            "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
+            "refinery",
+            "refinery__eve_type",
+            "refinery__owner",
+            "refinery__owner__corporation",
+            "refinery__owner__corporation__alliance",
+        )
+
     def update_moons_from_survey(self, scans: str, user: User = None) -> bool:
         """Update moons from survey input.
 
@@ -218,7 +230,18 @@ class MoonManager(models.Manager):
 
 
 class ExtractionQuerySet(models.QuerySet, UpdateCalculatedPropertiesMixin):
-    pass
+    def selected_related_defaults(self) -> models.QuerySet:
+        return self.select_related(
+            "refinery",
+            "refinery__moon",
+            "refinery__moon__eve_moon",
+            "refinery__owner",
+            "refinery__owner__corporation",
+            "refinery__owner__corporation__alliance",
+            "canceled_by",
+            "fractured_by",
+            "started_by",
+        )
 
 
 class ExtractionManager(models.Manager):

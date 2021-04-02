@@ -112,13 +112,7 @@ def extractions(request):
 def extractions_data(request, category):
     data = list()
     cutover_dt = now() - dt.timedelta(hours=MOONMINING_EXTRACTIONS_HOURS_UNTIL_STALE)
-    extractions = Extraction.objects.annotate_volume().select_related(
-        "refinery",
-        "refinery__moon",
-        "refinery__owner",
-        "refinery__owner__corporation",
-        "refinery__owner__corporation__alliance",
-    )
+    extractions = Extraction.objects.annotate_volume().selected_related_defaults()
     if category == ExtractionsCategory.UPCOMING:
         extractions = extractions.filter(ready_time__gte=cutover_dt).exclude(
             status=Extraction.Status.CANCELED
@@ -166,7 +160,11 @@ def extractions_data(request, category):
 @permission_required(["moonmining.extractions_access", "moonmining.basic_access"])
 def extraction_details(request, extraction_pk: int):
     try:
-        extraction = Extraction.objects.annotate_volume().get(pk=extraction_pk)
+        extraction = (
+            Extraction.objects.annotate_volume()
+            .selected_related_defaults()
+            .get(pk=extraction_pk)
+        )
     except Extraction.DoesNotExist:
         return HttpResponseNotFound()
     context = {"extraction": extraction}
@@ -177,7 +175,7 @@ def extraction_details(request, extraction_pk: int):
 @permission_required("moonmining.basic_access")
 def moon_details(request, moon_pk: int):
     try:
-        moon = Moon.objects.select_related("eve_moon").get(pk=moon_pk)
+        moon = Moon.objects.selected_related_defaults().get(pk=moon_pk)
     except Moon.DoesNotExist:
         return HttpResponseNotFound()
     if not request.user.has_perm(
@@ -241,15 +239,7 @@ def moons(request):
 def moons_data(request, category):
     """returns moon list in JSON for DataTables AJAX"""
     data = list()
-    moon_query = Moon.objects.select_related(
-        "eve_moon",
-        "eve_moon__eve_planet__eve_solar_system",
-        "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
-        "refinery",
-        "refinery__owner",
-        "refinery__owner__corporation",
-        "refinery__owner__corporation__alliance",
-    )
+    moon_query = Moon.objects.selected_related_defaults()
     if category == MoonsCategory.ALL and request.user.has_perm(
         "moonmining.view_all_moons"
     ):
