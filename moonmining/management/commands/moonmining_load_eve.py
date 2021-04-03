@@ -13,7 +13,7 @@ logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
 
 class Command(BaseCommand):
-    help = "Preload all necessary types."
+    help = "Preloads data like ore types from ESI."
 
     def handle(self, *args, **options):
         self.stdout.write("Loading all ore types from ESI. This can take a while.")

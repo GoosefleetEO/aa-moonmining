@@ -1,4 +1,4 @@
-# Moon Planner
+# Moon Mining
 
 An Alliance Auth app for tracking moon extractions and scouting new moons.
 
@@ -18,6 +18,7 @@ An Alliance Auth app for tracking moon extractions and scouting new moons.
 - [Installation](#installation)
 - [Permissions](#permissions)
 - [Settings](#settings)
+- [Management Commands](#management-commands)
 - [Change Log](CHANGELOG.md)
 
 ## Features
@@ -34,21 +35,23 @@ An Alliance Auth app for tracking moon extractions and scouting new moons.
 
 Build your own moon database from survey inputs and find the best moons for you. The moon rarity class and value are automatically calculated from your survey input.
 
-![moons](https://i.imgur.com/usZcEmC.png)
+![moons](https://i.imgur.com/kxjuPNN.png)
 
 See the exact ore makeup of this moon on the details page.
 
-![moons](https://i.imgur.com/olSr4mh.png)
+![moons](https://i.imgur.com/qrLGHZb.png)
+
+Note that you can also see on this list which moons you already own. In addition an extraction button is visible, when an extraction is active for a particular moon.
 
 ### Manage extractions
 
 After you added your corporation you can see which moons you own and see upcoming and past extractions:
 
-![moons](https://i.imgur.com/fJ6rTvq.png)
+![moons](https://i.imgur.com/FaRStOr.png)
 
 You can also review the extraction details, incl. which ore qualities you got.
 
-![moons](https://i.imgur.com/ZGH7eWL.png)
+![moons](https://i.imgur.com/3gnz6rK.png)
 
 ### Reports
 
@@ -56,15 +59,15 @@ Check out the reporting section for detail reports on your operation, e.g. Break
 
 ![moons](https://i.imgur.com/JBDPTtB.png)
 
-> **Note**<br>All ore compositions and ISK values shown on this screenshot are fake.
+> **Note**<br>All ore compositions and ISK values shown on these screenshots are fake.
 
 ## Installation
 
 ### Preconditions
 
-1. Moon Planner is a plugin for Alliance Auth. If you don't have Alliance Auth running already, please install it first before proceeding. (see the official [AA installation guide](https://allianceauth.readthedocs.io/en/latest/installation/auth/allianceauth/) for details)
+1. Moon Mining is a plugin for Alliance Auth. If you don't have Alliance Auth running already, please install it first before proceeding. (see the official [AA installation guide](https://allianceauth.readthedocs.io/en/latest/installation/auth/allianceauth/) for details)
 
-2. Moon Planner needs the app [django-eveuniverse](https://gitlab.com/ErikKalkoken/django-eveuniverse) to function. Please make sure it is installed, before before continuing.
+2. Moon Mining needs the app [django-eveuniverse](https://gitlab.com/ErikKalkoken/django-eveuniverse) to function. Please make sure it is installed, before before continuing.
 
 ### Step 1 - Install app
 
@@ -105,9 +108,21 @@ python manage.py migrate
 python manage.py collectstatic
 ```
 
-Restart your supervisor services for Auth
+Restart your supervisor services for Auth.
 
-### Step 4 - Update EVE Online API Application
+### Step 4 - Load ores from ESI
+
+Please run the following management command to load all ores from ESI. This has to be done once only.
+
+```bash
+python manage.py moonmining_load_eve
+```
+
+Please wait until the loading is complete before continuing.
+
+> **Note**<br>You can monitor the progress on by looking at how many tasks are running on the dashboard.
+
+### Step 5 - Update EVE Online API Application
 
 Update the Eve Online API app used for authentication in your AA installation to include the following scopes:
 
@@ -115,11 +130,11 @@ Update the Eve Online API app used for authentication in your AA installation to
 - `esi-universe.read_structures.v1`
 - `esi-characters.read_notifications.v1`
 
-### Step 5 - Setup permissions
+### Step 6 - Setup permissions
 
 Finally you want to setup permission to define which users / groups will have access to which parts of the app. Check out [permissions](#permissions) for details.
 
-Congratulations you are now ready to use Moon Planner!
+Congratulations! You are now ready to use Moon Mining!
 
 ## Permissions
 
@@ -144,3 +159,17 @@ Name | Description | Default
 `MOONMINING_EXTRACTIONS_HOURS_UNTIL_STALE`| Number of hours an extractions that has passed its ready time is still shown on the upcoming extractions tab. | `12`
 `MOONMINING_REPROCESSING_YIELD`| Reprocessing yield used for calculating all values | `0.82`
 `MOONMINING_VOLUME_PER_MONTH`| Total ore volume per month used for calculating moon values. | `14557923`
+
+## Management Commands
+
+The following management commands are available to perform administrative tasks:
+
+> **Hint**:<br>Run any command with `--help` to see all options
+
+### moonmining_calculate_all
+
+Calculate all properties for moons and extractions.
+
+### moonmining_load_eve
+
+Pre-loads data required for this app from ESI to improve app performance.
