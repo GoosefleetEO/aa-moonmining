@@ -33,9 +33,12 @@ class TestOwner(TestCase):
             1001, permissions=["moonmining.add_refinery_owner"]
         )
 
+    @patch(MODULE_PATH + ".notify_admins")
     @patch(MODULE_PATH + ".tasks.update_owner")
     @patch(MODULE_PATH + ".messages_plus")
-    def test_should_add_new_owner(self, mock_messages, mock_update_owner):
+    def test_should_add_new_owner(
+        self, mock_messages, mock_update_owner, mock_notify_admins
+    ):
         # given
         token = Mock(spec=Token)
         token.character_id = self.character_ownership.character.character_id
@@ -52,6 +55,7 @@ class TestOwner(TestCase):
         self.assertEqual(response.url, reverse("moonmining:index"))
         self.assertTrue(mock_messages.success.called)
         self.assertTrue(mock_update_owner.delay.called)
+        self.assertTrue(mock_notify_admins.called)
         obj = Owner.objects.get(corporation__corporation_id=2001)
         self.assertEqual(obj.character_ownership, self.character_ownership)
 
@@ -217,28 +221,28 @@ class TestMoonsData(TestCase):
         data = json_response_to_dict(response)
         self.assertEqual(len(data), 0)
 
-    # def test_should_return_uploaded_moons_only(self):
-    #     # given
-    #     request = self.factory.get(
-    #         reverse(
-    #             "moonmining:moons_data",
-    #             args={"category": views.MOONS_CATEGORY_UPLOADS},
-    #         )
-    #     )
-    #     user, _ = create_user_from_evecharacter(
-    #         1001,
-    #         permissions=["moonmining.basic_access", "moonmining.upload_moon_scan"],
-    #         scopes=Owner.esi_scopes(),
-    #     )
-    #     request.user = user
-    #     self.moon.products_updated_by = user
-    #     self.moon.save()
-    #     # when
-    #     response = views.moons_data(request, category=views.MOONS_CATEGORY_UPLOADS)
-    #     # then
-    #     self.assertEqual(response.status_code, 200)
-    #     data = json_response_to_dict(response)
-    #     self.assertSetEqual(set(data.keys()), {40161708})
+    def test_should_return_uploaded_moons_only(self):
+        # given
+        request = self.factory.get(
+            reverse(
+                "moonmining:moons_data",
+                args={"category": views.MoonsCategory.UPLOADS},
+            )
+        )
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=["moonmining.basic_access", "moonmining.upload_moon_scan"],
+            scopes=Owner.esi_scopes(),
+        )
+        request.user = user
+        self.moon.products_updated_by = user
+        self.moon.save()
+        # when
+        response = views.moons_data(request, category=views.MoonsCategory.UPLOADS)
+        # then
+        self.assertEqual(response.status_code, 200)
+        data = json_response_to_dict(response)
+        self.assertSetEqual(set(data.keys()), {40161708})
 
 
 class TestMoonInfo(TestCase):

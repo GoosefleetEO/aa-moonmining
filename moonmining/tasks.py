@@ -12,6 +12,8 @@ from .models import Extraction, Moon, Owner
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
+TASK_PRIORITY_LOWER = 6
+
 
 @shared_task
 def process_survey_input(scans, user_pk=None) -> bool:
@@ -85,7 +87,9 @@ def update_moons():
     moon_pks = Moon.objects.values_list("pk", flat=True)
     logger.info("Updating calculated properties for %d moons ...", len(moon_pks))
     for moon_pk in moon_pks:
-        update_moon_calculated_properties.delay(moon_pk)
+        update_moon_calculated_properties.apply_async(
+            kwargs={"moon_pk": moon_pk}, priority=TASK_PRIORITY_LOWER
+        )
 
 
 @shared_task
@@ -96,7 +100,9 @@ def update_extractions():
         "Updating calculated properties for %d extractions ...", len(extraction_pks)
     )
     for extraction_pk in extraction_pks:
-        update_extraction_calculated_properties.delay(extraction_pk)
+        update_extraction_calculated_properties.apply_async(
+            kwargs={"extraction_pk": extraction_pk}, priority=TASK_PRIORITY_LOWER
+        )
 
 
 @shared_task

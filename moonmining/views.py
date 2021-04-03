@@ -18,6 +18,7 @@ from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.evelinks import dotlan
 from allianceauth.eveonline.models import EveCorporationInfo
 from allianceauth.services.hooks import get_extension_logger
+from app_utils.allianceauth import notify_admins
 from app_utils.logging import LoggerAddTag
 from app_utils.messages import messages_plus
 from app_utils.views import (  # fontawesome_link_button_html,
@@ -28,6 +29,7 @@ from app_utils.views import (  # fontawesome_link_button_html,
 
 from . import __title__, constants, helpers, tasks
 from .app_settings import (
+    MOONMINING_ADMIN_NOTIFICATIONS_ENABLED,
     MOONMINING_EXTRACTIONS_HOURS_UNTIL_STALE,
     MOONMINING_REPROCESSING_YIELD,
     MOONMINING_VOLUME_PER_MONTH,
@@ -295,6 +297,12 @@ def add_owner(request, token):
     )
     tasks.update_owner.delay(owner.pk)
     messages_plus.success(request, f"Update of refineres started for {owner}.")
+    if MOONMINING_ADMIN_NOTIFICATIONS_ENABLED:
+        notify_admins(
+            message=("%(corporation)s was added as new owner by %(user)s.")
+            % {"corporation": owner, "user": request.user},
+            title=f"{__title__}: Owner added: {owner}",
+        )
     return redirect("moonmining:index")
 
 
