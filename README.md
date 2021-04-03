@@ -26,6 +26,7 @@ An Alliance Auth app for tracking moon extractions and scouting new moons.
 - Monitor ongoing extractions from your refineries.
 - Automatic value estimates for all moons and extractions.
 - See reports for your potential total income
+- Tool for mass importing moon scans from external sources
 
 ## Highlights
 
