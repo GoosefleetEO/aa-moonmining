@@ -16,6 +16,7 @@ from ..models import (
     ExtractionProduct,
     Moon,
     MoonProduct,
+    NotificationType,
     OreQualityClass,
     OreRarityClass,
     Owner,
@@ -505,7 +506,7 @@ class TestOwnerFetchNotifications(NoSocketsTestCase):
         # then
         self.assertEqual(owner.notifications.count(), 5)
         obj = owner.notifications.get(notification_id=1005000101)
-        self.assertEqual(obj.notif_type, "MoonminingExtractionStarted")
+        self.assertEqual(obj.notif_type, NotificationType.MOONMINING_EXTRACTION_STARTED)
         self.assertEqual(obj.sender_id, 2101)
         self.assertEqual(
             obj.timestamp, dt.datetime(2019, 11, 22, 1, 0, tzinfo=pytz.UTC)

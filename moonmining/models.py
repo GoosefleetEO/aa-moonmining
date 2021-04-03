@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Iterable, Optional
 
 import yaml
@@ -26,6 +27,27 @@ from .providers import esi
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 # MAX_DISTANCE_TO_MOON_METERS = 3000000
+
+
+class NotificationType(str, Enum):
+    """ESI notification types used in this app."""
+
+    MOONMINING_AUTOMATIC_FRACTURE = "MoonminingAutomaticFracture"
+    MOONMINING_EXTRACTION_CANCELLED = "MoonminingExtractionCancelled"
+    MOONMINING_EXTRACTION_FINISHED = "MoonminingExtractionFinished"
+    MOONMINING_EXTRACTION_STARTED = "MoonminingExtractionStarted"
+    MOONMINING_LASER_FIRED = "MoonminingLaserFired"
+
+    @classproperty
+    def all_moon_mining(cls) -> set:
+        """Return all moon mining notifications"""
+        return {
+            cls.MOONMINING_AUTOMATIC_FRACTURE,
+            cls.MOONMINING_EXTRACTION_CANCELLED,
+            cls.MOONMINING_EXTRACTION_FINISHED,
+            cls.MOONMINING_EXTRACTION_STARTED,
+            cls.MOONMINING_LASER_FIRED,
+        }
 
 
 class OreRarityClass(models.IntegerChoices):
@@ -727,14 +749,7 @@ class Owner(models.Model):
         moon_notifications = [
             notif
             for notif in all_notifications
-            if notif["type"]
-            in {
-                "MoonminingAutomaticFracture",
-                "MoonminingExtractionCancelled",
-                "MoonminingExtractionFinished",
-                "MoonminingExtractionStarted",
-                "MoonminingLaserFired",
-            }
+            if notif["type"] in NotificationType.all_moon_mining
         ]
         return moon_notifications
 
@@ -817,7 +832,7 @@ class Owner(models.Model):
                 notif = notifications_for_refinery.first()
                 refinery.update_moon_from_eve_id(notif.details["moonID"])
             for notif in notifications_for_refinery.order_by("timestamp"):
-                if notif.notif_type == "MoonminingExtractionStarted":
+                if notif.notif_type == NotificationType.MOONMINING_EXTRACTION_STARTED:
                     started_by = eveentity_get_or_create_esi_safe(
                         notif.details.get("startedBy")
                     )
@@ -833,7 +848,10 @@ class Owner(models.Model):
 
                 elif extraction:
                     if extraction.status == Extraction.Status.STARTED:
-                        if notif.notif_type == "MoonminingExtractionCancelled":
+                        if (
+                            notif.notif_type
+                            == NotificationType.MOONMINING_EXTRACTION_CANCELLED
+                        ):
                             extraction.status = Extraction.Status.CANCELED
                             extraction.canceled_at = notif.timestamp
                             extraction.canceled_by = eveentity_get_or_create_esi_safe(
@@ -843,13 +861,16 @@ class Owner(models.Model):
                             extraction = ores = None
                             extractions_count += 1
 
-                        elif notif.notif_type == "MoonminingExtractionFinished":
+                        elif (
+                            notif.notif_type
+                            == NotificationType.MOONMINING_EXTRACTION_FINISHED
+                        ):
                             extraction.status = Extraction.Status.READY
                             extraction.finished_at = notif.timestamp
                             ores = notif.details["oreVolumeByType"]
 
                     elif extraction.status == Extraction.Status.READY:
-                        if notif.notif_type == "MoonminingLaserFired":
+                        if notif.notif_type == NotificationType.MOONMINING_LASER_FIRED:
                             extraction.status = Extraction.Status.COMPLETED
                             extraction.fractured_at = notif.timestamp
                             extraction.fractured_by = eveentity_get_or_create_esi_safe(
@@ -860,7 +881,10 @@ class Owner(models.Model):
                             extraction = ores = None
                             extractions_count += 1
 
-                        elif notif.notif_type == "MoonminingAutomaticFracture":
+                        elif (
+                            notif.notif_type
+                            == NotificationType.MOONMINING_AUTOMATIC_FRACTURE
+                        ):
                             extraction.status = Extraction.Status.COMPLETED
                             extraction.fractured_at = notif.timestamp
                             ores = notif.details["oreVolumeByType"]
