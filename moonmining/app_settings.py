@@ -6,6 +6,6 @@ MOONMINING_EXTRACTIONS_HOURS_UNTIL_STALE = getattr(
     settings, "MOONMINING_EXTRACTIONS_HOURS_UNTIL_STALE", 12
 )
 # Reprocessing yield used for calculating all values
-MOONMINING_REPROCESSING_YIELD = getattr(settings, "MOONMINING_REPROCESSING_YIELD", 0.7)
+MOONMINING_REPROCESSING_YIELD = getattr(settings, "MOONMINING_REPROCESSING_YIELD", 0.82)
 # Total ore volume per month used for calculating moon values.
 MOONMINING_VOLUME_PER_MONTH = getattr(settings, "MOONMINING_VOLUME_PER_MONTH", 14557923)

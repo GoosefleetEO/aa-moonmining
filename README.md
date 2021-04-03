@@ -129,8 +129,8 @@ Name  | Description
 `moonmining.basic_access` | This is access permission, users without this permission will be unable to access the plugin.
 `moonmining.upload_moon_scan` | This permission allows users to upload moon scan data.
 `moonmining.extractions_access` | User can access extractions and view owned moons
-`moonmining.access_all_moons` | User gets access to all moons in the database
-`moonmining.add_corporation` | This permission is allows users to add their tokens to be pulled from when checking for new extraction events.
+`moonmining.view_all_moons` | User can view all moons in the database
+`moonmining.add_refinery_owner` | This permission is allows users to add their tokens to be pulled from when checking for new extraction events.
 
 ## Settings
 
@@ -141,5 +141,5 @@ Note that all settings are optional and the app will use the documented default 
 Name | Description | Default
 -- | -- | --
 `MOONMINING_EXTRACTIONS_HOURS_UNTIL_STALE`| Number of hours an extractions that has passed its ready time is still shown on the upcoming extractions tab. | `12`
-`MOONMINING_REPROCESSING_YIELD`| Reprocessing yield used for calculating all values | `0.7`
+`MOONMINING_REPROCESSING_YIELD`| Reprocessing yield used for calculating all values | `0.82`
 `MOONMINING_VOLUME_PER_MONTH`| Total ore volume per month used for calculating moon values. | `14557923`

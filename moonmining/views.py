@@ -61,19 +61,24 @@ class MoonsCategory(str, helpers.EnumToDict, Enum):
 
 def moon_details_button_html(moon: Moon) -> str:
     return format_html(
-        '<button type="button" class="btn btn-default" '
-        'data-toggle="modal" data-target="#modalMoonDetails" '
+        '<button type="button" '
+        'class="btn btn-default" '
+        'data-toggle="modal" '
+        'data-target="#modalMoonDetails" '
         'title="Show details for this moon." '
         "data-ajax_url={}>"
-        '<i class="fas fa-moon"></i></button>',
+        '<i class="fas fa-moon"></i>'
+        "</button>",
         reverse("moonmining:moon_details", args=[moon.pk]),
     )
 
 
 def moon_link_html(moon: Moon) -> str:
     return format_html(
-        '<a href="#" data-toggle="modal" data-target="#modalMoonDetails" '
-        'title="Show details for this moon." data-ajax_url={}>'
+        '<a href="#" data-toggle="modal" '
+        'data-target="#modalMoonDetails" '
+        'title="Show details for this moon." '
+        "data-ajax_url={}>"
         "{}</a>",
         reverse("moonmining:moon_details", args=[moon.pk]),
         moon.name,
@@ -82,11 +87,14 @@ def moon_link_html(moon: Moon) -> str:
 
 def extraction_details_button_html(extraction: Extraction) -> str:
     return format_html(
-        '<button type="button" class="btn btn-default" '
-        'data-toggle="modal" data-target="#modalExtractionDetails" '
+        '<button type="button" '
+        'class="btn btn-default" '
+        'data-toggle="modal" '
+        'data-target="#modalExtractionDetails" '
         'title="Show details for this extraction." '
         "data-ajax_url={}>"
-        '<i class="fas fa-hammer"></i></button>',
+        '<i class="fas fa-hammer"></i>'
+        "</button>",
         reverse("moonmining:extraction_details", args=[extraction.pk]),
     )
 
