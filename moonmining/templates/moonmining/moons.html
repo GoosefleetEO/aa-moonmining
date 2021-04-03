@@ -1,0 +1,180 @@
+{% extends 'moonmining/base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block details %}
+    <span class="pull-right">
+        {% if perms.moonmining.upload_moon_scan %}
+            <button type="button" class="btn btn-success btn-tabs" data-toggle="modal" data-target="#modalUploadSurvey" data-ajax_url="{% url 'moonmining:upload_survey' %}">
+                {% trans "Upload Moon Surveys" %}
+            </button>
+        {% endif %}
+    </span>
+
+    <!-- Nav tabs -->
+    <ul id="myTabs" class="nav nav-tabs" role="tablist">
+        {% if perms.moonmining.extractions_access %}
+            <li role="presentation">
+                <a href="#tab_{{ MoonsCategory.OURS }}" aria-controls="tab_{{ MoonsCategory.OURS }}" role="tab" data-toggle="tab">{% trans "Owned Moons" %}</a>
+            </li>
+        {% endif %}
+        {% if perms.moonmining.view_all_moons %}
+            <li role="presentation">
+                <a href="#tab_{{ MoonsCategory.ALL }}" aria-controls="tab_{{ MoonsCategory.ALL }}" role="tab" data-toggle="tab">{% trans "All Moons" %}</a>
+            </li>
+        {% endif %}
+        {% if perms.moonmining.upload_moon_scan %}
+            <li role="presentation">
+                <a href="#tab_{{ MoonsCategory.UPLOADS }}" aria-controls="tab_{{ MoonsCategory.UPLOADS }}" role="tab" data-toggle="tab">{% trans "My Uploaded Moons" %}</a>
+            </li>
+         {% endif %}
+    </ul>
+
+    <div class="panel panel-default panel-tabs">
+        <div class="panel-body">
+            <div class="tab-content">
+                {% include "moonmining/partials/moons_tab.html" with category=MoonsCategory.OURS %}
+                {% include "moonmining/partials/moons_tab.html" with category=MoonsCategory.ALL %}
+                {% include "moonmining/partials/moons_tab.html" with category=MoonsCategory.UPLOADS %}
+            </div>
+            {% include 'moonmining/partials/value_estimate_legend.html' %}
+        </div>
+    </div>
+
+    {% if perms.moonmining.extractions_access or perms.moonmining.view_all_moons %}
+        <script>var defaultTab = "tab_{{MoonsCategory.OURS}}";</script>
+    {% elif perms.moonmining.upload_moon_scan %}
+        <script>var defaultTab = "tab_{{MoonsCategory.UPLOADS}}";</script>
+    {% endif %}
+
+    <!-- Modals -->
+    {% include "moonmining/modals/base.html" with modal_id="modalUploadSurvey" modal_content_id="modalUploadSurveyContent" %}
+    {% include "moonmining/modals/base.html" with modal_id="modalMoonDetails" modal_content_id="modalMoonDetailsContent" %}
+    {% include "moonmining/modals/base.html" with modal_id="modalExtractionDetails" modal_content_id="modalExtractionDetailsContent" %}
+{% endblock %}
+
+{% block extra_javascript %}
+    {{ block.super }}
+    <script type="text/javascript">
+        $(function(){
+            var def = {
+                ajax: {
+                    url: '',
+                    dataSrc: '',
+                    cache: true
+                },
+                columns: [
+                    { data: 'moon_name' },
+                    { data: 'corporation',
+                        render: {
+                            _: 'display',
+                            sort: 'sort'
+                        }
+                    },
+                    { data: 'solar_system_link' },
+                    { data: 'region_name' },
+                    { data: 'rarity_class',
+                        render: {
+                            _: 'display',
+                            sort: 'sort'
+                        }
+                    },
+                    {
+                        data: 'value',
+                        render: $.fn.dataTable.render.formatisk()
+                    },
+                    { data: 'details' },
+
+                    { data: 'solar_system_name' },
+                    { data: 'has_refinery_str' },
+                    { data: 'corporation_name' },
+                    { data: 'alliance_name' },
+                    { data: 'rarity_class_label' },
+                    { data: 'has_extraction_str' },
+                ],
+                lengthMenu: DEFAULT_LENGTH_MENU,
+                pageLength: DEFAULT_PAGE_LENGTH,
+                order: [ [0, "asc"] ],
+                columnDefs: [
+                    { "orderable": false, "targets": [ 6 ] },
+                    { "visible": false, "targets": [ 7, 8, 9, 10, 11, 12 ] },
+                ],
+                filterDropDown: {
+                    columns: [
+                        {
+                            idx: 10,
+                            title: "Alliance"
+                        },
+                        {
+                            idx: 9,
+                            title: "Corporation"
+                        },
+                        {
+                            idx: 3
+                        },
+                        {
+                            idx: 7,
+                            title: "System"
+                        },
+                        {
+                            idx: 11,
+                            title: "Rarity"
+                        },
+                        {
+                            idx: 8,
+                            title: "Our moon"
+                        },
+                        {
+                            idx: 12,
+                            title: "Active Extraction?"
+                        }
+                    ],
+                    bootstrap: true,
+                    autoSize: false
+                }
+            };
+
+            /* our moons table */
+            def.ajax.url = '{% url "moonmining:moons_data" MoonsCategory.OURS %}'
+            var table = $('#table_{{ MoonsCategory.OURS }}').DataTable(def);
+            table.on( 'xhr', function () {
+                table.columns.adjust().draw();
+                $("#loader_{{ MoonsCategory.OURS }}").hide();
+                $("#wrapper_{{ MoonsCategory.OURS }}").show();
+            } );
+
+            /* all moons table */
+            def.ajax.url = '{% url "moonmining:moons_data" MoonsCategory.ALL %}'
+            var table = $('#table_{{ MoonsCategory.ALL }}').DataTable(def);
+            table.on( 'xhr', function () {
+                table.columns.adjust().draw();
+                $("#loader_{{ MoonsCategory.ALL }}").hide();
+                $("#wrapper_{{ MoonsCategory.ALL }}").show();
+            } );
+
+            /* uploaded moons table */
+            def.ajax.url = '{% url "moonmining:moons_data" MoonsCategory.UPLOADS %}'
+            var table = $('#table_{{ MoonsCategory.UPLOADS }}').DataTable(def);
+            table.on( 'xhr', function () {
+                table.columns.adjust().draw();
+                $("#loader_{{ MoonsCategory.UPLOADS }}").hide();
+                $("#wrapper_{{ MoonsCategory.UPLOADS }}").show();
+            } );
+
+            $('#myTabs a[href="#' + defaultTab + '"]').tab('show')
+
+            handle_modal_events("modalUploadSurvey", "modalUploadSurveyContent")
+            handle_modal_events("modalMoonDetails", "modalMoonDetailsContent")
+            handle_modal_events("modalExtractionDetails", "modalExtractionDetailsContent")
+
+        });
+    </script>
+{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <link href="{% static 'moonmining/css/moons.css' %}" type="text/css" rel="stylesheet">
+{% endblock %}
+
+{% block extra_script %}
+{% endblock %}

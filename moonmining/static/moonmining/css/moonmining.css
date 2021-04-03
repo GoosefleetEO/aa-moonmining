@@ -1,0 +1,27 @@
+#table_extraction_details thead th:nth-child(3) {
+	text-align: center;
+}
+#table_extraction_details thead th:nth-child(4) {
+	text-align: center;
+}
+#table_extraction_details tbody td:nth-child(3) {
+	text-align: right;
+}
+#table_extraction_details tbody td:nth-child(4) {
+	text-align: right;
+}
+#table_extraction_details tfoot th:nth-child(3) {
+	text-align: right;
+}
+#table_extraction_details tfoot th:nth-child(4) {
+	text-align: right;
+}
+#table_past_extractions tbody td:nth-child(1) {
+	text-align: left;
+}
+#table_past_extractions tbody td:nth-child(2) {
+	text-align: right;
+}
+#table_past_extractions tbody td:nth-child(3) {
+	text-align: right;
+}

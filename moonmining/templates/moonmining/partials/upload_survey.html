@@ -1,0 +1,12 @@
+{% load i18n %}
+
+<p>Paste your moon scan results into the form below and click the submit button.</p>
+
+<form class="form-signin" role="form" action="{% url 'moonmining:upload_survey' %}" method="POST">
+    {% csrf_token %}
+    <div class="form-group">
+        <textarea class="form-control" name="scan" rows="10" id="scan" required></textarea>
+    </div>
+    <br />
+    <button class="btn btn-primary" type="submit" name="submit_scan" id="submit_scan">Submit Moon Scans</button>
+</form>

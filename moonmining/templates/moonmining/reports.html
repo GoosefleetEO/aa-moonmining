@@ -1,0 +1,118 @@
+{% extends 'moonmining/base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block details %}
+    <ul id="myTabs" class="nav nav-tabs" role="tablist">
+        <li role="presentation" class="active">
+            <a href="#tab_owned_value" aria-controls="tab_owned_value" role="tab" data-toggle="tab">Potential monthly income</a>
+        </li>
+    </ul>
+
+    <div class="panel panel-default panel-tabs">
+        <div class="panel-body">
+            <div class="tab-content">
+                {% include "moonmining/partials/reports_owned_value_tab.html" %}
+            </div>
+            {% include 'moonmining/partials/value_estimate_legend.html' %}
+        </div>
+    </div>
+
+    <!-- Modals -->
+    {% include "moonmining/modals/base.html" with modal_id="modalMoonDetails" modal_content_id="modalMoonDetailsContent" %}
+{% endblock %}
+
+{% block extra_javascript %}
+    {{ block.super }}
+    <script type="application/javascript" src="{% static 'moonmining/vendor/datatables/plugins/dataTables.rowGroup.min.js' %}"></script>
+    <script type="text/javascript">
+        $(function() {
+
+            $('#table_owned_value').DataTable(
+                {
+                ajax: {
+                    url: '{% url "moonmining:report_owned_value_data" %}',
+                    dataSrc: '',
+                    cache: true
+                },
+                columns: [
+                    { data: 'corporation' },
+                    { data: 'moon',
+                        render: {
+                            _: 'display',
+                            sort: 'sort'
+                        }
+                    },
+                    { data: 'region' },
+                    { data: 'rarity_class' },
+                    {
+                        data: 'value',
+                        render: $.fn.dataTable.render.formatisk()
+                    },
+                    {
+                        data: 'grand_total_percent',
+                        render: $.fn.dataTable.render.number(',', '.', 0)
+                    },
+                    { data: 'rank' },
+                    {
+                        data: 'total',
+                        render: $.fn.dataTable.render.formatisk()
+                    },
+                ],
+                lengthMenu: DEFAULT_LENGTH_MENU,
+                pageLength: DEFAULT_PAGE_LENGTH,
+                order: [ [0, "asc"], [1, "asc"] ],
+                ordering: false,
+                rowGroup: {
+                    dataSrc: 'corporation',
+                    className: 'table-group'
+                },
+                columnDefs: [
+                    { "visible": false, "targets": [ 0 ] },
+                    { "orderable": false, "targets": [ 1 ] },
+                ],
+                createdRow: function( row, data, dataIndex ) {
+                    if (data['is_total']) {
+                        $(row).addClass('info');
+                    }
+                },
+                footerCallback: function (row, data, start, end, display) {
+                    var api = this.api(), data;
+
+                    const columnPercent = 5
+                    var total_percent = api
+                        .column(columnPercent)
+                        .data()
+                        .reduce(function (a, b) {
+                                return intVal(a) + intVal(b);
+                            },
+                            0
+                        );
+                    $(api.column(columnPercent).footer()).html(total_percent.toFixed(0));
+
+                    const columnTotal = 7
+                    var total_value = api
+                        .column(columnTotal)
+                        .data()
+                        .reduce(function (a, b) {
+                                return intVal(a) + intVal(b);
+                            },
+                            0
+                        );
+                    $(api.column(columnTotal).footer()).html(formatisk(total_value));
+                }
+            });
+
+            handle_modal_events("modalMoonDetails", "modalMoonDetailsContent")
+        });
+    </script>
+{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'memberaudit/vendor/datatables/plugins/rowGroup.dataTables.min.css' %}" type="text/css">
+    <link href="{% static 'moonmining/css/reports.css' %}" type="text/css" rel="stylesheet">
+{% endblock %}
+
+{% block extra_script %}
+{% endblock %}

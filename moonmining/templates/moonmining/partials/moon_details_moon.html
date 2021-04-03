@@ -1,0 +1,51 @@
+{% load i18n %}
+{% load moonmining %}
+
+<div class="row">
+    <div class="col-md-3">
+        <p><strong>Name:</strong></p>
+    </div>
+    <div class="col-md-9">
+    <p>{{ moon.name }}&nbsp;</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <p><strong>Solar System:</strong></p>
+    </div>
+    <div class="col-md-9">
+        {% include "moonmining/partials/solar_system.html" with eve_solar_system=moon.eve_moon.eve_planet.eve_solar_system %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <p><strong>Corporation:</strong></p>
+    </div>
+    <div class="col-md-9">
+    <p>{{ moon.refinery.owner|default:"-" }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <p><strong>Refinery:</strong></p>
+    </div>
+    <div class="col-md-9">
+    {% if moon.refinery %}
+        <p>{{ moon.refinery|default:"-" }}  / {{ moon.refinery.eve_type|default:"-" }}</p>
+    {% else %}
+        -
+    {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <p><strong>Value est. *:</strong></p>
+    </div>
+    <div class="col-md-9">
+    <p>{{ moon.value | formatisk }}</p>
+    </div>
+</div>

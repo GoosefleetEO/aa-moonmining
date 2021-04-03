@@ -1,5 +1,5 @@
-appname = aa-moonplanner
-package = moonplanner
+appname = aa-moonmining
+package = moonmining
 
 help:
 	@echo "Makefile for $(appname)"

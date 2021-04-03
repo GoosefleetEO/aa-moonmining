@@ -1,0 +1,157 @@
+{% extends 'moonmining/base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block details %}
+    <ul id="myTabs" class="nav nav-tabs" role="tablist">
+        <li role="presentation">
+            <a href="#tab_{{ ExtractionsCategory.UPCOMING }}" aria-controls="tab_{{ ExtractionsCategory.UPCOMING }}" role="tab" data-toggle="tab">Upcoming Extractions</a>
+        </li>
+        <li role="presentation"><a href="#tab_{{ ExtractionsCategory.PAST }}" aria-controls="tab_{{ ExtractionsCategory.PAST }}" role="tab" data-toggle="tab">Past Extractions</a></li>
+    </ul>
+
+    <div class="panel panel-default panel-tabs">
+        <div class="panel-body">
+            <div class="tab-content">
+                {% include "moonmining/partials/extractions_tab.html" with category=ExtractionsCategory.UPCOMING %}
+                {% include "moonmining/partials/extractions_tab.html" with category=ExtractionsCategory.PAST %}
+            </div>
+            {% include 'moonmining/partials/value_estimate_legend.html' %}
+            <p class="text-muted">All times displayed are EVE/UTC • Extractions will be shown on the upcoming tab until {{ stale_hours }} hours after their ready time.</p>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    {% include "moonmining/modals/base.html" with modal_id="modalMoonDetails" modal_content_id="modalMoonDetailsContent" %}
+    {% include "moonmining/modals/base.html" with modal_id="modalExtractionDetails" modal_content_id="modalExtractionDetailsContent" %}
+{% endblock %}
+
+{% block extra_javascript %}
+    {{ block.super }}
+    <script type="text/javascript">
+        $(function() {
+            var def = {
+                ajax: {
+                    url: '',
+                    dataSrc: '',
+                    cache: true
+                },
+                columns: [
+                    {
+                        data: 'ready_time',
+                        render: { _: 'display', sort: 'sort'}
+                    },
+                    { data: 'moon' },
+                    { data: 'status_str' },
+                    {
+                        data: 'corporation',
+                        render: { _: 'display', sort: 'sort'}
+                    },
+                    {
+                        data: 'volume',
+                        render: $.fn.dataTable.render.number(',', '.', 0)
+                    },
+                    {
+                        data: 'value',
+                        render: $.fn.dataTable.render.formatisk()
+                    },
+                    { data: 'details' },
+
+                    { data: 'corporation_name' },
+                    { data: 'alliance_name' },
+                    { data: 'is_jackpot_str' },
+                ],
+                lengthMenu: DEFAULT_LENGTH_MENU,
+                pageLength: DEFAULT_PAGE_LENGTH,
+                columnDefs: [
+                    { "orderable": false, "targets": [ 6 ] },
+                    { "visible": false, "targets": [ 7, 8, 9 ] },
+                ],
+                filterDropDown: {
+                    columns: [
+                        {
+                            idx: 8,
+                            title: "Alliance"
+                        },
+                        {
+                            idx: 7,
+                            title: "Corporation"
+                        },
+                        {
+                            idx: 9,
+                            title: "Jackpot?"
+                        },
+                        {
+                            idx: 1
+                        }
+                    ],
+                    bootstrap: true,
+                    autoSize: false
+                },
+                createdRow: function( row, data, dataIndex )
+                {
+                    if (data['status'] == '{{ ExtractionsStatus.CANCELED }}') {
+                        $(row).addClass('danger');
+                    }
+                    else if (data['status'] == '{{ ExtractionsStatus.READY }}') {
+                        $(row).addClass('info');
+                    }
+                    else if (data['status'] == '{{ ExtractionsStatus.COMPLETED }}') {
+                        $(row).addClass('success');
+                    }
+                },
+                footerCallback: function (row, data, start, end, display) {
+                    var api = this.api(), data;
+
+                    const columnVolume = 4
+                    var total_1 = api
+                        .column(columnVolume)
+                        .data()
+                        .reduce(function (a, b) {
+                                return intVal(a) + intVal(b);
+                            },
+                            0
+                        );
+                    $(api.column(columnVolume).footer()).html(
+                        total_1.toLocaleString('en-US', {maximumFractionDigits: 0})
+                    );
+
+                    const columnValue = 5
+                    var total_2 = api
+                        .column(columnValue)
+                        .data()
+                        .reduce(function (a, b) {
+                                return intVal(a) + intVal(b);
+                            },
+                            0
+                        );
+                    $(api.column(columnValue).footer()).html(formatisk(total_2));
+                }
+            };
+
+            /* upcoming extractions*/
+            def.ajax.url = '{% url "moonmining:extractions_data" ExtractionsCategory.UPCOMING %}'
+            def.order = [ [0, "asc"] ]
+            var table = $('#table_{{ ExtractionsCategory.UPCOMING }}').DataTable(def);
+
+            /* past extractions */
+            def.ajax.url = '{% url "moonmining:extractions_data" ExtractionsCategory.PAST %}'
+            def.order = [ [0, "desc"] ]
+            var table = $('#table_{{ ExtractionsCategory.PAST }}').DataTable(def);
+
+            $('#myTabs a[href="#tab_{{ ExtractionsCategory.UPCOMING }}"]').tab('show')
+
+            handle_modal_events("modalMoonDetails", "modalMoonDetailsContent")
+            handle_modal_events("modalExtractionDetails", "modalExtractionDetailsContent")
+        });
+
+    </script>
+{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <link href="{% static 'moonmining/css/extractions.css' %}" type="text/css" rel="stylesheet">
+{% endblock %}
+
+{% block extra_script %}
+{% endblock %}

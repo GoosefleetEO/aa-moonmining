@@ -1,0 +1,16 @@
+{% load evelinks %}
+
+{% if eve_solar_system %}
+    <a href="{{ eve_solar_system.name|dotlan_solar_system_url }}" target="_blank">
+        {{ eve_solar_system.name }}
+    </a>
+    {% with system=eve_solar_system %}
+        <span class="{% if system.is_high_sec %}text-high-sec{% elif system.is_low_sec %}text-low-sec{% else %}text-null-sec{% endif%}">
+            {{ system.security_status|floatformat:1 }}
+        </span>
+    {% endwith %}
+    /
+    {{ eve_solar_system.eve_constellation.eve_region.name }}
+{% else %}
+    <span class="text-muted">?</span>
+{% endif %}

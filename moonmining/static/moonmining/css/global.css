@@ -1,0 +1,76 @@
+/* Global styles shared by all apps */
+
+@media all {
+	/* Bootstrap Tabs */
+	.template-light-mode .nav-tabs > li.active > a {
+		background-color: rgb(236, 240, 241) !important;
+		color: rgb(0, 0, 0) !important;
+	}
+
+	.template-dark-mode .nav-tabs > li.active > a {
+		background-color: rgb(70, 69, 69) !important;
+		color: rgb(255, 255, 255) !important;
+	}
+
+	.panel-tabs {
+		border-top: none;
+		border-top-left-radius: 0%;
+		border-top-right-radius: 0%;
+	}
+
+	.btn-tabs {
+		border-width: 0px;
+	}
+
+	/* Datatables row group headers */
+	.template-light-mode .table > tbody > .table-group > td {
+		background-color: rgb(105, 105, 105);
+		color: rgb(255, 255, 255);
+		font-weight: bold;
+	}
+
+	.template-dark-mode .table > tbody > .table-group > td {
+		background-color: rgb(105, 105, 105);
+		color: rgb(255, 255, 255);
+		font-weight: bold;
+	}
+
+	/* other */
+	.nowrap {
+		white-space: nowrap;
+	}
+
+	.text-high-sec {
+		color: rgb(0, 128, 0);
+	}
+
+	.text-low-sec {
+		color: rgb(255, 165, 0);
+	}
+
+	.text-null-sec {
+		color: rgb(255, 0, 0);
+	}
+
+	.boolean-icon-false {
+		color: rgb(255, 0, 0);
+	}
+
+	.boolean-icon-true {
+		color: rgb(0, 128, 0);
+	}
+
+	/* fix to remove vertical slider when in response mode */
+	.table-width-fix {
+		width: 100% !important;
+	}
+}
+
+@media all and (min-width: 768px) {
+	/* Bootstrap modals */
+	.modal-xl {
+		width: 90%;
+		min-width: 1600px;
+		max-width: 1600px;
+	}
+}

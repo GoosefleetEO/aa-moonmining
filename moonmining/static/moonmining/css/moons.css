@@ -1,0 +1,12 @@
+/* Moon list */
+.table-moons thead th {
+	text-align: left;
+	vertical-align: middle;
+}
+.table-moons tbody td {
+	text-align: left;
+	vertical-align: middle !important;
+}
+.table-moons tbody td:nth-child(6) {
+	text-align: right;
+}

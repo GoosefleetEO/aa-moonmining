@@ -2,7 +2,7 @@ import os
 
 from setuptools import find_packages, setup
 
-from moonplanner import __version__
+from moonmining import __version__
 
 # read the contents of your README file
 this_directory = os.path.abspath(os.path.dirname(__file__))
@@ -10,21 +10,19 @@ with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
-    name="aa-moonplanner",
+    name="aa-moonmining",
     version=__version__,
     packages=find_packages(),
     include_package_data=True,
     license="GPLv3",
     description="App for planning moon mining with Auth",
     long_description=long_description,
-    url="https://gitlab.com/ErikKalkoken/aa-moonplanner",
+    url="https://gitlab.com/ErikKalkoken/aa-moonmining",
     author="Erik Kalkoken",
     author_email="kaloken87@gmail.com",
     classifiers=[
         "Environment :: Web Environment",
         "Framework :: Django",
-        "Framework :: Django :: 2.2",
-        "Framework :: Django :: 3.0",
         "Framework :: Django :: 3.1",
         "Intended Audience :: End Users/Desktop",
         "License :: OSI Approved :: MIT License",
@@ -38,9 +36,10 @@ setup(
     ],
     python_requires="~=3.6",
     install_requires=[
-        "allianceauth",
+        "allianceauth>=2.8.2",
         "django-bootstrap-form",
         "django-navhelper",
-        "allianceauth-evesde @ git+https://gitlab.com/ErikKalkoken/allianceauth-evesde.git",
+        "allianceauth-app-utils>=1.1",
+        "django-eveuniverse>=0.8.0a4",
     ],
 )

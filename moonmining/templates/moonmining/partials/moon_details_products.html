@@ -1,0 +1,49 @@
+{% load i18n %}
+{% load moonmining %}
+
+{% if product_rows|length_is:"0" %}
+    <p class="text-warning"><strong>
+        We could not find a survey for this moon in our database.
+    </strong></p>
+{% else %}
+
+    {% for product in moon.products_sorted %}
+        <div class="row">
+            <div class="col-md-2">
+                <img class="media-object" src="{{ product.ore_type.icon_url }}">
+            </div>
+
+            <div class="col-md-8">
+                <p>
+                    <a href="{{ product.ore_type.profile_url }}" target="_blank">{{ product.ore_type.name }}</a>
+                    &nbsp;{{ product.ore_type.rarity_class.bootstrap_tag_html }}
+                </p>
+                <div class="progress" style="height: 20px; width: 100%">
+                    <div
+                        class="progress-bar progress-bar-default progress-bar-striped"
+                        role="progressbar"
+                        aria-valuenow="{{ product.amount_percent }}"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        style="width: {{ product.amount_percent }}%; line-height: 20px;"
+                    >
+                        <span class="sr-only">
+                            {{ product.amount_percent|floatformat:"0" }}% {{ product.ore_type.name }}
+                        </span>
+                        <h5 class="media-heading" style="padding-top: 2px">
+                            {{ product.amount_percent|floatformat:"0" }}%
+                        </h5>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-2">
+                <span class="pull-right">
+                    <br>
+                    {{ product.value | formatisk }}
+                </span>
+            </div>
+        </div>
+    {% endfor %}
+{% endif %}
+<p class="text-muted">Last updated on {{moon.products_updated_at|datetime|default:"?"}} by {{moon.products_updated_by.profile.main_character|default:"?"}}<p>

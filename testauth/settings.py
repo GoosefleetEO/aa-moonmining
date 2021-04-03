@@ -255,7 +255,7 @@ SITE_NAME = "testauth"
 DEBUG = False
 
 # Add any additional apps to this list.
-INSTALLED_APPS += ["evesde", "moonplanner"]
+INSTALLED_APPS += ["eveuniverse", "moonmining"]
 
 # Enter credentials to use MySQL/MariaDB. Comment out to use sqlite3
 """
@@ -298,3 +298,6 @@ DEFAULT_FROM_EMAIL = ""
 #######################################
 
 Logging = None
+
+NOTIFICATIONS_REFRESH_TIME = 30
+NOTIFICATIONS_MAX_PER_USER = 50
