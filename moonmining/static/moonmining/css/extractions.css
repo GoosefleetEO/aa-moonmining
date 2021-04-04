@@ -10,10 +10,10 @@
 }
 
 .table-extractions thead th:nth-child(5) {
-	text-align: center;
+	text-align: right;
 }
 .table-extractions thead th:nth-child(6) {
-	text-align: center;
+	text-align: right;
 }
 .table-extractions tbody td:nth-child(5) {
 	text-align: right;
