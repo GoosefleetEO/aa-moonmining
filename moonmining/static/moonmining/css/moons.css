@@ -10,3 +10,7 @@
 .table-moons tbody td:nth-child(6) {
 	text-align: right;
 }
+.table-moons tbody td:nth-child(7) {
+	text-align: right;
+	white-space: nowrap;
+}

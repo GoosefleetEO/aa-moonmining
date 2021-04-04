@@ -137,8 +137,8 @@ def extractions_data(request, category):
         corporation_html = extraction.refinery.owner.name_html
         corporation_name = extraction.refinery.owner.name
         alliance_name = extraction.refinery.owner.alliance_name
-        actions_html = moon_details_button_html(extraction.refinery.moon)
-        actions_html += "&nbsp;" + extraction_details_button_html(extraction)
+        actions_html = extraction_details_button_html(extraction)
+        actions_html += " " + moon_details_button_html(extraction.refinery.moon)
         data.append(
             {
                 "id": extraction.pk,
@@ -254,12 +254,10 @@ def moons_data(request, category):
             moon.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region.name
         )
         if has_details_access:
-            details_html = moon_details_button_html(moon)
-            details_html += (
-                "&nbsp;" + extraction_details_button_html(extraction)
-                if extraction
-                else ""
+            details_html = (
+                extraction_details_button_html(extraction) + " " if extraction else ""
             )
+            details_html += moon_details_button_html(moon)
         else:
             details_html = ""
         moon_data = {
