@@ -23,10 +23,10 @@ An Alliance Auth app for tracking moon extractions and scouting new moons.
 
 ## Features
 
-- Upload survey scans and research your own moon database.
-- Monitor ongoing extractions from your refineries.
+- Upload survey scans and research your moon database.
+- Monitor active extractions from your refineries.
 - Automatic value estimates for all moons and extractions.
-- See reports for your potential total income
+- See reports for your potential total income.
 - Tool for mass importing moon scans from external sources
 
 ## Highlights
@@ -47,11 +47,11 @@ Note that you can also see on this list which moons you already own. In addition
 
 After you added your corporation you can see which moons you own and see upcoming and past extractions:
 
-![moons](https://i.imgur.com/FaRStOr.png)
+![moons](https://i.imgur.com/earsLke.png)
 
 You can also review the extraction details, incl. which ore qualities you got.
 
-![moons](https://i.imgur.com/3gnz6rK.png)
+![moons](https://i.imgur.com/mt9eyNN.png)
 
 ### Reports
 
