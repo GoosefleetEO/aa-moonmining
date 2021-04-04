@@ -21,6 +21,7 @@ from app_utils.views import bootstrap_icon_plus_name_html, bootstrap_label_html
 
 from . import __title__, constants
 from .app_settings import MOONMINING_REPROCESSING_YIELD, MOONMINING_VOLUME_PER_MONTH
+from .constants import BootstrapContext
 from .helpers import eveentity_get_or_create_esi_safe
 from .managers import EveOreTypeManger, ExtractionManager, MoonManager
 from .providers import esi
@@ -37,6 +38,9 @@ class NotificationType(str, Enum):
     MOONMINING_EXTRACTION_FINISHED = "MoonminingExtractionFinished"
     MOONMINING_EXTRACTION_STARTED = "MoonminingExtractionStarted"
     MOONMINING_LASER_FIRED = "MoonminingLaserFired"
+
+    def __str__(self) -> str:
+        return self.value
 
     @classproperty
     def all_moon_mining(cls) -> set:
@@ -63,11 +67,11 @@ class OreRarityClass(models.IntegerChoices):
     @property
     def bootstrap_tag_html(self) -> str:
         map_rarity_to_type = {
-            self.R4: "primary",
-            self.R8: "info",
-            self.R16: "success",
-            self.R32: "warning",
-            self.R64: "danger",
+            self.R4: BootstrapContext.PRIMARY,
+            self.R8: BootstrapContext.INFO,
+            self.R16: BootstrapContext.SUCCESS,
+            self.R32: BootstrapContext.WARNING,
+            self.R64: BootstrapContext.DANGER,
         }
         try:
             return bootstrap_label_html(
@@ -109,8 +113,8 @@ class OreQualityClass(models.TextChoices):
     def bootstrap_tag_html(self) -> str:
         """Return bootstrap tag."""
         map_quality_to_label_def = {
-            self.IMPROVED: {"text": "+15%", "label": "success"},
-            self.EXCELLENT: {"text": "+100%", "label": "warning"},
+            self.IMPROVED: {"text": "+15%", "label": BootstrapContext.SUCCESS},
+            self.EXCELLENT: {"text": "+100%", "label": BootstrapContext.WARNING},
         }
         try:
             label_def = map_quality_to_label_def[self.value]
@@ -211,6 +215,20 @@ class Extraction(models.Model):
         COMPLETED = "CP", "completed"  # has been fractured
         UNDEFINED = "UN", "undefined"  # unclear status
 
+        @property
+        def bootstrap_tag_html(self) -> str:
+            map_to_type = {
+                self.STARTED: BootstrapContext.SUCCESS,
+                self.CANCELED: BootstrapContext.DANGER,
+                self.READY: BootstrapContext.WARNING,
+                self.COMPLETED: BootstrapContext.DEFAULT,
+                self.UNDEFINED: "",
+            }
+            try:
+                return bootstrap_label_html(self.label, label=map_to_type[self.value])
+            except KeyError:
+                return ""
+
         @classproperty
         def considered_active(cls):
             return [cls.STARTED, cls.READY]
@@ -291,8 +309,14 @@ class Extraction(models.Model):
     def __str__(self) -> str:
         return f"{self.refinery} - {self.ready_time} - {self.status}"
 
+    @property
+    def status_enum(self) -> "Extraction.Status":
+        """Return current status as enum type."""
+        return self.Status(self.status)
+
     @cached_property
     def products_sorted(self):
+        """Return current products as sorted iterable."""
         try:
             return (
                 self.products.select_related("ore_type", "ore_type__eve_group")
@@ -472,6 +496,7 @@ class Moon(models.Model):
 
     @cached_property
     def products_sorted(self):
+        """Return current products as sorted iterable."""
         return self.products.select_related("ore_type", "ore_type__eve_group").order_by(
             "-ore_type__eve_group_id"
         )

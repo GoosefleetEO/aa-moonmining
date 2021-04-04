@@ -2,23 +2,22 @@
 {% load humanize %}
 {% load moonmining %}
 
-{% if not hide_moon %}
-    <div class="row">
-        <div class="col-md-2">
-            <p><strong>Moon:</strong></p>
-        </div>
-        <div class="col-md-10">
-            <p>{{ extraction.refinery.moon }}</p>
-        </div>
+
+<div class="row">
+    <div class="col-md-2">
+        <p><strong>Moon:</strong></p>
     </div>
-{% endif %}
+    <div class="col-md-10">
+        <p>{{ extraction.refinery.moon }}</p>
+    </div>
+</div>
 
 <div class="row">
     <div class="col-md-2">
         <p><strong>Status:</strong></p>
     </div>
     <div class="col-md-10">
-        <p>{{ extraction.get_status_display }}</p>
+        <p>{{ extraction.status_enum.bootstrap_tag_html }}</p>
     </div>
 </div>
 
