@@ -310,7 +310,7 @@ class TestViewsAreWorking(TestCase):
         cls.moon = helpers.create_moon_40161708()
         cls.refinery = helpers.add_refinery(cls.moon)
 
-    def test_should_redirect_to_moons_page(self):
+    def test_should_redirect_to_extractions_page(self):
         # given
         request = self.factory.get(reverse("moonmining:index"))
         request.user = self.user
@@ -318,7 +318,7 @@ class TestViewsAreWorking(TestCase):
         response = views.index(request)
         # then
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, reverse("moonmining:moons"))
+        self.assertEqual(response.url, reverse("moonmining:extractions"))
 
     def test_should_open_extractions_page(self):
         # given
