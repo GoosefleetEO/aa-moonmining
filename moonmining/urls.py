@@ -15,7 +15,7 @@ urlpatterns = [
         name="extractions_data",
     ),
     path(
-        "extraction_details/<int:extraction_pk>",
+        "extraction/<int:extraction_pk>",
         views.extraction_details,
         name="extraction_details",
     ),

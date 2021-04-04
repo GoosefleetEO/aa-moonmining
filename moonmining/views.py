@@ -102,7 +102,10 @@ def default_if_none(value, default):
 @login_required
 @permission_required("moonmining.basic_access")
 def index(request):
-    return redirect("moonmining:moons")
+    if request.user.has_perm("moonmining.extractions_access"):
+        return redirect("moonmining:extractions")
+    else:
+        return redirect("moonmining:moons")
 
 
 @login_required

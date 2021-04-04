@@ -17,22 +17,22 @@
 
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav">
-                <li class="{% navactive request 'moonmining:moons' %}">
-                    <a href="{% url 'moonmining:moons' %}">Moons</a>
-                </li>
-                {% if "/moonmining/upload_survey" in request.path %}
-                    <li class="{% navactive request 'moonmining:upload_survey' %}">
-                        <a href="{% url 'moonmining:upload_survey' %}">Upload Moon Surveys</a>
-                    </li>
-                {% endif %}
-                {% if "/moonmining/moon/" in request.path %}
-                    <li class="{% renavactive request '/moonmining/moon/' %}">
-                        <a href="#">Moon Details</a>
-                    </li>
-                {% endif %}
                 {% if perms.moonmining.extractions_access %}
                     <li class="{% navactive request 'moonmining:extractions' %}">
                         <a href="{% url 'moonmining:extractions' %}">Extractions</a>
+                    </li>
+                {% endif %}
+                {% if "/moonmining/extraction/" in request.path %}
+                    <li class="{% renavactive request '/moonmining/extraction/' %}">
+                        <a href="#">Extraction Details</a>
+                    </li>
+                {% endif %}
+                <li class="{% navactive request 'moonmining:moons' %}">
+                    <a href="{% url 'moonmining:moons' %}">Moons</a>
+                </li>
+                {% if "/moonmining/moon/" in request.path %}
+                    <li class="{% renavactive request '/moonmining/moon/' %}">
+                        <a href="#">Moon Details</a>
                     </li>
                 {% endif %}
                  {% if perms.moonmining.reports_access %}
