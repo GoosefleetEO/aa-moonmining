@@ -230,9 +230,18 @@ def moons_data(request, category):
         return JsonResponse([], safe=False)
 
     for moon in moon_query.iterator():
-        solar_system_name = moon.eve_moon.eve_planet.eve_solar_system.name
-        solar_system_link = link_html(
-            dotlan.solar_system_url(solar_system_name), solar_system_name
+        solar_system = moon.eve_moon.eve_planet.eve_solar_system
+        if solar_system.is_high_sec:
+            sec_class = "text-high-sec"
+        elif solar_system.is_low_sec:
+            sec_class = "text-low-sec"
+        else:
+            sec_class = "text-null-sec"
+        solar_system_link = format_html(
+            '{}&nbsp;<span class="{}">{}</span>',
+            link_html(dotlan.solar_system_url(solar_system.name), solar_system.name),
+            sec_class,
+            round(solar_system.security_status, 1),
         )
         try:
             refinery = moon.refinery
@@ -277,7 +286,7 @@ def moons_data(request, category):
             "details": details_html,
             "has_refinery_str": yesno_str(has_refinery),
             "has_extraction_str": yesno_str(extraction is not None),
-            "solar_system_name": solar_system_name,
+            "solar_system_name": solar_system.name,
             "corporation_name": corporation_name,
             "alliance_name": alliance_name,
             "rarity_class_label": OreRarityClass(moon.rarity_class).label,
