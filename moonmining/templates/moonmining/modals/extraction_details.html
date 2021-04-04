@@ -1,1 +1,2 @@
-{% include "moonmining/modals/content_base.html" with modal_content_id="modalExtractionDetailsContent" modal_body_url="moonmining/partials/extraction_details.html" modal_title="Extraction" %}
+{% url 'moonmining:extraction_details' extraction.pk as new_page_url%}
+{% include "moonmining/modals/content_base.html" with modal_content_id="modalExtractionDetailsContent" modal_body_url="moonmining/partials/extraction_details.html" modal_title="Extraction" new_page_url=new_page_url %}

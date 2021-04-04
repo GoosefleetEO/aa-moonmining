@@ -136,27 +136,27 @@
 
             /* our moons table */
             def.ajax.url = '{% url "moonmining:moons_data" MoonsCategory.OURS %}'
-            var table = $('#table_{{ MoonsCategory.OURS }}').DataTable(def);
-            table.on( 'xhr', function () {
-                table.columns.adjust().draw();
+            var table_our = $('#table_{{ MoonsCategory.OURS }}').DataTable(def);
+            table_our.on( 'xhr', function () {
+                table_our.columns.adjust().draw();
                 $("#loader_{{ MoonsCategory.OURS }}").hide();
                 $("#wrapper_{{ MoonsCategory.OURS }}").show();
             } );
 
             /* all moons table */
             def.ajax.url = '{% url "moonmining:moons_data" MoonsCategory.ALL %}'
-            var table = $('#table_{{ MoonsCategory.ALL }}').DataTable(def);
-            table.on( 'xhr', function () {
-                table.columns.adjust().draw();
+            var table_all = $('#table_{{ MoonsCategory.ALL }}').DataTable(def);
+            table_all.on( 'xhr', function () {
+                table_all.columns.adjust().draw();
                 $("#loader_{{ MoonsCategory.ALL }}").hide();
                 $("#wrapper_{{ MoonsCategory.ALL }}").show();
             } );
 
             /* uploaded moons table */
             def.ajax.url = '{% url "moonmining:moons_data" MoonsCategory.UPLOADS %}'
-            var table = $('#table_{{ MoonsCategory.UPLOADS }}').DataTable(def);
-            table.on( 'xhr', function () {
-                table.columns.adjust().draw();
+            var table_uploads = $('#table_{{ MoonsCategory.UPLOADS }}').DataTable(def);
+            table_uploads.on( 'xhr', function () {
+                table_uploads.columns.adjust().draw();
                 $("#loader_{{ MoonsCategory.UPLOADS }}").hide();
                 $("#wrapper_{{ MoonsCategory.UPLOADS }}").show();
             } );

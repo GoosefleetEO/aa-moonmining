@@ -1,0 +1,14 @@
+{% extends 'moonmining/base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block details %}
+    <div class="panel panel-default" style="max-width:900px;">
+        <div class="panel-heading">
+            <h3 class="panel-title">Moon</h3>
+        </div>
+        <div class="panel-body">
+            {% include "moonmining/partials/moon_details.html" %}
+        </div>
+    </div>
+{% endblock %}

@@ -16,6 +16,11 @@
         </div>
 
         <div class="modal-footer">
+            {% if new_page_url %}
+                <a class="btn btn-default pull-left" href="{{ new_page_url }}?new_page=yes" target="_blank" title="Open in new tab">
+                    <i class="far fa-window-restore"></i>
+                </a>
+            {% endif %}
             <button type="button" class="btn btn-default" data-dismiss="modal">
                 {% translate 'Close' %}
             </button>

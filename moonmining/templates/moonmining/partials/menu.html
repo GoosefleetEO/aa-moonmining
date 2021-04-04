@@ -20,11 +20,6 @@
                 <li class="{% navactive request 'moonmining:moons' %}">
                     <a href="{% url 'moonmining:moons' %}">Moons</a>
                 </li>
-                {% if perms.moonmining.extractions_access %}
-                    <li class="{% navactive request 'moonmining:extractions' %}">
-                        <a href="{% url 'moonmining:extractions' %}">Extractions</a>
-                    </li>
-                {% endif %}
                 {% if "/moonmining/upload_survey" in request.path %}
                     <li class="{% navactive request 'moonmining:upload_survey' %}">
                         <a href="{% url 'moonmining:upload_survey' %}">Upload Moon Surveys</a>
@@ -35,7 +30,12 @@
                         <a href="#">Moon Details</a>
                     </li>
                 {% endif %}
-                {% if perms.moonmining.reports_access %}
+                {% if perms.moonmining.extractions_access %}
+                    <li class="{% navactive request 'moonmining:extractions' %}">
+                        <a href="{% url 'moonmining:extractions' %}">Extractions</a>
+                    </li>
+                {% endif %}
+                 {% if perms.moonmining.reports_access %}
                     <li class="{% navactive request 'moonmining:reports' %}">
                         <a href="{% url 'moonmining:reports' %}">Reports</a>
                     </li>

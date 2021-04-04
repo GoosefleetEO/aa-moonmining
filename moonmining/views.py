@@ -52,15 +52,6 @@ class MoonsCategory(str, helpers.EnumToDict, Enum):
     OURS = "our_moons"
 
 
-# def moon_details_button_html(moon: Moon) -> str:
-#     return fontawesome_link_button_html(
-#         url=reverse("moonmining:moon_details", args=[moon.pk]),
-#         fa_code="fas fa-moon",
-#         tooltip="Show details for this moon.",
-#         button_type="default",
-#     )
-
-
 def moon_details_button_html(moon: Moon) -> str:
     return format_html(
         '<button type="button" '
@@ -177,6 +168,30 @@ def extractions_data(request, category):
     return JsonResponse(data, safe=False)
 
 
+@login_required
+@permission_required(["moonmining.extractions_access", "moonmining.basic_access"])
+def extraction_details(request, extraction_pk: int):
+    try:
+        extraction = (
+            Extraction.objects.annotate_volume()
+            .selected_related_defaults()
+            .get(pk=extraction_pk)
+        )
+    except Extraction.DoesNotExist:
+        return HttpResponseNotFound()
+    context = {
+        "page_title": (
+            f"{extraction.refinery.moon} "
+            f"| {extraction.ready_time.strftime(constants.DATE_FORMAT)}"
+        ),
+        "extraction": extraction,
+    }
+    if request.GET.get("new_page"):
+        return render(request, "moonmining/extraction_details.html", context)
+    else:
+        return render(request, "moonmining/modals/extraction_details.html", context)
+
+
 @login_required()
 @permission_required("moonmining.basic_access")
 def moons(request):
@@ -271,6 +286,30 @@ def moons_data(request, category):
     return JsonResponse(data, safe=False)
 
 
+@login_required
+@permission_required("moonmining.basic_access")
+def moon_details(request, moon_pk: int):
+    try:
+        moon = Moon.objects.selected_related_defaults().get(pk=moon_pk)
+    except Moon.DoesNotExist:
+        return HttpResponseNotFound()
+    if not request.user.has_perm(
+        "moonmining.view_all_moons"
+    ) and not request.user.has_perm("moonmining.extractions_access"):
+        return HttpResponseUnauthorized()
+
+    context = {
+        "page_title": moon.name,
+        "moon": moon,
+        "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
+        "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
+    }
+    if request.GET.get("new_page"):
+        return render(request, "moonmining/moon_details.html", context)
+    else:
+        return render(request, "moonmining/modals/moon_details.html", context)
+
+
 @permission_required(["moonmining.add_refinery_owner", "moonmining.basic_access"])
 @token_required(scopes=Owner.esi_scopes())
 @login_required
@@ -304,42 +343,6 @@ def add_owner(request, token):
             title=f"{__title__}: Owner added: {owner}",
         )
     return redirect("moonmining:index")
-
-
-@login_required
-@permission_required(["moonmining.extractions_access", "moonmining.basic_access"])
-def extraction_details(request, extraction_pk: int):
-    try:
-        extraction = (
-            Extraction.objects.annotate_volume()
-            .selected_related_defaults()
-            .get(pk=extraction_pk)
-        )
-    except Extraction.DoesNotExist:
-        return HttpResponseNotFound()
-    context = {"extraction": extraction}
-    return render(request, "moonmining/modals/extraction_details.html", context)
-
-
-@login_required
-@permission_required("moonmining.basic_access")
-def moon_details(request, moon_pk: int):
-    try:
-        moon = Moon.objects.selected_related_defaults().get(pk=moon_pk)
-    except Moon.DoesNotExist:
-        return HttpResponseNotFound()
-    if not request.user.has_perm(
-        "moonmining.view_all_moons"
-    ) and not request.user.has_perm("moonmining.extractions_access"):
-        return HttpResponseUnauthorized()
-
-    context = {
-        "page_title": "Moon Details",
-        "moon": moon,
-        "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
-        "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
-    }
-    return render(request, "moonmining/modals/moon_details.html", context)
 
 
 @permission_required(["moonmining.basic_access", "moonmining.upload_moon_scan"])

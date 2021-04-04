@@ -1,0 +1,55 @@
+{% load i18n %}
+{% load humanize %}
+{% load moonmining %}
+
+{% if not hide_moon %}
+    <div class="row">
+        <div class="col-md-2">
+            <p><strong>Moon:</strong></p>
+        </div>
+        <div class="col-md-10">
+            <p>{{ extraction.refinery.moon }}</p>
+        </div>
+    </div>
+{% endif %}
+
+<div class="row">
+    <div class="col-md-2">
+        <p><strong>Status:</strong></p>
+    </div>
+    <div class="col-md-10">
+        <p>{{ extraction.get_status_display }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-2">
+        <p><strong>Started:</strong></p>
+    </div>
+    <div class="col-md-10">
+        <p>{{ extraction.started_at|datetime|default:"?" }} ({{ extraction.started_at|naturaltime|default:"?" }}) by {{ extraction.started_by|default:"?" }}</p>
+    </div>
+</div>
+
+{% if extraction.status == extraction.Status.CANCELED %}
+    <div class="row">
+        <div class="col-md-2">
+            <p><strong>Canceled:</strong></p>
+        </div>
+        <div class="col-md-10">
+            <p>{{ extraction.canceled_at|datetime|default:"?" }} by {{ extraction.canceled_by|default:"?" }}</p>
+        </div>
+    </div>
+{% endif %}
+
+<div class="row">
+    <div class="col-md-2">
+        <p><strong>Ready:</strong></p>
+    </div>
+    <div class="col-md-10">
+        <p>{{ extraction.ready_time|datetime }}
+        {% if extraction.status == extraction.Status.STARTED %}
+            ({{ extraction.ready_time|timeuntil }})</p>
+        {% endif %}
+    </div>
+</div>

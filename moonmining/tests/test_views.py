@@ -332,7 +332,8 @@ class TestViewsAreWorking(TestCase):
     def test_should_open_moon_details_page(self):
         # given
         request = self.factory.get(
-            reverse("moonmining:moon_details", args=[self.moon.pk])
+            path=reverse("moonmining:moon_details", args=[self.moon.pk]),
+            data={"new_page": "yes"},
         )
         request.user = self.user
         # when
@@ -344,7 +345,8 @@ class TestViewsAreWorking(TestCase):
         # given
         extraction = self.refinery.extractions.first()
         request = self.factory.get(
-            reverse("moonmining:extraction_details", args=[extraction.pk])
+            path=reverse("moonmining:extraction_details", args=[extraction.pk]),
+            data={"new_page": "yes"},
         )
         request.user = self.user
         # when

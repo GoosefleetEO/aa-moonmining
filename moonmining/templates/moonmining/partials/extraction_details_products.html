@@ -1,0 +1,40 @@
+{% load i18n %}
+{% load humanize %}
+{% load moonmining %}
+
+<div class="table-responsive">
+    <table class="table table-striped" id="table_extraction_details">
+        <thead>
+            <tr>
+                <th></th>
+                <th>Ore Type</th>
+                <th>Volume</th>
+                <th>Value est. *</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in extraction.products_sorted %}
+                <tr>
+                    <td><img src="{{ product.ore_type.icon_url_32 }}"/></td>
+                    <td>
+                        <a href="{{ product.ore_type.profile_url }}" target="_blank">
+                            {{ product.ore_type.name }}
+                        </a>&nbsp;{{ product.ore_type.rarity_class.bootstrap_tag_html }}
+                        &nbsp;{{ product.ore_type.quality_class.bootstrap_tag_html }}
+
+                    </td>
+                    <td>{{ product.volume|floatformat:"0"|intcomma }}</td>
+                    <td>{{ product.value|formatisk|default:""}}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <th></th>
+                <th>TOTAL</th>
+                <th>{{ extraction.volume|floatformat:"0"|intcomma }}</th>
+                <th>{{ extraction.value|formatisk|default:""}}</th>
+            </tr>
+        </tfoot>
+    </table>
+</div>
