@@ -1,6 +1,4 @@
 import csv
-from concurrent import futures
-from functools import partial
 from pathlib import Path
 
 from bravado.exception import HTTPBadGateway, HTTPGatewayTimeout, HTTPServiceUnavailable
@@ -19,7 +17,6 @@ from ... import __title__
 
 MAX_RETRIES = 3
 BULK_BATCH_SIZE = 500
-MAX_THREAD_WORKERS = 20
 
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
@@ -68,21 +65,22 @@ class Command(BaseCommand):
             raise CommandError(
                 f"Could not find a file with the path: {input_file.resolve()}"
             )
-        moons, ore_types = self._read_moons(input_file)
-        self._fetch_missing_eve_objects(
+        moons, ore_types = self.read_moons(input_file)
+        self.fetch_missing_eve_objects(
             EveModel=EveMoon,
             ids_incoming=set(moons.keys()),
             force_refetch=options["force_refetch"],
         )
-        self._fetch_missing_eve_objects(
+        self.fetch_missing_eve_objects(
             EveModel=EveOreType,
             ids_incoming=ore_types,
             force_refetch=options["force_refetch"],
         )
-        self._create_moons(moons, options["force_update"])
+        self.import_moons(moons, options["force_update"])
+        self.update_moons(moons)
         self.stdout.write(self.style.SUCCESS("Done."))
 
-    def _read_moons(self, input_file) -> tuple:
+    def read_moons(self, input_file) -> tuple:
         self.stdout.write(f"Importing moons from: {input_file} ...")
         moons = dict()
         ore_types = set()
@@ -105,7 +103,7 @@ class Command(BaseCommand):
         )
         return moons, ore_types
 
-    def _fetch_missing_eve_objects(
+    def fetch_missing_eve_objects(
         self, EveModel: type, ids_incoming: set, force_refetch: bool
     ):
         if force_refetch:
@@ -114,15 +112,15 @@ class Command(BaseCommand):
             ids_existing = set(EveModel.objects.values_list("id", flat=True))
             ids_to_fetch = set(ids_incoming) - ids_existing
         if not len(ids_to_fetch):
-            self.stdout.write(f"No {EveModel.__name__} objects to fetch from ESI")
+            logger.debug("No %s objects to fetch from ESI", EveModel.__name__)
             return
         self.stdout.write(
-            f"Fetching {len(ids_to_fetch)} {EveModel.__name__} objects from ESI..."
+            f"Fetching {len(ids_to_fetch):,} {EveModel.__name__} objects from ESI",
+            ending="",
         )
-        with futures.ThreadPoolExecutor(max_workers=MAX_THREAD_WORKERS) as executor:
-            executor.map(
-                partial(self._thread_fetch_eve_object, EveModel), list(ids_to_fetch)
-            )
+        for id in ids_to_fetch:
+            self._fetch_eve_object(EveModel, id)
+        self.stdout.write("")
         ids_existing = set(EveModel.objects.values_list("id", flat=True))
         ids_missing = ids_to_fetch - ids_existing
         if ids_missing:
@@ -136,8 +134,7 @@ class Command(BaseCommand):
                 f"Failed to fetch all {EveModel.__name__} objects. Please try again"
             )
 
-    @staticmethod
-    def _thread_fetch_eve_object(EveModel: type, id: int):
+    def _fetch_eve_object(self, EveModel: type, id: int):
         for run in range(MAX_RETRIES + 1):
             try:
                 with transaction.atomic():
@@ -156,10 +153,11 @@ class Command(BaseCommand):
             ) as ex:
                 logger.exception("Recoverable error occurred: %s", ex)
             else:
+                self.stdout.write(".", ending="")
                 break
 
     @transaction.atomic()
-    def _create_moons(self, moons, force_update):
+    def import_moons(self, moons, force_update):
         ids_incoming = set(moons.keys())
         ids_existing = set(Moon.objects.values_list("pk", flat=True))
         ids_missing = ids_incoming - ids_existing
@@ -167,16 +165,22 @@ class Command(BaseCommand):
             moon_id: moon for moon_id, moon in moons.items() if moon_id in ids_missing
         }
         if not len(new_moons):
-            self.stdout.write("No Moon objects to create")
+            logger.debug("No Moon objects to create")
+            if not force_update:
+                self.stdout.write("Moons already exist in DB. Aborting.")
+                return
         else:
             self.stdout.write(
-                f"Writing {len(new_moons)} Moon objects...",
+                f"Creating {len(new_moons):,} moons...",
             )
             moon_objects = [Moon(eve_moon_id=moon_id) for moon_id in new_moons.keys()]
             Moon.objects.bulk_create(moon_objects, batch_size=BULK_BATCH_SIZE)
-
         if force_update:
-            Moon.objects.filter(pk__in=ids_existing).update(
+            ids_to_update = ids_incoming - ids_missing
+            self.stdout.write(
+                f"Updating {len(ids_to_update):,} moons...",
+            )
+            Moon.objects.filter(pk__in=ids_to_update).update(
                 products_updated_at=None, products_updated_by=None
             )
             MoonProduct.objects.filter(moon__pk__in=moons.keys()).delete()
@@ -185,11 +189,9 @@ class Command(BaseCommand):
             product_moons = new_moons
 
         # create moon products
-        if not len(product_moons):
-            self.stdout.write("No MoonProduct objects to create")
-        else:
+        if len(product_moons):
             self.stdout.write(
-                f"Writing approx. {len(product_moons) * 3.5:,.0f} " "moon products..."
+                f"Writing approx. {len(product_moons) * 3.5:,.0f} moon products..."
             )
             product_objects = []
             for moon_id, moon_data in product_moons.items():
@@ -198,3 +200,10 @@ class Command(BaseCommand):
                         MoonProduct(moon_id=moon_id, ore_type_id=ore[0], amount=ore[1])
                     )
             MoonProduct.objects.bulk_create(product_objects, batch_size=BULK_BATCH_SIZE)
+
+    def update_moons(self, moons):
+        moons_to_update_qs = Moon.objects.filter(pk__in=moons.keys())
+        self.stdout.write(
+            f"Updating calculated properties for {moons_to_update_qs.count():,} moons..."
+        )
+        moons_to_update_qs.update_calculated_properties()

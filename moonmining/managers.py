@@ -39,21 +39,19 @@ class UpdateCalculatedPropertiesMixin:
     """Mixin for updating all calculated properties of a query set"""
 
     def update_calculated_properties(self):
-        obj_pks = self.values_list("pk", flat=True)
         logger.info(
             "Updating calculated properties for %d %ss ...",
-            len(obj_pks),
+            len(self),
             self.model.__name__.lower(),
         )
         with futures.ThreadPoolExecutor(max_workers=MAX_THREAD_WORKERS) as executor:
-            executor.map(self._thread_update_obj, list(obj_pks))
+            executor.map(self._thread_update_obj, list(self))
         logger.info("Completed calculating properties.")
 
-    def _thread_update_obj(self, pk):
+    def _thread_update_obj(self, obj):
         logger.info(
-            "Updating calculated properties for %s %d...", self.model.__name__, pk
+            "Updating calculated properties for %s %d...", self.model.__name__, obj.pk
         )
-        obj = self.get(pk=pk)
         obj.update_calculated_properties()
 
 

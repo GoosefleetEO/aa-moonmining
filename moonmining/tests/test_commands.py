@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from django.core.management import CommandError, call_command
+from eveuniverse.models import EveMarketPrice, EveType
 
 from app_utils.testing import NoSocketsTestCase
 
@@ -29,6 +30,12 @@ class TestImportMoons(NoSocketsTestCase):
     def test_should_create_moons(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
+        tungsten = EveType.objects.get(id=16637)
+        mercury = EveType.objects.get(id=16646)
+        evaporite_deposits = EveType.objects.get(id=16635)
+        EveMarketPrice.objects.create(eve_type=tungsten, average_price=7000)
+        EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
+        EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
         # when
         call_command("moonmining_import_moons", str(self.import_file), stdout=self.out)
         # then
