@@ -16,7 +16,6 @@ setup(
     include_package_data=True,
     license="GPLv3",
     description="App for planning moon mining with Auth",
-    long_description=long_description,
     url="https://gitlab.com/ErikKalkoken/aa-moonmining",
     author="Erik Kalkoken",
     author_email="kaloken87@gmail.com",

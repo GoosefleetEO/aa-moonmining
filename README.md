@@ -166,10 +166,8 @@ The following management commands are available to perform administrative tasks:
 
 > **Hint**:<br>Run any command with `--help` to see all options
 
-### moonmining_calculate_all
-
-Calculate all properties for moons and extractions.
-
-### moonmining_load_eve
-
-Pre-loads data required for this app from ESI to improve app performance.
+Name | Description
+-- | --
+`moonmining_calculate_all`| Calculate all properties for moons and extractions.
+`moonmining_load_eve`| Pre-loads data required for this app from ESI to improve app performance.
+`moonmining_import_moons`| Import moons from an CSV file. Example:<br>`moon_id,ore_type_id,amount`<br>`40161708,45506,0.19`

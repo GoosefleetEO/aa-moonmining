@@ -555,8 +555,8 @@ class TestProcessSurveyInput(NoSocketsTestCase):
         self.assertEqual(m1.products.get(ore_type_id=46689).amount, 0.33)
 
         m2 = Moon.objects.get(pk=40161709)
-        self.assertEqual(m1.products_updated_by, self.user)
-        self.assertAlmostEqual(m1.products_updated_at, now(), delta=dt.timedelta(30))
+        self.assertEqual(m2.products_updated_by, self.user)
+        self.assertAlmostEqual(m2.products_updated_at, now(), delta=dt.timedelta(30))
         self.assertEqual(m2.products.count(), 4)
         self.assertEqual(m2.products.get(ore_type_id=45492).amount, 0.27)
         self.assertEqual(m2.products.get(ore_type_id=45494).amount, 0.23)
