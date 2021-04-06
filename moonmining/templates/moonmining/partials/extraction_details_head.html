@@ -61,3 +61,15 @@
         {% endif %}
     </div>
 </div>
+
+<div class="row">
+    <div class="col-md-2">
+        <p><strong>Decays:</strong></p>
+    </div>
+    <div class="col-md-10">
+        <p>{{ extraction.decayes_at|datetime|default:"-" }}
+        {% if extraction.decayes_at > now %}
+            ({{ extraction.decayes_at|timeuntil }})</p>
+        {% endif %}
+    </div>
+</div>

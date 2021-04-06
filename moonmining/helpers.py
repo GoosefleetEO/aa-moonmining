@@ -1,3 +1,6 @@
+import datetime as dt
+from copy import copy
+
 from django.http import HttpResponse
 from eveuniverse.models import EveEntity
 
@@ -27,3 +30,11 @@ def eveentity_get_or_create_esi_safe(id):
         except OSError:
             pass
     return None
+
+
+def round_seconds(dt_obj: dt.datetime) -> dt.datetime:
+    """Return new copy rounded to full seconds."""
+    new_dt_obj = copy(dt_obj)
+    if new_dt_obj.microsecond >= 500_000:
+        new_dt_obj += dt.timedelta(seconds=1)
+    return new_dt_obj.replace(microsecond=0)

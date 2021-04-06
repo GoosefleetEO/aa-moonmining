@@ -230,6 +230,93 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         helpers.generate_eve_entities_from_allianceauth()
         cls.moon = helpers.create_moon_40161708()
 
+    def test_should_create_basic_started_extraction(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        owner.fetch_notifications_from_esi()
+        refinery = Refinery.objects.create(
+            id=1000000000001,
+            name="Test",
+            moon=self.moon,
+            owner=owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        # when
+        owner.update_extractions_from_esi()
+        # then
+        self.assertEqual(refinery.extractions.count(), 1)
+        extraction = refinery.extractions.first()
+        self.assertEqual(extraction.status, Extraction.Status.STARTED)
+        self.assertEqual(
+            extraction.ready_time, dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC)
+        )
+        self.assertEqual(
+            extraction.started_at, dt.datetime(2021, 4, 1, 12, 00, tzinfo=pytz.UTC)
+        )
+        self.assertEqual(
+            extraction.auto_time, dt.datetime(2021, 4, 18, 18, 00, tzinfo=pytz.UTC)
+        )
+        self.assertEqual(extraction.products.count(), 0)
+        self.assertIsNone(extraction.value)
+        self.assertIsNone(extraction.is_jackpot)
+
+    def test_should_have_status_completed(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        owner.fetch_notifications_from_esi()
+        refinery = Refinery.objects.create(
+            id=1000000000001,
+            name="Test",
+            moon=self.moon,
+            owner=owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        # when
+        with patch(MODELS_PATH + ".now") as mock_now:
+            mock_now.return_value = dt.datetime(2021, 4, 18, 18, 15, 0, tzinfo=pytz.UTC)
+            owner.update_extractions_from_esi()
+        # then
+        self.assertEqual(refinery.extractions.count(), 1)
+        extraction = refinery.extractions.first()
+        self.assertEqual(extraction.status, Extraction.Status.COMPLETED)
+
+    def test_should_delete_local_extractions_no_longer_in_esi_response(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        owner.fetch_notifications_from_esi()
+        refinery = Refinery.objects.create(
+            id=1000000000001,
+            name="Test",
+            moon=self.moon,
+            owner=owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        stale_extraction = Extraction.objects.create(
+            refinery=refinery,
+            ready_time=dt.datetime(2021, 3, 15, 18, 0, tzinfo=pytz.UTC),
+            started_at=dt.datetime(2021, 3, 10, 18, 0, tzinfo=pytz.UTC),
+        )
+        # when
+        owner.update_extractions_from_esi()
+        # then
+        extraction_pks = set(refinery.extractions.values_list("pk", flat=True))
+        self.assertNotIn(stale_extraction.pk, extraction_pks)
+
     def test_should_create_started_extraction_with_products(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
@@ -254,11 +341,7 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         self.assertEqual(extraction.status, Extraction.Status.STARTED)
         self.assertEqual(
             extraction.ready_time,
-            dt.datetime(2019, 11, 20, 0, 1, 0, 105915, tzinfo=pytz.UTC),
-        )
-        self.assertEqual(
-            extraction.auto_time,
-            dt.datetime(2019, 11, 20, 3, 1, 0, 105915, tzinfo=pytz.UTC),
+            dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
         )
         self.assertEqual(extraction.started_by_id, 1001)
         self.assertEqual(extraction.products.count(), 4)
@@ -289,11 +372,16 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
             owner=owner,
             eve_type=helpers.eve_type_athanor(),
         )
+        extraction = Extraction.objects.create(
+            refinery=refinery,
+            ready_time=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
+            started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
+        )
         # when
-        owner.update_extractions()
+        owner.update_extractions_from_notifications()
         # then
         self.assertEqual(refinery.extractions.count(), 1)
-        extraction = refinery.extractions.first()
+        extraction.refresh_from_db()
         self.assertEqual(extraction.status, Extraction.Status.CANCELED)
         self.assertEqual(
             extraction.canceled_at,
@@ -321,11 +409,16 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
             owner=owner,
             eve_type=helpers.eve_type_athanor(),
         )
+        extraction = Extraction.objects.create(
+            refinery=refinery,
+            ready_time=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
+            started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
+        )
         # when
-        owner.update_extractions()
+        owner.update_extractions_from_notifications()
         # then
         self.assertEqual(refinery.extractions.count(), 1)
-        extraction = refinery.extractions.first()
+        extraction.refresh_from_db()
         self.assertEqual(extraction.status, Extraction.Status.READY)
         self.assertEqual(
             extraction.finished_at,
@@ -352,11 +445,16 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
             owner=owner,
             eve_type=helpers.eve_type_athanor(),
         )
+        extraction = Extraction.objects.create(
+            refinery=refinery,
+            ready_time=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
+            started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
+        )
         # when
-        owner.update_extractions()
+        owner.update_extractions_from_notifications()
         # then
         self.assertEqual(refinery.extractions.count(), 1)
-        extraction = refinery.extractions.first()
+        extraction.refresh_from_db()
         self.assertEqual(extraction.status, Extraction.Status.COMPLETED)
         self.assertEqual(
             extraction.finished_at,
@@ -384,11 +482,16 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
             owner=owner,
             eve_type=helpers.eve_type_athanor(),
         )
+        extraction = Extraction.objects.create(
+            refinery=refinery,
+            ready_time=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
+            started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
+        )
         # when
-        owner.update_extractions()
+        owner.update_extractions_from_notifications()
         # then
         self.assertEqual(refinery.extractions.count(), 1)
-        extraction = refinery.extractions.first()
+        extraction.refresh_from_db()
         self.assertEqual(extraction.status, Extraction.Status.COMPLETED)
         self.assertEqual(
             extraction.finished_at,
@@ -416,11 +519,16 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
             name="Test",
             eve_type=helpers.eve_type_athanor(),
         )
+        extraction = Extraction.objects.create(
+            refinery=refinery,
+            ready_time=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
+            started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
+        )
         # when
-        owner.update_extractions()
+        owner.update_extractions_from_notifications()
         # then
         self.assertEqual(refinery.extractions.count(), 1)
-        extraction = refinery.extractions.first()
+        extraction.refresh_from_db()
         self.assertEqual(extraction.status, Extraction.Status.CANCELED)
 
     def test_should_cancel_existing_and_create_two_new(self, mock_esi):
@@ -445,19 +553,30 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         extraction_1 = Extraction.objects.create(
             refinery=refinery,
             ready_time=ready_time_1,
-            auto_time=dt.datetime(2019, 11, 20, 3, 1, 0, 105915, tzinfo=pytz.UTC),
             started_at=ready_time_1 - dt.timedelta(days=14),
             status=Extraction.Status.STARTED,
         )
+        extraction_2 = Extraction.objects.create(
+            refinery=refinery,
+            ready_time=ready_time_2,
+            started_at=ready_time_2 - dt.timedelta(days=14),
+            status=Extraction.Status.STARTED,
+        )
+        extraction_3 = Extraction.objects.create(
+            refinery=refinery,
+            ready_time=ready_time_3,
+            started_at=ready_time_3 - dt.timedelta(days=14),
+            status=Extraction.Status.STARTED,
+        )
         # when
-        owner.update_extractions()
+        owner.update_extractions_from_notifications()
         # then
         self.assertEqual(refinery.extractions.count(), 3)
         extraction_1.refresh_from_db()
         self.assertEqual(extraction_1.status, Extraction.Status.CANCELED)
-        extraction_2 = refinery.extractions.get(ready_time=ready_time_2)
+        extraction_2.refresh_from_db()
         self.assertEqual(extraction_2.status, Extraction.Status.COMPLETED)
-        extraction_3 = refinery.extractions.get(ready_time=ready_time_3)
+        extraction_3.refresh_from_db()
         self.assertEqual(extraction_3.status, Extraction.Status.STARTED)
 
     def test_should_update_refinery_with_moon_from_notification_if_not_found(

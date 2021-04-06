@@ -6,7 +6,7 @@ import yaml
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models, transaction
+from django.db import models
 from django.utils.functional import cached_property, classproperty
 from django.utils.timezone import now
 from esi.models import Token
@@ -22,7 +22,7 @@ from app_utils.views import bootstrap_icon_plus_name_html, bootstrap_label_html
 from . import __title__, constants
 from .app_settings import MOONMINING_REPROCESSING_YIELD, MOONMINING_VOLUME_PER_MONTH
 from .constants import BootstrapContext
-from .helpers import eveentity_get_or_create_esi_safe
+from .core import CalculatedExtraction, CalculatedExtractionProduct
 from .managers import EveOreTypeManger, ExtractionManager, MoonManager
 from .providers import esi
 
@@ -237,6 +237,20 @@ class Extraction(models.Model):
         def considered_inactive(cls):
             return [cls.CANCELED, cls.COMPLETED]
 
+        @classmethod
+        def from_calculated(cls, calculated):
+            map_from_calculated = {
+                CalculatedExtraction.Status.STARTED: cls.STARTED,
+                CalculatedExtraction.Status.CANCELED: cls.CANCELED,
+                CalculatedExtraction.Status.READY: cls.READY,
+                CalculatedExtraction.Status.COMPLETED: cls.COMPLETED,
+                CalculatedExtraction.Status.UNDEFINED: cls.UNDEFINED,
+            }
+            try:
+                return map_from_calculated[calculated.status]
+            except KeyError:
+                return cls.UNDEFINED
+
     # PK
     refinery = models.ForeignKey(
         "Refinery", on_delete=models.CASCADE, related_name="extractions"
@@ -246,7 +260,9 @@ class Extraction(models.Model):
     )
     # normal properties
     auto_time = models.DateTimeField(
-        help_text="when this extraction will be automatically fractured"
+        null=True,
+        default=None,
+        help_text="when this extraction will be automatically fractured",
     )
     canceled_at = models.DateTimeField(
         null=True, default=None, help_text="when this extraction was canceled"
@@ -355,35 +371,6 @@ class Extraction(models.Model):
         self.value = self.calc_value()
         self.is_jackpot = self.calc_is_jackpot()
         self.save()
-
-    def save_when_changed(self, ores):
-        """Save extraction with provided ores if status has changed.
-
-        Will update existing extraction or create new as needed.
-        """
-        # preload eve ore types before transaction starts
-        for ore_type_id in ores:
-            EveOreType.objects.get_or_create_esi(id=ore_type_id)
-
-        with transaction.atomic():
-            db_obj = (
-                Extraction.objects.select_for_update()
-                .filter(refinery=self.refinery, ready_time=self.ready_time)
-                .first()
-            )
-            if db_obj:
-                if db_obj.status == self.status:
-                    return
-                else:
-                    self.pk = db_obj.pk
-
-            self.save()
-            ExtractionProduct.objects.filter(extraction=self).delete()
-            for ore_type_id, ore_volume in ores.items():
-                ExtractionProduct.objects.create(
-                    extraction=self, ore_type_id=ore_type_id, volume=ore_volume
-                )
-            self.update_calculated_properties()
 
 
 class ExtractionProduct(models.Model):
@@ -834,8 +821,61 @@ class Owner(models.Model):
         return len(new_notification_objects)
 
     def update_extractions(self):
-        """Update all extractions from stored notifications."""
-        logger.info("%s: Updating extractions...", self)
+        self.update_extractions_from_esi()
+        self.update_extractions_from_notifications()
+
+    def update_extractions_from_esi(self):
+        """Creates new extractions from ESI for current owner."""
+        logger.info("%s: Fetching extractions from ESI...", self)
+        token = self.fetch_token()
+        extractions = (
+            esi.client.Industry.get_corporation_corporation_id_mining_extractions(
+                corporation_id=self.corporation.corporation_id,
+                token=token.valid_access_token(),
+            ).results()
+        )
+        logger.info("%s: Received %d extractions from ESI.", self, len(extractions))
+        new_extractions_count = 0
+        incoming_extraction_pks = set()
+        for extraction_info in extractions:
+            try:
+                refinery = self.refineries.get(pk=extraction_info.get("structure_id"))
+            except Refinery.DoesNotExist:
+                continue
+            extraction_start_time = extraction_info["extraction_start_time"]
+            chunk_arrival_time = extraction_info["chunk_arrival_time"]
+            auto_time = extraction_info["natural_decay_time"]
+            if now() > auto_time:
+                status = Extraction.Status.COMPLETED
+            elif now() > chunk_arrival_time:
+                status = Extraction.Status.READY
+            else:
+                status = Extraction.Status.STARTED
+            extraction, created = Extraction.objects.get_or_create(
+                refinery=refinery,
+                ready_time=extraction_info["chunk_arrival_time"],
+                defaults={
+                    "started_at": extraction_start_time,
+                    "status": status,
+                    "auto_time": auto_time,
+                },
+            )
+            incoming_extraction_pks.add(extraction.pk)
+            if created:
+                new_extractions_count += 1
+        if new_extractions_count:
+            logger.info("%s: Created %d new extractions.", self, new_extractions_count)
+        # delete stale extractions
+        stale_extractions_qs = Extraction.objects.filter(refinery__owner=self).exclude(
+            pk__in=incoming_extraction_pks
+        )
+        if stale_extractions_qs.exists():
+            deleted_count, _ = stale_extractions_qs.delete()
+            logger.info("%s: Deleted %d stale extractions.", self, deleted_count)
+
+    def update_extractions_from_notifications(self):
+        """Add information from notifications to extractions."""
+        logger.info("%s: Updating extractions from notifications...", self)
         notifications_count = self.notifications.count()
         if not notifications_count:
             logger.info("%s: No moon notifications", self)
@@ -846,7 +886,6 @@ class Owner(models.Model):
         for refinery in Refinery.objects.all():
             extractions_count = 0
             extraction = None
-            ores = None
             notifications_for_refinery = self.notifications.filter(
                 details__structureID=refinery.id
             )
@@ -858,67 +897,73 @@ class Owner(models.Model):
                 refinery.update_moon_from_eve_id(notif.details["moonID"])
             for notif in notifications_for_refinery.order_by("timestamp"):
                 if notif.notif_type == NotificationType.MOONMINING_EXTRACTION_STARTED:
-                    started_by = eveentity_get_or_create_esi_safe(
-                        notif.details.get("startedBy")
-                    )
-                    extraction = Extraction(
-                        status=Extraction.Status.STARTED,
-                        refinery=refinery,
+                    extraction = CalculatedExtraction(
+                        refinery_id=refinery.id,
+                        status=CalculatedExtraction.Status.STARTED,
                         ready_time=ldap_time_2_datetime(notif.details["readyTime"]),
                         auto_time=ldap_time_2_datetime(notif.details["autoTime"]),
-                        started_by=started_by,
-                        started_at=notif.timestamp,
+                        started_by=notif.details.get("startedBy"),
+                        products=CalculatedExtractionProduct.create_list_from_dict(
+                            notif.details["oreVolumeByType"]
+                        ),
                     )
-                    ores = notif.details["oreVolumeByType"]
 
                 elif extraction:
-                    if extraction.status == Extraction.Status.STARTED:
+                    if extraction.status == CalculatedExtraction.Status.STARTED:
                         if (
                             notif.notif_type
                             == NotificationType.MOONMINING_EXTRACTION_CANCELLED
                         ):
-                            extraction.status = Extraction.Status.CANCELED
+                            extraction.status = CalculatedExtraction.Status.CANCELED
                             extraction.canceled_at = notif.timestamp
-                            extraction.canceled_by = eveentity_get_or_create_esi_safe(
-                                notif.details.get("cancelledBy")
-                            )
-                            extraction.save_when_changed(ores)
-                            extraction = ores = None
+                            extraction.canceled_by = notif.details.get("cancelledBy")
+                            Extraction.objects.update_from_calculated(extraction)
+                            extraction = None
                             extractions_count += 1
 
                         elif (
                             notif.notif_type
                             == NotificationType.MOONMINING_EXTRACTION_FINISHED
                         ):
-                            extraction.status = Extraction.Status.READY
+                            extraction.status = CalculatedExtraction.Status.READY
                             extraction.finished_at = notif.timestamp
-                            ores = notif.details["oreVolumeByType"]
-
-                    elif extraction.status == Extraction.Status.READY:
-                        if notif.notif_type == NotificationType.MOONMINING_LASER_FIRED:
-                            extraction.status = Extraction.Status.COMPLETED
-                            extraction.fractured_at = notif.timestamp
-                            extraction.fractured_by = eveentity_get_or_create_esi_safe(
-                                notif.details.get("firedBy")
+                            extraction.products = (
+                                CalculatedExtractionProduct.create_list_from_dict(
+                                    notif.details["oreVolumeByType"]
+                                )
                             )
-                            ores = notif.details["oreVolumeByType"]
-                            extraction.save_when_changed(ores)
-                            extraction = ores = None
+
+                    elif extraction.status == CalculatedExtraction.Status.READY:
+                        if notif.notif_type == NotificationType.MOONMINING_LASER_FIRED:
+                            extraction.status = CalculatedExtraction.Status.COMPLETED
+                            extraction.fractured_at = notif.timestamp
+                            extraction.fractured_by = notif.details.get("firedBy")
+                            extraction.products = (
+                                CalculatedExtractionProduct.create_list_from_dict(
+                                    notif.details["oreVolumeByType"]
+                                )
+                            )
+                            Extraction.objects.update_from_calculated(extraction)
+                            extraction = None
                             extractions_count += 1
 
                         elif (
                             notif.notif_type
                             == NotificationType.MOONMINING_AUTOMATIC_FRACTURE
                         ):
-                            extraction.status = Extraction.Status.COMPLETED
+                            extraction.status = CalculatedExtraction.Status.COMPLETED
                             extraction.fractured_at = notif.timestamp
-                            ores = notif.details["oreVolumeByType"]
-                            extraction.save_when_changed(ores)
-                            extraction = ores = None
+                            extraction.products = (
+                                CalculatedExtractionProduct.create_list_from_dict(
+                                    notif.details["oreVolumeByType"]
+                                )
+                            )
+                            Extraction.objects.update_from_calculated(extraction)
+                            extraction = None
                             extractions_count += 1
 
             if extraction:
-                extraction.save_when_changed(ores)
+                Extraction.objects.update_from_calculated(extraction)
                 extractions_count += 1
             logger.info(
                 "%s: %s: Updated %d extractions", self, refinery, extractions_count
@@ -932,6 +977,7 @@ class Owner(models.Model):
             "esi-universe.read_structures.v1",
             "esi-characters.read_notifications.v1",
             "esi-corporations.read_structures.v1",
+            "esi-industry.read_corporation_mining.v1",
         ]
 
 

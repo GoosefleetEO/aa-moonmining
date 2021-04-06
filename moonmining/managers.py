@@ -14,6 +14,8 @@ from allianceauth.services.hooks import get_extension_logger
 from app_utils.logging import LoggerAddTag
 
 from . import __title__, constants
+from .core import CalculatedExtraction
+from .helpers import eveentity_get_or_create_esi_safe
 
 MAX_THREAD_WORKERS = 20
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
@@ -249,3 +251,63 @@ class ExtractionManager(models.Manager):
 
     def get_queryset(self) -> models.QuerySet:
         return ExtractionQuerySet(self.model, using=self._db)
+
+    def update_from_calculated(self, calculated: CalculatedExtraction):
+        """Update an extraction object from related calculated extraction."""
+        from .models import EveOreType, ExtractionProduct
+
+        try:
+            extraction = self.get(
+                refinery_id=calculated.refinery_id, ready_time=calculated.ready_time
+            )
+        except self.model.DoesNotExist:
+            return
+
+        needs_update = False
+        if calculated.canceled_at and not extraction.canceled_at:
+            extraction.canceled_at = calculated.canceled_at
+            needs_update = True
+        if calculated.canceled_by and not extraction.canceled_by:
+            extraction.canceled_by = eveentity_get_or_create_esi_safe(
+                calculated.canceled_by
+            )
+            needs_update = True
+        if calculated.canceled_by and not extraction.canceled_by:
+            extraction.canceled_by = eveentity_get_or_create_esi_safe(
+                calculated.canceled_by
+            )
+            needs_update = True
+        if calculated.fractured_by and not extraction.fractured_by:
+            extraction.fractured_by = eveentity_get_or_create_esi_safe(
+                calculated.fractured_by
+            )
+            needs_update = True
+        if calculated.fractured_at and not extraction.fractured_at:
+            extraction.fractured_at = calculated.fractured_at
+            needs_update = True
+        if calculated.finished_at and not extraction.finished_at:
+            extraction.finished_at = calculated.finished_at
+            needs_update = True
+        if self.model.Status.from_calculated(calculated) != extraction.status:
+            extraction.status = self.model.Status.from_calculated(calculated)
+            needs_update = True
+        if calculated.started_by and not extraction.started_by:
+            extraction.started_by = eveentity_get_or_create_esi_safe(
+                calculated.started_by
+            )
+            needs_update = True
+        if needs_update:
+            extraction.save()
+        if calculated.products and not extraction.products.exists():
+            # preload eve ore types before transaction starts
+            for product in calculated.products:
+                EveOreType.objects.get_or_create_esi(id=product.ore_type_id)
+            with transaction.atomic():
+                ExtractionProduct.objects.filter(extraction=extraction).delete()
+                for product in calculated.products:
+                    ExtractionProduct.objects.create(
+                        extraction=extraction,
+                        ore_type_id=product.ore_type_id,
+                        volume=product.volume,
+                    )
+            extraction.update_calculated_properties()

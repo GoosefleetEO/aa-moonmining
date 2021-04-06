@@ -23,6 +23,12 @@ _endpoints = [
         needs_token=True,
     ),
     EsiEndpoint(
+        "Industry",
+        "get_corporation_corporation_id_mining_extractions",
+        "corporation_id",
+        needs_token=True,
+    ),
+    EsiEndpoint(
         "Universe",
         "get_universe_structures_structure_id",
         "structure_id",
