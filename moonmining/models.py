@@ -878,7 +878,7 @@ class Owner(models.Model):
         logger.info("%s: Processing %d moon notifications", self, notifications_count)
 
         # create or update extractions from notifications by refinery
-        for refinery in Refinery.objects.all():
+        for refinery in self.refineries.all():
             extractions_count = 0
             extraction = None
             notifications_for_refinery = self.notifications.filter(

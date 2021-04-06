@@ -52,24 +52,32 @@
 
 <div class="row">
     <div class="col-md-2">
-        <p><strong>Ready:</strong></p>
+        <p><strong>Chunk arrives:</strong></p>
     </div>
     <div class="col-md-10">
-        <p>{{ extraction.chunk_arrival_at|datetime }}
-        {% if extraction.status == extraction.Status.STARTED %}
-            ({{ extraction.chunk_arrival_at|timeuntil }})</p>
-        {% endif %}
+        <p>
+            {% if extraction.status == extraction.Status.CANCELED %}<s>{% endif %}
+            {{ extraction.chunk_arrival_at|datetime }}
+            {% if extraction.status == extraction.Status.STARTED %}
+                ({{ extraction.chunk_arrival_at|timeuntil }})
+            {% endif %}
+            {% if extraction.status == extraction.Status.CANCELED %}</s>{% endif %}
+        </p>
     </div>
 </div>
 
 <div class="row">
     <div class="col-md-2">
-        <p><strong>Decays:</strong></p>
+        <p><strong>Auto Fracture:</strong></p>
     </div>
     <div class="col-md-10">
-        <p>{{ extraction.decayes_at|datetime|default:"-" }}
-        {% if extraction.decayes_at > now %}
-            ({{ extraction.decayes_at|timeuntil }})</p>
-        {% endif %}
+        <p>
+            {% if extraction.status == extraction.Status.CANCELED %}<s>{% endif %}
+            {{ extraction.auto_fracture_at|datetime }}
+            {% if extraction.auto_fracture_at > now %}
+                ({{ extraction.auto_fracture_at|timeuntil }})
+            {% endif %}
+            {% if extraction.status == extraction.Status.CANCELED %}</s>{% endif %}
+        </p>
     </div>
 </div>

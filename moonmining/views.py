@@ -133,7 +133,9 @@ def extractions_data(request, category):
             status=Extraction.Status.CANCELED
         )
     elif category == ExtractionsCategory.PAST:
-        extractions = extractions.filter(auto_fracture_at__lt=cutover_dt)
+        extractions = extractions.filter(
+            auto_fracture_at__lt=cutover_dt
+        ) | extractions.filter(status=Extraction.Status.CANCELED)
     else:
         extractions = Extraction.objects.none()
     for extraction in extractions:
