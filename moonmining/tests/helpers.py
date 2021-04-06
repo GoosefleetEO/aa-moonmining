@@ -54,8 +54,8 @@ def add_refinery(moon: Moon, owner: Owner = None) -> Refinery:
     )
     extraction = Extraction.objects.create(
         refinery=refinery,
-        ready_time=now() + dt.timedelta(days=3),
-        auto_time=now() + dt.timedelta(days=3, hours=12),
+        chunk_arrival_at=now() + dt.timedelta(days=3),
+        auto_fracture_at=now() + dt.timedelta(days=3, hours=12),
         started_at=now() - dt.timedelta(days=3),
         status=Extraction.Status.STARTED,
     )

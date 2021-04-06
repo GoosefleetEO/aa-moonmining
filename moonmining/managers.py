@@ -258,7 +258,8 @@ class ExtractionManager(models.Manager):
 
         try:
             extraction = self.get(
-                refinery_id=calculated.refinery_id, ready_time=calculated.ready_time
+                refinery_id=calculated.refinery_id,
+                chunk_arrival_at=calculated.chunk_arrival_at,
             )
         except self.model.DoesNotExist:
             return
@@ -284,9 +285,6 @@ class ExtractionManager(models.Manager):
             needs_update = True
         if calculated.fractured_at and not extraction.fractured_at:
             extraction.fractured_at = calculated.fractured_at
-            needs_update = True
-        if calculated.finished_at and not extraction.finished_at:
-            extraction.finished_at = calculated.finished_at
             needs_update = True
         if self.model.Status.from_calculated(calculated) != extraction.status:
             extraction.status = self.model.Status.from_calculated(calculated)

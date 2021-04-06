@@ -70,13 +70,13 @@ def random_percentages(parts) -> list:
     return percentages
 
 
-def generate_extraction(refinery, ready_time, started_by, status):
+def generate_extraction(refinery, chunk_arrival_at, started_by, status):
     extraction = Extraction.objects.create(
         refinery=refinery,
-        ready_time=ready_time,
-        auto_time=ready_time + dt.timedelta(hours=4),
+        chunk_arrival_at=chunk_arrival_at,
+        auto_fracture_at=chunk_arrival_at + dt.timedelta(hours=4),
         started_by=started_by,
-        started_at=ready_time - dt.timedelta(days=14),
+        started_at=chunk_arrival_at - dt.timedelta(days=14),
         status=status,
     )
     for product in moon.products.all():
@@ -141,7 +141,7 @@ for moon in random.choices(my_moons, k=MAX_REFINERIES):
         my_extractions.append(
             generate_extraction(
                 refinery=refinery,
-                ready_time=now() + dt.timedelta(days=random.randint(7, 30)),
+                chunk_arrival_at=now() + dt.timedelta(days=random.randint(7, 30)),
                 started_by=character,
                 status=Extraction.Status.STARTED,
             )
@@ -149,7 +149,7 @@ for moon in random.choices(my_moons, k=MAX_REFINERIES):
         my_extractions.append(
             generate_extraction(
                 refinery=refinery,
-                ready_time=now() - dt.timedelta(days=random.randint(7, 30)),
+                chunk_arrival_at=now() - dt.timedelta(days=random.randint(7, 30)),
                 started_by=character,
                 status=Extraction.Status.CANCELED,
             )
@@ -157,7 +157,7 @@ for moon in random.choices(my_moons, k=MAX_REFINERIES):
         my_extractions.append(
             generate_extraction(
                 refinery=refinery,
-                ready_time=now() - dt.timedelta(days=random.randint(7, 30)),
+                chunk_arrival_at=now() - dt.timedelta(days=random.randint(7, 30)),
                 started_by=character,
                 status=Extraction.Status.COMPLETED,
             )

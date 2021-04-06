@@ -129,11 +129,11 @@ def extractions_data(request, category):
     cutover_dt = now() - dt.timedelta(hours=MOONMINING_EXTRACTIONS_HOURS_UNTIL_STALE)
     extractions = Extraction.objects.annotate_volume().selected_related_defaults()
     if category == ExtractionsCategory.UPCOMING:
-        extractions = extractions.filter(ready_time__gte=cutover_dt).exclude(
+        extractions = extractions.filter(auto_fracture_at__gte=cutover_dt).exclude(
             status=Extraction.Status.CANCELED
         )
     elif category == ExtractionsCategory.PAST:
-        extractions = extractions.filter(ready_time__lt=cutover_dt)
+        extractions = extractions.filter(auto_fracture_at__lt=cutover_dt)
     else:
         extractions = Extraction.objects.none()
     for extraction in extractions:
@@ -145,15 +145,15 @@ def extractions_data(request, category):
         data.append(
             {
                 "id": extraction.pk,
-                "ready_time": {
+                "chunk_arrival_at": {
                     "display": format_html(
                         "{}&nbsp;{}",
-                        extraction.ready_time.strftime(constants.DATETIME_FORMAT),
+                        extraction.chunk_arrival_at.strftime(constants.DATETIME_FORMAT),
                         bootstrap_label_html("Jackpot", "warning")
                         if extraction.is_jackpot
                         else "",
                     ),
-                    "sort": extraction.ready_time,
+                    "sort": extraction.chunk_arrival_at,
                 },
                 "moon": str(extraction.refinery.moon),
                 "status_str": extraction.status_enum.bootstrap_tag_html,
@@ -164,7 +164,7 @@ def extractions_data(request, category):
                 "corporation_name": corporation_name,
                 "alliance_name": alliance_name,
                 "is_jackpot_str": yesno_str(extraction.is_jackpot),
-                "is_ready": extraction.ready_time <= now(),
+                "is_ready": extraction.chunk_arrival_at <= now(),
                 "status": extraction.status,
             }
         )
@@ -185,7 +185,7 @@ def extraction_details(request, extraction_pk: int):
     context = {
         "page_title": (
             f"{extraction.refinery.moon} "
-            f"| {extraction.ready_time.strftime(constants.DATE_FORMAT)}"
+            f"| {extraction.chunk_arrival_at.strftime(constants.DATE_FORMAT)}"
         ),
         "extraction": extraction,
     }

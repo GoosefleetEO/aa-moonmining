@@ -18,20 +18,19 @@ class CalculatedExtraction:
         UNDEFINED = auto()
 
     refinery_id: int
-    ready_time: dt.datetime
+    chunk_arrival_at: dt.datetime
 
     status: str
     started_by: int
-    auto_time: dt.datetime = None
+    auto_fracture_at: dt.datetime = None
     canceled_at: dt.datetime = None
     canceled_by: int = None
-    finished_at: dt.datetime = None
     fractured_at: dt.datetime = None
     fractured_by: int = None
     products: List["CalculatedExtractionProduct"] = None
 
     def __post_init__(self):
-        self.ready_time = helpers.round_seconds(self.ready_time)
+        self.chunk_arrival_at = helpers.round_seconds(self.chunk_arrival_at)
 
 
 @dataclass

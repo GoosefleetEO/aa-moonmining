@@ -253,13 +253,15 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         extraction = refinery.extractions.first()
         self.assertEqual(extraction.status, Extraction.Status.STARTED)
         self.assertEqual(
-            extraction.ready_time, dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC)
+            extraction.chunk_arrival_at,
+            dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
         )
         self.assertEqual(
             extraction.started_at, dt.datetime(2021, 4, 1, 12, 00, tzinfo=pytz.UTC)
         )
         self.assertEqual(
-            extraction.auto_time, dt.datetime(2021, 4, 18, 18, 00, tzinfo=pytz.UTC)
+            extraction.auto_fracture_at,
+            dt.datetime(2021, 4, 18, 18, 00, tzinfo=pytz.UTC),
         )
         self.assertEqual(extraction.products.count(), 0)
         self.assertIsNone(extraction.value)
@@ -308,8 +310,9 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         )
         stale_extraction = Extraction.objects.create(
             refinery=refinery,
-            ready_time=dt.datetime(2021, 3, 15, 18, 0, tzinfo=pytz.UTC),
+            chunk_arrival_at=dt.datetime(2021, 3, 15, 18, 0, tzinfo=pytz.UTC),
             started_at=dt.datetime(2021, 3, 10, 18, 0, tzinfo=pytz.UTC),
+            auto_fracture_at=dt.datetime(2021, 3, 15, 21, 0, tzinfo=pytz.UTC),
         )
         # when
         owner.update_extractions_from_esi()
@@ -340,7 +343,7 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         extraction = refinery.extractions.first()
         self.assertEqual(extraction.status, Extraction.Status.STARTED)
         self.assertEqual(
-            extraction.ready_time,
+            extraction.chunk_arrival_at,
             dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
         )
         self.assertEqual(extraction.started_by_id, 1001)
@@ -374,8 +377,9 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         )
         extraction = Extraction.objects.create(
             refinery=refinery,
-            ready_time=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
+            chunk_arrival_at=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
             started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
+            auto_fracture_at=dt.datetime(2021, 4, 15, 21, 0, tzinfo=pytz.UTC),
         )
         # when
         owner.update_extractions_from_notifications()
@@ -411,8 +415,9 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         )
         extraction = Extraction.objects.create(
             refinery=refinery,
-            ready_time=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
+            chunk_arrival_at=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
             started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
+            auto_fracture_at=dt.datetime(2021, 4, 15, 21, 0, tzinfo=pytz.UTC),
         )
         # when
         owner.update_extractions_from_notifications()
@@ -420,10 +425,6 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         self.assertEqual(refinery.extractions.count(), 1)
         extraction.refresh_from_db()
         self.assertEqual(extraction.status, Extraction.Status.READY)
-        self.assertEqual(
-            extraction.finished_at,
-            dt.datetime(2019, 11, 22, 3, tzinfo=pytz.UTC),
-        )
         self.assertEqual(
             set(extraction.products.values_list("ore_type_id", flat=True)),
             {46311, 46676, 46678, 46689},
@@ -447,8 +448,9 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         )
         extraction = Extraction.objects.create(
             refinery=refinery,
-            ready_time=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
+            chunk_arrival_at=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
             started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
+            auto_fracture_at=dt.datetime(2021, 4, 15, 21, 0, tzinfo=pytz.UTC),
         )
         # when
         owner.update_extractions_from_notifications()
@@ -456,10 +458,6 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         self.assertEqual(refinery.extractions.count(), 1)
         extraction.refresh_from_db()
         self.assertEqual(extraction.status, Extraction.Status.COMPLETED)
-        self.assertEqual(
-            extraction.finished_at,
-            dt.datetime(2019, 11, 22, 3, tzinfo=pytz.UTC),
-        )
         self.assertEqual(extraction.fractured_by_id, 1001)
         self.assertEqual(
             set(extraction.products.values_list("ore_type_id", flat=True)),
@@ -484,8 +482,9 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         )
         extraction = Extraction.objects.create(
             refinery=refinery,
-            ready_time=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
+            chunk_arrival_at=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
             started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
+            auto_fracture_at=dt.datetime(2021, 4, 15, 21, 0, tzinfo=pytz.UTC),
         )
         # when
         owner.update_extractions_from_notifications()
@@ -493,10 +492,6 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         self.assertEqual(refinery.extractions.count(), 1)
         extraction.refresh_from_db()
         self.assertEqual(extraction.status, Extraction.Status.COMPLETED)
-        self.assertEqual(
-            extraction.finished_at,
-            dt.datetime(2019, 11, 22, 3, tzinfo=pytz.UTC),
-        )
         self.assertIsNone(extraction.fractured_by)
         self.assertEqual(
             set(extraction.products.values_list("ore_type_id", flat=True)),
@@ -521,8 +516,9 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         )
         extraction = Extraction.objects.create(
             refinery=refinery,
-            ready_time=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
+            chunk_arrival_at=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
             started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
+            auto_fracture_at=dt.datetime(2021, 4, 15, 21, 0, tzinfo=pytz.UTC),
         )
         # when
         owner.update_extractions_from_notifications()
@@ -552,20 +548,23 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         ready_time_3 = dt.datetime(2019, 11, 21, 12, tzinfo=pytz.UTC)
         extraction_1 = Extraction.objects.create(
             refinery=refinery,
-            ready_time=ready_time_1,
+            chunk_arrival_at=ready_time_1,
             started_at=ready_time_1 - dt.timedelta(days=14),
+            auto_fracture_at=ready_time_1 + dt.timedelta(hours=4),
             status=Extraction.Status.STARTED,
         )
         extraction_2 = Extraction.objects.create(
             refinery=refinery,
-            ready_time=ready_time_2,
+            chunk_arrival_at=ready_time_2,
             started_at=ready_time_2 - dt.timedelta(days=14),
+            auto_fracture_at=ready_time_2 + dt.timedelta(hours=4),
             status=Extraction.Status.STARTED,
         )
         extraction_3 = Extraction.objects.create(
             refinery=refinery,
-            ready_time=ready_time_3,
+            chunk_arrival_at=ready_time_3,
             started_at=ready_time_3 - dt.timedelta(days=14),
+            auto_fracture_at=ready_time_3 + dt.timedelta(hours=4),
             status=Extraction.Status.STARTED,
         )
         # when
@@ -792,8 +791,8 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
         # given
         extraction = Extraction.objects.create(
             refinery=self.refinery,
-            ready_time=now() + dt.timedelta(days=3),
-            auto_time=now() + dt.timedelta(days=4),
+            chunk_arrival_at=now() + dt.timedelta(days=3),
+            auto_fracture_at=now() + dt.timedelta(days=4),
             started_at=now() - dt.timedelta(days=3),
             status=Extraction.Status.STARTED,
         )
@@ -816,8 +815,8 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
         # given
         extraction = Extraction.objects.create(
             refinery=self.refinery,
-            ready_time=now() + dt.timedelta(days=3),
-            auto_time=now() + dt.timedelta(days=4),
+            chunk_arrival_at=now() + dt.timedelta(days=3),
+            auto_fracture_at=now() + dt.timedelta(days=4),
             started_at=now() - dt.timedelta(days=3),
             status=Extraction.Status.STARTED,
         )
@@ -840,8 +839,8 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
         # given
         extraction = Extraction.objects.create(
             refinery=self.refinery,
-            ready_time=now() + dt.timedelta(days=3),
-            auto_time=now() + dt.timedelta(days=4),
+            chunk_arrival_at=now() + dt.timedelta(days=3),
+            auto_fracture_at=now() + dt.timedelta(days=4),
             started_at=now() - dt.timedelta(days=3),
             status=Extraction.Status.STARTED,
         )
@@ -864,8 +863,8 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
         # given
         extraction = Extraction.objects.create(
             refinery=self.refinery,
-            ready_time=now() + dt.timedelta(days=3),
-            auto_time=now() + dt.timedelta(days=4),
+            chunk_arrival_at=now() + dt.timedelta(days=3),
+            auto_fracture_at=now() + dt.timedelta(days=4),
             started_at=now() - dt.timedelta(days=3),
             status=Extraction.Status.STARTED,
         )

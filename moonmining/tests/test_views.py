@@ -393,8 +393,8 @@ class TestViewsAreWorking(TestCase):
         )
         Extraction.objects.create(
             refinery=refinery,
-            ready_time=now() + dt.timedelta(days=1),
-            auto_time=now() + dt.timedelta(days=1),
+            chunk_arrival_at=now() + dt.timedelta(days=1),
+            auto_fracture_at=now() + dt.timedelta(days=1),
             started_at=now() - dt.timedelta(days=3),
             status=Extraction.Status.STARTED,
         )
@@ -424,8 +424,8 @@ class TestExtractionsData(TestCase):
         )
         extraction = Extraction.objects.create(
             refinery=self.refinery,
-            ready_time=dt.datetime(2019, 11, 20, 0, 1, 0, tzinfo=pytz.UTC),
-            auto_time=dt.datetime(2019, 11, 20, 3, 1, 0, tzinfo=pytz.UTC),
+            chunk_arrival_at=dt.datetime(2019, 11, 20, 0, 1, 0, tzinfo=pytz.UTC),
+            auto_fracture_at=dt.datetime(2019, 11, 20, 3, 1, 0, tzinfo=pytz.UTC),
             started_by_id=1001,
             started_at=now() - dt.timedelta(days=3),
             status=Extraction.Status.STARTED,
@@ -446,7 +446,7 @@ class TestExtractionsData(TestCase):
         data = json_response_to_dict(response)
         self.assertSetEqual(set(data.keys()), {extraction.pk})
         obj = data[extraction.pk]
-        self.assertIn("2019-Nov-20 00:01", obj["ready_time"]["display"])
+        self.assertIn("2019-Nov-20 00:01", obj["chunk_arrival_at"]["display"])
         self.assertEqual(obj["corporation_name"], "Wayne Technologies [WYN]")
 
 

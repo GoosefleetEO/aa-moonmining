@@ -10,9 +10,9 @@ class ExtractionProductAdmin(admin.TabularInline):
 
 @admin.register(Extraction)
 class ExtractionAdmin(admin.ModelAdmin):
-    list_display = ("ready_time", "status", "_owner", "refinery")
-    ordering = ("-ready_time",)
-    list_filter = ("ready_time", "status", "refinery__owner", "refinery")
+    list_display = ("chunk_arrival_at", "status", "_owner", "refinery")
+    ordering = ("-chunk_arrival_at",)
+    list_filter = ("chunk_arrival_at", "status", "refinery__owner", "refinery")
     search_fields = ("refinery__moon__eve_moon__name",)
     inlines = [ExtractionProductAdmin]
     actions = ["update_calculated_properties"]

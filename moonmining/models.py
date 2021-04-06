@@ -255,13 +255,9 @@ class Extraction(models.Model):
     refinery = models.ForeignKey(
         "Refinery", on_delete=models.CASCADE, related_name="extractions"
     )
-    ready_time = models.DateTimeField(
-        db_index=True, help_text="when this extraction is ready to be fractured"
-    )
+    started_at = models.DateTimeField(help_text="when this extraction was started")
     # normal properties
-    auto_time = models.DateTimeField(
-        null=True,
-        default=None,
+    auto_fracture_at = models.DateTimeField(
         help_text="when this extraction will be automatically fractured",
     )
     canceled_at = models.DateTimeField(
@@ -275,8 +271,8 @@ class Extraction(models.Model):
         related_name="+",
         help_text="Eve character who canceled this extraction",
     )
-    finished_at = models.DateTimeField(
-        null=True, default=None, help_text="when this extraction finished"
+    chunk_arrival_at = models.DateTimeField(
+        db_index=True, help_text="when this extraction is ready to be fractured"
     )
     fractured_at = models.DateTimeField(
         null=True, default=None, help_text="when this extraction was fractured"
@@ -294,7 +290,6 @@ class Extraction(models.Model):
         null=True,
         help_text="Whether this is a jackpot extraction (calculated)",
     )
-    started_at = models.DateTimeField(help_text="when this extraction was started")
     started_by = models.ForeignKey(
         EveEntity,
         on_delete=models.SET_DEFAULT,
@@ -318,12 +313,12 @@ class Extraction(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["refinery", "ready_time"], name="functional_pk_extraction"
+                fields=["refinery", "started_at"], name="functional_pk_extraction"
             )
         ]
 
     def __str__(self) -> str:
-        return f"{self.refinery} - {self.ready_time} - {self.status}"
+        return f"{self.refinery} - {self.started_at} - {self.status}"
 
     @property
     def status_enum(self) -> "Extraction.Status":
@@ -844,8 +839,8 @@ class Owner(models.Model):
                 continue
             extraction_start_time = extraction_info["extraction_start_time"]
             chunk_arrival_time = extraction_info["chunk_arrival_time"]
-            auto_time = extraction_info["natural_decay_time"]
-            if now() > auto_time:
+            auto_fracture_at = extraction_info["natural_decay_time"]
+            if now() > auto_fracture_at:
                 status = Extraction.Status.COMPLETED
             elif now() > chunk_arrival_time:
                 status = Extraction.Status.READY
@@ -853,11 +848,11 @@ class Owner(models.Model):
                 status = Extraction.Status.STARTED
             extraction, created = Extraction.objects.get_or_create(
                 refinery=refinery,
-                ready_time=extraction_info["chunk_arrival_time"],
+                chunk_arrival_at=extraction_info["chunk_arrival_time"],
                 defaults={
                     "started_at": extraction_start_time,
                     "status": status,
-                    "auto_time": auto_time,
+                    "auto_fracture_at": auto_fracture_at,
                 },
             )
             incoming_extraction_pks.add(extraction.pk)
@@ -900,8 +895,12 @@ class Owner(models.Model):
                     extraction = CalculatedExtraction(
                         refinery_id=refinery.id,
                         status=CalculatedExtraction.Status.STARTED,
-                        ready_time=ldap_time_2_datetime(notif.details["readyTime"]),
-                        auto_time=ldap_time_2_datetime(notif.details["autoTime"]),
+                        chunk_arrival_at=ldap_time_2_datetime(
+                            notif.details["readyTime"]
+                        ),
+                        auto_fracture_at=ldap_time_2_datetime(
+                            notif.details["autoTime"]
+                        ),
                         started_by=notif.details.get("startedBy"),
                         products=CalculatedExtractionProduct.create_list_from_dict(
                             notif.details["oreVolumeByType"]
@@ -926,7 +925,6 @@ class Owner(models.Model):
                             == NotificationType.MOONMINING_EXTRACTION_FINISHED
                         ):
                             extraction.status = CalculatedExtraction.Status.READY
-                            extraction.finished_at = notif.timestamp
                             extraction.products = (
                                 CalculatedExtractionProduct.create_list_from_dict(
                                     notif.details["oreVolumeByType"]

@@ -55,9 +55,9 @@
         <p><strong>Ready:</strong></p>
     </div>
     <div class="col-md-10">
-        <p>{{ extraction.ready_time|datetime }}
+        <p>{{ extraction.chunk_arrival_at|datetime }}
         {% if extraction.status == extraction.Status.STARTED %}
-            ({{ extraction.ready_time|timeuntil }})</p>
+            ({{ extraction.chunk_arrival_at|timeuntil }})</p>
         {% endif %}
     </div>
 </div>
