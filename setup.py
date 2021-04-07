@@ -40,5 +40,6 @@ setup(
         "django-navhelper",
         "allianceauth-app-utils>=1.1",
         "django-eveuniverse>=0.8.0a4",
+        "dataclasses>='0.7';python_version<'3.7'",
     ],
 )
