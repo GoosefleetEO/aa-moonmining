@@ -118,7 +118,7 @@ class OwnerAdmin(admin.ModelAdmin):
             text = f"Started updating owner: {obj}. "
             self.message_user(request, text)
 
-    update_owner.short_description = "Update refineres from ESI for selected owners"
+    update_owner.short_description = "Update selected owners from ESI"
 
     def has_change_permission(self, request, obj=None):
         return False

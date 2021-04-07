@@ -35,7 +35,12 @@
         <p><strong>Started:</strong></p>
     </div>
     <div class="col-md-10">
-        <p>{{ extraction.started_at|datetime|default:"?" }} ({{ extraction.started_at|naturaltime|default:"?" }}) by {{ extraction.started_by|default:"?" }}</p>
+        <p>
+            <span title="{{ extraction.started_at|naturaltime }}">
+                {{ extraction.started_at|datetime }}
+            </span>
+             by {{ extraction.started_by|default:"?" }}
+        </p>
     </div>
 </div>
 
@@ -45,7 +50,11 @@
             <p><strong>Canceled:</strong></p>
         </div>
         <div class="col-md-10">
-            <p>{{ extraction.canceled_at|datetime|default:"?" }} by {{ extraction.canceled_by|default:"?" }}</p>
+            <p>
+                <span title="{{ extraction.canceled_at|naturaltime|default:'?' }}">
+                    {{ extraction.canceled_at|datetime|default:"?" }}
+                </span> by {{ extraction.canceled_by|default:"?" }}
+            </p>
         </div>
     </div>
 {% endif %}
@@ -57,10 +66,9 @@
     <div class="col-md-10">
         <p>
             {% if extraction.status == extraction.Status.CANCELED %}<s>{% endif %}
-            {{ extraction.chunk_arrival_at|datetime }}
-            {% if extraction.status == extraction.Status.STARTED %}
-                ({{ extraction.chunk_arrival_at|timeuntil }})
-            {% endif %}
+            <span title="{{ extraction.chunk_arrival_at|naturaltime }}">
+                {{ extraction.chunk_arrival_at|datetime }}
+            </span>
             {% if extraction.status == extraction.Status.CANCELED %}</s>{% endif %}
         </p>
     </div>
@@ -73,10 +81,9 @@
     <div class="col-md-10">
         <p>
             {% if extraction.status == extraction.Status.CANCELED %}<s>{% endif %}
-            {{ extraction.auto_fracture_at|datetime }}
-            {% if extraction.auto_fracture_at > now %}
-                ({{ extraction.auto_fracture_at|timeuntil }})
-            {% endif %}
+            <span title="{{ extraction.auto_fracture_at|naturaltime }}">
+                {{ extraction.auto_fracture_at|datetime }}
+            </span>
             {% if extraction.status == extraction.Status.CANCELED %}</s>{% endif %}
         </p>
     </div>

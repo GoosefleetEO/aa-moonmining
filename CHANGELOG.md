@@ -15,7 +15,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
-- Add pre-commit checks
+## [1.0.0] - tbd
+
+### Added
+
+- Release of new version based on eveuniverse
 
 ## [0.1.12] - 2020-10-09
 

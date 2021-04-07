@@ -419,6 +419,18 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
             started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2021, 4, 15, 21, 0, tzinfo=pytz.UTC),
         )
+        ExtractionProduct.objects.create(
+            extraction=extraction, ore_type_id=45506, volume=1288475
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction, ore_type_id=46676, volume=544691
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction, ore_type_id=22, volume=526825
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction, ore_type_id=46689, volume=528996
+        )
         # when
         owner.update_extractions_from_notifications()
         # then
@@ -451,6 +463,18 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
             chunk_arrival_at=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
             started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2021, 4, 15, 21, 0, tzinfo=pytz.UTC),
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction, ore_type_id=45506, volume=1288475
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction, ore_type_id=46676, volume=544691
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction, ore_type_id=22, volume=526825
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction, ore_type_id=46689, volume=528996
         )
         # when
         owner.update_extractions_from_notifications()
@@ -485,6 +509,18 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
             chunk_arrival_at=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
             started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2021, 4, 15, 21, 0, tzinfo=pytz.UTC),
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction, ore_type_id=45506, volume=1288475
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction, ore_type_id=46676, volume=544691
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction, ore_type_id=22, volume=526825
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction, ore_type_id=46689, volume=528996
         )
         # when
         owner.update_extractions_from_notifications()
@@ -527,7 +563,7 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         extraction.refresh_from_db()
         self.assertEqual(extraction.status, Extraction.Status.CANCELED)
 
-    def test_should_cancel_existing_and_create_two_new(self, mock_esi):
+    def test_should_cancel_existing_and_update_two_other(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
         _, character_ownership = helpers.create_default_user_from_evecharacter(1004)
@@ -560,6 +596,18 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
             auto_fracture_at=ready_time_2 + dt.timedelta(hours=4),
             status=Extraction.Status.STARTED,
         )
+        ExtractionProduct.objects.create(
+            extraction=extraction_2, ore_type_id=45506, volume=1288475
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction_2, ore_type_id=46676, volume=544691
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction_2, ore_type_id=22, volume=526825
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction_2, ore_type_id=46689, volume=528996
+        )
         extraction_3 = Extraction.objects.create(
             refinery=refinery,
             chunk_arrival_at=ready_time_3,
@@ -575,8 +623,16 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         self.assertEqual(extraction_1.status, Extraction.Status.CANCELED)
         extraction_2.refresh_from_db()
         self.assertEqual(extraction_2.status, Extraction.Status.COMPLETED)
+        self.assertEqual(
+            set(extraction_2.products.values_list("ore_type_id", flat=True)),
+            {46311, 46676, 46678, 46689},
+        )
         extraction_3.refresh_from_db()
         self.assertEqual(extraction_3.status, Extraction.Status.STARTED)
+        self.assertEqual(
+            set(extraction_3.products.values_list("ore_type_id", flat=True)),
+            {45506, 46676, 22, 46689},
+        )
 
     def test_should_update_refinery_with_moon_from_notification_if_not_found(
         self, mock_esi

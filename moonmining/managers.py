@@ -18,6 +18,7 @@ from .core import CalculatedExtraction
 from .helpers import eveentity_get_or_create_esi_safe
 
 MAX_THREAD_WORKERS = 20
+BULK_BATCH_SIZE = 500
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
 SurveyProcessResult = namedtuple(
@@ -252,8 +253,12 @@ class ExtractionManager(models.Manager):
     def get_queryset(self) -> models.QuerySet:
         return ExtractionQuerySet(self.model, using=self._db)
 
-    def update_from_calculated(self, calculated: CalculatedExtraction):
-        """Update an extraction object from related calculated extraction."""
+    def update_from_calculated(self, calculated: CalculatedExtraction) -> bool:
+        """Update an extraction object from related calculated extraction
+        when there is new information.
+
+        Return True when updated, else False.
+        """
         from .models import EveOreType, ExtractionProduct
 
         try:
@@ -262,7 +267,7 @@ class ExtractionManager(models.Manager):
                 chunk_arrival_at=calculated.chunk_arrival_at,
             )
         except self.model.DoesNotExist:
-            return
+            return False
 
         needs_update = False
         if calculated.canceled_at and not extraction.canceled_at:
@@ -289,23 +294,35 @@ class ExtractionManager(models.Manager):
         if self.model.Status.from_calculated(calculated) != extraction.status:
             extraction.status = self.model.Status.from_calculated(calculated)
             needs_update = True
+            status_changed = True
+        else:
+            status_changed = False
         if calculated.started_by and not extraction.started_by:
             extraction.started_by = eveentity_get_or_create_esi_safe(
                 calculated.started_by
             )
             needs_update = True
+        updated = False
         if needs_update:
             extraction.save()
-        if calculated.products and not extraction.products.exists():
+            updated = True
+        if calculated.products and (status_changed or not extraction.products.exists()):
             # preload eve ore types before transaction starts
             for product in calculated.products:
                 EveOreType.objects.get_or_create_esi(id=product.ore_type_id)
+            products = [
+                ExtractionProduct(
+                    extraction=extraction,
+                    ore_type_id=product.ore_type_id,
+                    volume=product.volume,
+                )
+                for product in calculated.products
+            ]
             with transaction.atomic():
                 ExtractionProduct.objects.filter(extraction=extraction).delete()
-                for product in calculated.products:
-                    ExtractionProduct.objects.create(
-                        extraction=extraction,
-                        ore_type_id=product.ore_type_id,
-                        volume=product.volume,
-                    )
+                ExtractionProduct.objects.bulk_create(
+                    products, batch_size=BULK_BATCH_SIZE
+                )
             extraction.update_calculated_properties()
+            updated = True
+        return updated

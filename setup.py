@@ -15,7 +15,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     license="GPLv3",
-    description="App for planning moon mining with Auth",
+    description="Alliance Auth app for tracking moon extractions and scouting new moons.",
     url="https://gitlab.com/ErikKalkoken/aa-moonmining",
     author="Erik Kalkoken",
     author_email="kaloken87@gmail.com",

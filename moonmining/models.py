@@ -864,22 +864,25 @@ class Owner(models.Model):
         stale_extractions_qs = Extraction.objects.filter(refinery__owner=self).exclude(
             pk__in=incoming_extraction_pks
         )
-        if stale_extractions_qs.exists():
-            deleted_count, _ = stale_extractions_qs.delete()
-            logger.info("%s: Deleted %d stale extractions.", self, deleted_count)
+        stale_extractions_count = stale_extractions_qs.count()
+        if stale_extractions_count:
+            logger.info(
+                "%s: Deleteting %d stale extractions.", self, stale_extractions_count
+            )
+            stale_extractions_qs.delete()
 
     def update_extractions_from_notifications(self):
         """Add information from notifications to extractions."""
         logger.info("%s: Updating extractions from notifications...", self)
         notifications_count = self.notifications.count()
         if not notifications_count:
-            logger.info("%s: No moon notifications", self)
+            logger.info("%s: No moon notifications.", self)
             return
-        logger.info("%s: Processing %d moon notifications", self, notifications_count)
+        logger.info("%s: Processing %d moon notifications.", self, notifications_count)
 
         # create or update extractions from notifications by refinery
         for refinery in self.refineries.all():
-            extractions_count = 0
+            updated_count = 0
             extraction = None
             notifications_for_refinery = self.notifications.filter(
                 details__structureID=refinery.id
@@ -916,9 +919,11 @@ class Owner(models.Model):
                             extraction.status = CalculatedExtraction.Status.CANCELED
                             extraction.canceled_at = notif.timestamp
                             extraction.canceled_by = notif.details.get("cancelledBy")
-                            Extraction.objects.update_from_calculated(extraction)
+                            updated = Extraction.objects.update_from_calculated(
+                                extraction
+                            )
+                            updated_count += 1 if updated else 0
                             extraction = None
-                            extractions_count += 1
 
                         elif (
                             notif.notif_type
@@ -941,9 +946,11 @@ class Owner(models.Model):
                                     notif.details["oreVolumeByType"]
                                 )
                             )
-                            Extraction.objects.update_from_calculated(extraction)
+                            updated = Extraction.objects.update_from_calculated(
+                                extraction
+                            )
+                            updated_count += 1 if updated else 0
                             extraction = None
-                            extractions_count += 1
 
                         elif (
                             notif.notif_type
@@ -956,16 +963,22 @@ class Owner(models.Model):
                                     notif.details["oreVolumeByType"]
                                 )
                             )
-                            Extraction.objects.update_from_calculated(extraction)
+                            updated = Extraction.objects.update_from_calculated(
+                                extraction
+                            )
+                            updated_count += 1 if updated else 0
                             extraction = None
-                            extractions_count += 1
 
             if extraction:
-                Extraction.objects.update_from_calculated(extraction)
-                extractions_count += 1
-            logger.info(
-                "%s: %s: Updated %d extractions", self, refinery, extractions_count
-            )
+                updated = Extraction.objects.update_from_calculated(extraction)
+                updated_count += 1 if updated else 0
+            if updated_count:
+                logger.info(
+                    "%s: %s: Updated %d extractions from notifications",
+                    self,
+                    refinery,
+                    updated_count,
+                )
 
     @classmethod
     def esi_scopes(cls):
