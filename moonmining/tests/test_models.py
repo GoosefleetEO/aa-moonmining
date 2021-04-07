@@ -313,12 +313,79 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
             chunk_arrival_at=dt.datetime(2021, 3, 15, 18, 0, tzinfo=pytz.UTC),
             started_at=dt.datetime(2021, 3, 10, 18, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2021, 3, 15, 21, 0, tzinfo=pytz.UTC),
+            status=Extraction.Status.STARTED,
         )
         # when
         owner.update_extractions_from_esi()
         # then
         extraction_pks = set(refinery.extractions.values_list("pk", flat=True))
         self.assertNotIn(stale_extraction.pk, extraction_pks)
+
+    @patch(MODELS_PATH + ".MOONMINING_CANCELED_EXTRACTIONS_HOURS_UNTIL_STALE", 2)
+    def test_should_keep_non_stale_canceled_extraction(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        owner.fetch_notifications_from_esi()
+        refinery = Refinery.objects.create(
+            id=1000000000001,
+            name="Test",
+            moon=self.moon,
+            owner=owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        canceled_extraction = Extraction.objects.create(
+            refinery=refinery,
+            chunk_arrival_at=dt.datetime(2021, 3, 15, 18, 0, tzinfo=pytz.UTC),
+            started_at=dt.datetime(2021, 3, 10, 18, 0, tzinfo=pytz.UTC),
+            auto_fracture_at=dt.datetime(2021, 3, 15, 21, 0, tzinfo=pytz.UTC),
+            canceled_at=dt.datetime(2021, 3, 12, 18, 0, tzinfo=pytz.UTC),
+            status=Extraction.Status.CANCELED,
+        )
+        # when
+        with patch(MODELS_PATH + ".now") as mock_now:
+            mock_now.return_value = dt.datetime(2021, 3, 12, 18, 30, tzinfo=pytz.UTC)
+            owner.update_extractions_from_esi()
+        # then
+        extraction_pks = set(refinery.extractions.values_list("pk", flat=True))
+        self.assertIn(canceled_extraction.pk, extraction_pks)
+
+    @patch(MODELS_PATH + ".MOONMINING_CANCELED_EXTRACTIONS_HOURS_UNTIL_STALE", 2)
+    def test_should_delete_stale_canceled_extraction(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        owner.fetch_notifications_from_esi()
+        refinery = Refinery.objects.create(
+            id=1000000000001,
+            name="Test",
+            moon=self.moon,
+            owner=owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        canceled_extraction = Extraction.objects.create(
+            refinery=refinery,
+            chunk_arrival_at=dt.datetime(2021, 3, 15, 18, 0, tzinfo=pytz.UTC),
+            started_at=dt.datetime(2021, 3, 10, 18, 0, tzinfo=pytz.UTC),
+            auto_fracture_at=dt.datetime(2021, 3, 15, 21, 0, tzinfo=pytz.UTC),
+            canceled_at=dt.datetime(2021, 3, 12, 18, 0, tzinfo=pytz.UTC),
+            status=Extraction.Status.CANCELED,
+        )
+        # when
+        with patch(MODELS_PATH + ".now") as mock_now:
+            mock_now.return_value = dt.datetime(2021, 3, 12, 20, 30, tzinfo=pytz.UTC)
+            owner.update_extractions_from_esi()
+        # then
+        extraction_pks = set(refinery.extractions.values_list("pk", flat=True))
+        self.assertNotIn(canceled_extraction.pk, extraction_pks)
 
     def test_should_create_started_extraction_with_products(self, mock_esi):
         # given

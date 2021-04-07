@@ -30,7 +30,7 @@ from app_utils.views import (  # fontawesome_link_button_html,
 from . import __title__, constants, helpers, tasks
 from .app_settings import (
     MOONMINING_ADMIN_NOTIFICATIONS_ENABLED,
-    MOONMINING_EXTRACTIONS_HOURS_UNTIL_STALE,
+    MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE,
     MOONMINING_REPROCESSING_YIELD,
     MOONMINING_VOLUME_PER_MONTH,
 )
@@ -117,7 +117,7 @@ def extractions(request):
         "ExtractionsStatus": Extraction.Status,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
-        "stale_hours": MOONMINING_EXTRACTIONS_HOURS_UNTIL_STALE,
+        "stale_hours": MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE,
     }
     return render(request, "moonmining/extractions.html", context)
 
@@ -126,7 +126,9 @@ def extractions(request):
 @permission_required(["moonmining.extractions_access", "moonmining.basic_access"])
 def extractions_data(request, category):
     data = list()
-    cutover_dt = now() - dt.timedelta(hours=MOONMINING_EXTRACTIONS_HOURS_UNTIL_STALE)
+    cutover_dt = now() - dt.timedelta(
+        hours=MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE
+    )
     extractions = Extraction.objects.annotate_volume().selected_related_defaults()
     if category == ExtractionsCategory.UPCOMING:
         extractions = extractions.filter(auto_fracture_at__gte=cutover_dt).exclude(

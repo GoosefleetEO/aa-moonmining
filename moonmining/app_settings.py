@@ -1,9 +1,14 @@
 from app_utils.django import clean_setting
 
+# Canceled extractions will be shown on the extractions list until they become stale
+MOONMINING_CANCELED_EXTRACTIONS_HOURS_UNTIL_STALE = clean_setting(
+    "MOONMINING_CANCELED_EXTRACTIONS_HOURS_UNTIL_STALE", 72
+)
+
 # Number of hours an extractions that has passed its ready time is still shown
 # on the upcoming extractions tab
-MOONMINING_EXTRACTIONS_HOURS_UNTIL_STALE = clean_setting(
-    "MOONMINING_EXTRACTIONS_HOURS_UNTIL_STALE", 12
+MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE = clean_setting(
+    "MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE", 12
 )
 
 # Reprocessing yield used for calculating all values
