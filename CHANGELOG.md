@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [1.0.0] - tbd
 
+> **Note for 1.0.0a3**<br>This alpha release includes a migration reset. Please make sure to migrate to zero BEFORE installing this new version.
+
 ### Added
 
 - Release of new version based on eveuniverse
