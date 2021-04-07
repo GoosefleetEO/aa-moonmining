@@ -428,6 +428,53 @@ class General(models.Model):
         )
 
 
+class MiningLedgerRecord(models.Model):
+    """A recorded mining activity in the vicinity of a refinery."""
+
+    # pk
+    refinery = models.ForeignKey(
+        "Refinery",
+        on_delete=models.CASCADE,
+        related_name="mining_ledger",
+        help_text="Refinery this mining activity was observed at",
+    )
+    day = models.DateField(help_text="last_updated in ESI")
+    character = models.ForeignKey(
+        EveEntity,
+        on_delete=models.CASCADE,
+        related_name="+",
+        help_text="character that did the mining",
+    )
+    ore_type = models.ForeignKey(
+        EveOreType, on_delete=models.CASCADE, related_name="mining_ledger"
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        default=None,
+        related_name="mining_ledger",
+        help_text="user that did the mining (if any)",
+    )
+    # regular
+    corporation = models.ForeignKey(
+        EveEntity,
+        on_delete=models.CASCADE,
+        related_name="+",
+        help_text="corporation of the character at time data was recorded",
+    )
+    quantity = models.PositiveBigIntegerField()
+
+    # TODO: Remove comment once stable
+    # class Meta:
+    #     constraints = [
+    #         models.UniqueConstraint(
+    #             fields=["refinery", "day", "character", "ore_type"],
+    #             name="functional_pk_mining_activity",
+    #         )
+    #     ]
+
+
 class Moon(models.Model):
     """Known moon through either survey data or anchored refinery.
 
@@ -993,6 +1040,50 @@ class Owner(models.Model):
                     refinery,
                     updated_count,
                 )
+
+    def update_mining_ledger_from_esi(self):
+        """Update mining ledger from ESI."""
+        token = self.fetch_token()
+        logger.info("%s: Fetching mining observers from ESI...", self)
+        observers = esi.client.Industry.get_corporation_corporation_id_mining_observers(
+            corporation_id=self.corporation.corporation_id,
+            token=token.valid_access_token(),
+        ).results()
+        logger.info("%s: Received %d observers from ESI.", self, len(observers))
+        observer_ids = {
+            row["observer_id"]
+            for row in observers
+            if row["observer_type"] == "structure"
+        }
+        logger.info("%s: Fetching mining observer records from ESI...", self)
+        for refinery in self.refineries.filter(id__in=observer_ids):
+            records = esi.client.Industry.get_corporation_corporation_id_mining_observers_observer_id(
+                corporation_id=self.corporation.corporation_id,
+                observer_id=refinery.id,
+                token=token.valid_access_token(),
+            ).results()
+            # preload all missing ore types
+            EveOreType.objects.bulk_get_or_create_esi(
+                ids={record["type_id"] for record in records}
+            )
+            for record in records:
+                character, _ = EveEntity.objects.get_or_create(
+                    id=record["character_id"]
+                )
+                corporation, _ = EveEntity.objects.get_or_create(
+                    id=record["recorded_corporation_id"]
+                )
+                MiningLedgerRecord.objects.update_or_create(
+                    refinery=refinery,
+                    character=character,
+                    day=record["last_updated"],
+                    ore_type_id=record["type_id"],
+                    defaults={
+                        "corporation": corporation,
+                        "quantity": record["quantity"],
+                    },
+                )
+            EveEntity.objects.bulk_update_new_esi()
 
     @classmethod
     def esi_scopes(cls):

@@ -14,6 +14,7 @@ from ..models import (
     EveOreType,
     Extraction,
     ExtractionProduct,
+    MiningLedgerRecord,
     Moon,
     MoonProduct,
     NotificationType,
@@ -218,6 +219,72 @@ class TestOwnerUpdateRefineries(NoSocketsTestCase):
             set(self.owner.refineries.values_list("id", flat=True)),
             {1000000000001, 1000000000002},
         )
+
+
+@patch(MODELS_PATH + ".esi")
+class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        load_allianceauth()
+        helpers.generate_eve_entities_from_allianceauth()
+        cls.moon = helpers.create_moon_40161708()
+
+    def test_should_create_new_mining_ledger(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        refinery = Refinery.objects.create(
+            id=1000000000001,
+            name="Test",
+            moon=self.moon,
+            owner=owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        # when
+        owner.update_mining_ledger_from_esi()
+        # then
+        self.assertEqual(refinery.mining_ledger.count(), 2)
+        obj = refinery.mining_ledger.get(character_id=1101)
+        self.assertEqual(obj.day, dt.date(2017, 9, 19))
+        self.assertEqual(obj.quantity, 500)
+        self.assertEqual(obj.corporation_id, 2101)
+        self.assertEqual(obj.ore_type_id, 45506)
+
+    def test_should_update_existing_mining_ledger(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        refinery = Refinery.objects.create(
+            id=1000000000001,
+            name="Test",
+            moon=self.moon,
+            owner=owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        MiningLedgerRecord.objects.create(
+            refinery=refinery,
+            character_id=1101,
+            day=dt.date(2017, 9, 19),
+            ore_type_id=45506,
+            corporation_id=2101,
+            quantity=199,
+        )
+        # when
+        owner.update_mining_ledger_from_esi()
+        # then
+        self.assertEqual(refinery.mining_ledger.count(), 2)
+        obj = refinery.mining_ledger.get(character_id=1101)
+        self.assertEqual(obj.quantity, 500)
 
 
 @patch(MODELS_PATH + ".esi")

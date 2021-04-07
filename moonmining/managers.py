@@ -308,8 +308,9 @@ class ExtractionManager(models.Manager):
             updated = True
         if calculated.products and (status_changed or not extraction.products.exists()):
             # preload eve ore types before transaction starts
-            for product in calculated.products:
-                EveOreType.objects.get_or_create_esi(id=product.ore_type_id)
+            EveOreType.objects.bulk_get_or_create_esi(
+                ids=[product.ore_type_id for product in calculated.products]
+            )
             products = [
                 ExtractionProduct(
                     extraction=extraction,

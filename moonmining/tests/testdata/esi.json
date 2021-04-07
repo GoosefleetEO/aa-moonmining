@@ -318,6 +318,35 @@
                 "structure_id": 1000000000002
               }
             ]
+        },
+        "get_corporation_corporation_id_mining_observers": {
+            "2001": [
+                {
+                    "last_updated": "2017-09-19",
+                    "observer_id": 1000000000001,
+                    "observer_type": "structure"
+                }
+            ]
+        },
+        "get_corporation_corporation_id_mining_observers_observer_id": {
+            "2001": {
+                "1000000000001": [
+                    {
+                        "character_id": 1101,
+                        "last_updated": "2017-09-19",
+                        "quantity": 500,
+                        "recorded_corporation_id": 2101,
+                        "type_id": 45506
+                    },
+                    {
+                        "character_id": 1102,
+                        "last_updated": "2017-09-19",
+                        "quantity": 1100,
+                        "recorded_corporation_id": 2102,
+                        "type_id": 45506
+                    }
+                ]
+            }
         }
     },
     "Universe": {

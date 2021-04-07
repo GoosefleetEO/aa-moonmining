@@ -40,6 +40,7 @@ def update_owner(owner_pk):
         update_refineries_from_esi_for_owner.si(owner_pk),
         fetch_notifications_from_esi_for_owner.si(owner_pk),
         update_extractions_for_owner.si(owner_pk),
+        update_mining_ledger_for_owner.si(owner_pk),
         mark_successful_update_for_owner.si(owner_pk),
     ).delay()
 
@@ -63,6 +64,13 @@ def update_extractions_for_owner(owner_pk):
     """Update extractions for a owner from ESI."""
     owner = Owner.objects.get(pk=owner_pk)
     owner.update_extractions()
+
+
+@shared_task
+def update_mining_ledger_for_owner(owner_pk):
+    """Update mining ledger for a owner from ESI."""
+    owner = Owner.objects.get(pk=owner_pk)
+    owner.update_mining_ledger_from_esi()
 
 
 @shared_task
