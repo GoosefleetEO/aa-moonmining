@@ -20,7 +20,7 @@ class CalculatedExtraction:
     refinery_id: int
     chunk_arrival_at: dt.datetime
 
-    status: str
+    status: Status
     started_by: int
     auto_fracture_at: dt.datetime = None
     canceled_at: dt.datetime = None
@@ -30,6 +30,8 @@ class CalculatedExtraction:
     products: List["CalculatedExtractionProduct"] = None
 
     def __post_init__(self):
+        self.refinery_id = int(self.refinery_id)
+        self.status = self.Status(self.status)
         self.chunk_arrival_at = helpers.round_seconds(self.chunk_arrival_at)
 
 
@@ -40,6 +42,9 @@ class CalculatedExtractionProduct:
     ore_type_id: int
     volume: float
 
+    def __post_init__(self):
+        self.ore_type_id = int(self.ore_type_id)
+
     @classmethod
-    def create_list_from_dict(cls, ores: dict):
+    def create_list_from_dict(cls, ores: dict) -> List["CalculatedExtractionProduct"]:
         return [cls(ore_type_id, volume) for ore_type_id, volume in ores.items()]

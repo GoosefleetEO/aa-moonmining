@@ -297,7 +297,57 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         helpers.generate_eve_entities_from_allianceauth()
         cls.moon = helpers.create_moon_40161708()
 
-    def test_should_create_basic_started_extraction(self, mock_esi):
+    def test_should_create_started_extraction_with_products(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        owner.fetch_notifications_from_esi()
+        refinery = Refinery.objects.create(
+            id=1000000000001,
+            name="Test",
+            moon=self.moon,
+            owner=owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        # when
+        owner.update_extractions()
+        # then
+        self.assertEqual(refinery.extractions.count(), 1)
+        extraction = refinery.extractions.first()
+        self.assertEqual(extraction.status, Extraction.Status.STARTED)
+        self.assertEqual(
+            extraction.chunk_arrival_at,
+            dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
+        )
+        self.assertEqual(extraction.started_by_id, 1001)
+        self.assertEqual(extraction.products.count(), 4)
+        product = extraction.products.get(ore_type_id=45506)
+        self.assertEqual(product.volume, 1288475.124715103)
+        product = extraction.products.get(ore_type_id=46676)
+        self.assertEqual(product.volume, 544691.7637724016)
+        product = extraction.products.get(ore_type_id=22)
+        self.assertEqual(product.volume, 526825.4047522942)
+        product = extraction.products.get(ore_type_id=46689)
+        self.assertEqual(product.volume, 528996.6386983792)
+        self.assertIsNotNone(extraction.value)
+        self.assertIsNotNone(extraction.is_jackpot)
+
+
+@patch(MODELS_PATH + ".esi")
+class TestOwnerUpdateExtractionsFromEsi(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        load_allianceauth()
+        helpers.generate_eve_entities_from_allianceauth()
+        cls.moon = helpers.create_moon_40161708()
+
+    def test_should_create_started_extraction(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
         _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
@@ -334,7 +384,7 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         self.assertIsNone(extraction.value)
         self.assertIsNone(extraction.is_jackpot)
 
-    def test_should_have_status_completed(self, mock_esi):
+    def test_should_create_completed_extraction(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
         _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
@@ -359,7 +409,7 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         extraction = refinery.extractions.first()
         self.assertEqual(extraction.status, Extraction.Status.COMPLETED)
 
-    def test_should_delete_local_extractions_no_longer_in_esi_response(self, mock_esi):
+    def test_should_delete_extractions_no_longer_in_esi_response(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
         _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
@@ -454,44 +504,16 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         extraction_pks = set(refinery.extractions.values_list("pk", flat=True))
         self.assertNotIn(canceled_extraction.pk, extraction_pks)
 
-    def test_should_create_started_extraction_with_products(self, mock_esi):
-        # given
-        mock_esi.client = esi_client_stub
-        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
-        owner = Owner.objects.create(
-            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
-            character_ownership=character_ownership,
-        )
-        owner.fetch_notifications_from_esi()
-        refinery = Refinery.objects.create(
-            id=1000000000001,
-            name="Test",
-            moon=self.moon,
-            owner=owner,
-            eve_type=helpers.eve_type_athanor(),
-        )
-        # when
-        owner.update_extractions()
-        # then
-        self.assertEqual(refinery.extractions.count(), 1)
-        extraction = refinery.extractions.first()
-        self.assertEqual(extraction.status, Extraction.Status.STARTED)
-        self.assertEqual(
-            extraction.chunk_arrival_at,
-            dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
-        )
-        self.assertEqual(extraction.started_by_id, 1001)
-        self.assertEqual(extraction.products.count(), 4)
-        product = extraction.products.get(ore_type_id=45506)
-        self.assertEqual(product.volume, 1288475.124715103)
-        product = extraction.products.get(ore_type_id=46676)
-        self.assertEqual(product.volume, 544691.7637724016)
-        product = extraction.products.get(ore_type_id=22)
-        self.assertEqual(product.volume, 526825.4047522942)
-        product = extraction.products.get(ore_type_id=46689)
-        self.assertEqual(product.volume, 528996.6386983792)
-        self.assertIsNotNone(extraction.value)
-        self.assertIsNotNone(extraction.is_jackpot)
+
+@patch(MODELS_PATH + ".esi")
+class TestOwnerUpdateExtractionsFromNotifications(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        load_allianceauth()
+        helpers.generate_eve_entities_from_allianceauth()
+        cls.moon = helpers.create_moon_40161708()
 
     def test_should_create_canceled_extraction_with_products(self, mock_esi):
         # given
