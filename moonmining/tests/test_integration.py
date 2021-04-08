@@ -7,12 +7,12 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils.timezone import now
 from django_webtest import WebTest
-from eveuniverse.models import EveMarketPrice, EveType
+from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 
 from app_utils.testing import create_user_from_evecharacter
 
 from .. import tasks
-from ..models import Owner, Refinery
+from ..models import Moon, Owner, Refinery
 from . import helpers
 from .testdata.esi_client_stub import esi_client_stub
 from .testdata.load_allianceauth import load_allianceauth
@@ -136,6 +136,43 @@ class TestUpdateTasks(TestCase):
         corporation_2002.refresh_from_db()
         self.assertEqual(corporation_2002.last_update_at, my_date)
         self.assertIsNone(corporation_2002.last_update_ok)
+
+    @patch(MODELS_PATH + ".esi")
+    def test_should_update_mining_ledgers(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        owner_2001 = helpers.create_owner_from_character_ownership(
+            self.character_ownership
+        )
+        moon_40161708 = helpers.create_moon_40161708()
+        refinery_1 = Refinery.objects.create(
+            id=1000000000001,
+            moon=moon_40161708,
+            owner=owner_2001,
+            eve_type=EveType.objects.get(id=35835),
+        )
+        moon_40161709 = Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161709))
+        refinery_2 = Refinery.objects.create(
+            id=1000000000002,
+            moon=moon_40161709,
+            owner=owner_2001,
+            eve_type=EveType.objects.get(id=35835),
+        )
+        _, ownership_1003 = helpers.create_default_user_from_evecharacter(1003)
+        owner_2002 = helpers.create_owner_from_character_ownership(ownership_1003)
+        moon_40131695 = Moon.objects.create(eve_moon=EveMoon.objects.get(id=40131695))
+        refinery_11 = Refinery.objects.create(
+            id=1000000000011,
+            moon=moon_40131695,
+            owner=owner_2002,
+            eve_type=EveType.objects.get(id=35835),
+        )
+        # when
+        tasks.run_ledger_updates()
+        # then
+        self.assertEqual(refinery_1.mining_ledger.count(), 2)
+        self.assertEqual(refinery_2.mining_ledger.count(), 1)
+        self.assertEqual(refinery_11.mining_ledger.count(), 1)
 
     @patch(TASKS_PATH + ".EveMarketPrice.objects.update_from_esi")
     def test_should_update_all_calculated_values(self, mock_update_prices):

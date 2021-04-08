@@ -228,24 +228,34 @@ class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
         cls.moon = helpers.create_moon_40161708()
+        cls.user, character_ownership = helpers.create_default_user_from_evecharacter(
+            1001
+        )
+        cls.owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+
+    def test_should_return_observer_ids_from_esi(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        # when
+        result = self.owner.fetch_mining_ledger_observers_from_esi()
+        # then
+        self.assertSetEqual(result, {1000000000001, 1000000000002})
 
     def test_should_create_new_mining_ledger(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
-        user, character_ownership = helpers.create_default_user_from_evecharacter(1001)
-        owner = Owner.objects.create(
-            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
-            character_ownership=character_ownership,
-        )
         refinery = Refinery.objects.create(
             id=1000000000001,
             name="Test",
             moon=self.moon,
-            owner=owner,
+            owner=self.owner,
             eve_type=helpers.eve_type_athanor(),
         )
         # when
-        owner.update_mining_ledger_from_esi()
+        refinery.update_mining_ledger_from_esi()
         # then
         self.assertEqual(refinery.mining_ledger.count(), 2)
         obj = refinery.mining_ledger.get(character_id=1001)
@@ -253,21 +263,16 @@ class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
         self.assertEqual(obj.quantity, 500)
         self.assertEqual(obj.corporation_id, 2001)
         self.assertEqual(obj.ore_type_id, 45506)
-        self.assertEqual(obj.user, user)
+        self.assertEqual(obj.user, self.user)
 
     def test_should_update_existing_mining_ledger(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
-        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
-        owner = Owner.objects.create(
-            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
-            character_ownership=character_ownership,
-        )
         refinery = Refinery.objects.create(
             id=1000000000001,
             name="Test",
             moon=self.moon,
-            owner=owner,
+            owner=self.owner,
             eve_type=helpers.eve_type_athanor(),
         )
         MiningLedgerRecord.objects.create(
@@ -279,7 +284,7 @@ class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
             quantity=199,
         )
         # when
-        owner.update_mining_ledger_from_esi()
+        refinery.update_mining_ledger_from_esi()
         # then
         self.assertEqual(refinery.mining_ledger.count(), 2)
         obj = refinery.mining_ledger.get(character_id=1001)

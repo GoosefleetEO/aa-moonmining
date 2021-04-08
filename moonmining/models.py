@@ -743,10 +743,9 @@ class Owner(models.Model):
     def update_refineries_from_esi(self):
         """Update all refineries from ESI."""
         logger.info("%s: Updating refineries...", self)
-        token = self.fetch_token()
-        refineries = self._fetch_refineries_from_esi(token)
+        refineries = self._fetch_refineries_from_esi()
         for structure_id, _ in refineries.items():
-            self._update_or_create_refinery_from_esi(structure_id, token)
+            self._update_or_create_refinery_from_esi(structure_id)
 
         # remove refineries that no longer exist
         self.refineries.exclude(id__in=refineries).delete()
@@ -754,11 +753,11 @@ class Owner(models.Model):
         self.last_update_at = now()
         self.save()
 
-    def _fetch_refineries_from_esi(self, token: Token) -> dict:
+    def _fetch_refineries_from_esi(self) -> dict:
         logger.info("%s: Fetching refineries from ESI...", self)
         structures = esi.client.Corporation.get_corporations_corporation_id_structures(
             corporation_id=self.corporation.corporation_id,
-            token=token.valid_access_token(),
+            token=self.fetch_token().valid_access_token(),
         ).results()
         refineries = dict()
         for structure_info in structures:
@@ -770,11 +769,11 @@ class Owner(models.Model):
                 refineries[structure_info["structure_id"]] = structure_info
         return refineries
 
-    def _update_or_create_refinery_from_esi(self, structure_id: int, token: Token):
+    def _update_or_create_refinery_from_esi(self, structure_id: int):
         logger.info("%s: Fetching details for refinery #%d", self, structure_id)
         try:
             structure_info = esi.client.Universe.get_universe_structures_structure_id(
-                structure_id=structure_id, token=token.valid_access_token()
+                structure_id=structure_id, token=self.fetch_token().valid_access_token()
             ).results()
         except OSError:
             logger.exception("%s: Failed to fetch refinery #%d", self, structure_id)
@@ -798,11 +797,10 @@ class Owner(models.Model):
     def _fetch_moon_notifications_from_esi(self) -> dict:
         """Fetch all notifications from ESI for current owner."""
         logger.info("%s: Fetching notifications from ESI...", self)
-        token = self.fetch_token()
         all_notifications = (
             esi.client.Character.get_characters_character_id_notifications(
                 character_id=self.character_ownership.character.character_id,
-                token=token.valid_access_token(),
+                token=self.fetch_token().valid_access_token(),
             ).results()
         )
         moon_notifications = [
@@ -875,11 +873,10 @@ class Owner(models.Model):
     def update_extractions_from_esi(self):
         """Creates new extractions from ESI for current owner."""
         logger.info("%s: Fetching extractions from ESI...", self)
-        token = self.fetch_token()
         extractions = (
             esi.client.Industry.get_corporation_corporation_id_mining_extractions(
                 corporation_id=self.corporation.corporation_id,
-                token=token.valid_access_token(),
+                token=self.fetch_token().valid_access_token(),
             ).results()
         )
         logger.info("%s: Received %d extractions from ESI.", self, len(extractions))
@@ -1010,57 +1007,18 @@ class Owner(models.Model):
                     updated_count,
                 )
 
-    def update_mining_ledger_from_esi(self):
-        """Update mining ledger from ESI."""
-        token = self.fetch_token()
+    def fetch_mining_ledger_observers_from_esi(self) -> set:
         logger.info("%s: Fetching mining observers from ESI...", self)
         observers = esi.client.Industry.get_corporation_corporation_id_mining_observers(
             corporation_id=self.corporation.corporation_id,
-            token=token.valid_access_token(),
+            token=self.fetch_token().valid_access_token(),
         ).results()
         logger.info("%s: Received %d observers from ESI.", self, len(observers))
-        observer_ids = {
+        return {
             row["observer_id"]
             for row in observers
             if row["observer_type"] == "structure"
         }
-        logger.info("%s: Fetching mining observer records from ESI...", self)
-        character_2_user = {
-            obj[0]: obj[1]
-            for obj in CharacterOwnership.objects.values_list(
-                "character__character_id",
-                "user_id",
-            )
-        }
-        for refinery in self.refineries.filter(id__in=observer_ids):
-            records = esi.client.Industry.get_corporation_corporation_id_mining_observers_observer_id(
-                corporation_id=self.corporation.corporation_id,
-                observer_id=refinery.id,
-                token=token.valid_access_token(),
-            ).results()
-            # preload all missing ore types
-            EveOreType.objects.bulk_get_or_create_esi(
-                ids={record["type_id"] for record in records}
-            )
-            for record in records:
-                character, _ = EveEntity.objects.get_or_create(
-                    id=record["character_id"]
-                )
-                corporation, _ = EveEntity.objects.get_or_create(
-                    id=record["recorded_corporation_id"]
-                )
-                MiningLedgerRecord.objects.update_or_create(
-                    refinery=refinery,
-                    character=character,
-                    day=record["last_updated"],
-                    ore_type_id=record["type_id"],
-                    defaults={
-                        "corporation": corporation,
-                        "quantity": record["quantity"],
-                        "user_id": character_2_user.get(character.id),
-                    },
-                )
-            EveEntity.objects.bulk_update_new_esi()
 
     @classmethod
     def esi_scopes(cls):
@@ -1132,6 +1090,42 @@ class Refinery(models.Model):
         moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
         self.moon = moon
         self.save()
+
+    def update_mining_ledger_from_esi(self):
+        logger.info("%s: Fetching mining observer records from ESI...", self)
+        character_2_user = {
+            obj[0]: obj[1]
+            for obj in CharacterOwnership.objects.values_list(
+                "character__character_id",
+                "user_id",
+            )
+        }
+        records = esi.client.Industry.get_corporation_corporation_id_mining_observers_observer_id(
+            corporation_id=self.owner.corporation.corporation_id,
+            observer_id=self.id,
+            token=self.owner.fetch_token().valid_access_token(),
+        ).results()
+        # preload all missing ore types
+        EveOreType.objects.bulk_get_or_create_esi(
+            ids={record["type_id"] for record in records}
+        )
+        for record in records:
+            character, _ = EveEntity.objects.get_or_create(id=record["character_id"])
+            corporation, _ = EveEntity.objects.get_or_create(
+                id=record["recorded_corporation_id"]
+            )
+            MiningLedgerRecord.objects.update_or_create(
+                refinery=self,
+                character=character,
+                day=record["last_updated"],
+                ore_type_id=record["type_id"],
+                defaults={
+                    "corporation": corporation,
+                    "quantity": record["quantity"],
+                    "user_id": character_2_user.get(character.id),
+                },
+            )
+        EveEntity.objects.bulk_update_new_esi()
 
     def create_extractions_from_esi_response(self, esi_extractions: List[dict]) -> int:
         existing_extractions = set(

@@ -8,7 +8,7 @@ from allianceauth.services.hooks import get_extension_logger
 from app_utils.logging import LoggerAddTag
 
 from . import __title__
-from .models import Extraction, Moon, Owner
+from .models import Extraction, Moon, Owner, Refinery
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
@@ -40,7 +40,6 @@ def update_owner(owner_pk):
         update_refineries_from_esi_for_owner.si(owner_pk),
         fetch_notifications_from_esi_for_owner.si(owner_pk),
         update_extractions_for_owner.si(owner_pk),
-        update_mining_ledger_for_owner.si(owner_pk),
         mark_successful_update_for_owner.si(owner_pk),
     ).delay()
 
@@ -67,18 +66,41 @@ def update_extractions_for_owner(owner_pk):
 
 
 @shared_task
-def update_mining_ledger_for_owner(owner_pk):
-    """Update mining ledger for a owner from ESI."""
-    owner = Owner.objects.get(pk=owner_pk)
-    owner.update_mining_ledger_from_esi()
-
-
-@shared_task
 def mark_successful_update_for_owner(owner_pk):
     """Mark a successful update for this corporation."""
     owner = Owner.objects.get(pk=owner_pk)
     owner.last_update_ok = True
     owner.save()
+
+
+@shared_task
+def run_ledger_updates():
+    """Run tasks for updating ledgers."""
+    owners_to_update = Owner.objects.filter(is_enabled=True)
+    owner_pks = owners_to_update.values_list("pk", flat=True)
+    logger.info("Updating mining ledgers for %d owners...", len(owner_pks))
+    for owner_pk in owner_pks:
+        update_mining_ledger_for_owner.delay(owner_pk)
+
+
+@shared_task
+def update_mining_ledger_for_owner(owner_pk):
+    """Update mining ledger for a owner from ESI."""
+    owner = Owner.objects.get(pk=owner_pk)
+    observer_ids = owner.fetch_mining_ledger_observers_from_esi()
+    for refinery_id in owner.refineries.filter(id__in=observer_ids).values_list(
+        "id", flat=True
+    ):
+        update_mining_ledger_for_refinery.apply_async(
+            kwargs={"refinery_id": refinery_id}, priority=TASK_PRIORITY_LOWER
+        )
+
+
+@shared_task
+def update_mining_ledger_for_refinery(refinery_id):
+    """Update mining ledger for a refinery from ESI."""
+    refinery = Refinery.objects.get(id=refinery_id)
+    refinery.update_mining_ledger_from_esi()
 
 
 @shared_task
