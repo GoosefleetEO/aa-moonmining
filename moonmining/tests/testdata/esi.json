@@ -307,14 +307,14 @@
                 "chunk_arrival_time": "2021-04-15T18:00:00Z",
                 "extraction_start_time": "2021-04-01T12:00:00Z",
                 "moon_id": 40161708,
-                "natural_decay_time": "2021-04-18T18:00:00Z",
+                "natural_decay_time": "2021-04-15T21:00:00Z",
                 "structure_id": 1000000000001
               },
               {
                 "chunk_arrival_time": "2021-04-28T18:00:00Z",
                 "extraction_start_time": "2021-03-22T16:11:47Z",
                 "moon_id": 40161709,
-                "natural_decay_time": "2021-04-30T21:01:00Z",
+                "natural_decay_time": "2021-04-28T21:01:00Z",
                 "structure_id": 1000000000002
               }
             ]
@@ -332,17 +332,17 @@
             "2001": {
                 "1000000000001": [
                     {
-                        "character_id": 1101,
+                        "character_id": 1001,
                         "last_updated": "2017-09-19",
                         "quantity": 500,
-                        "recorded_corporation_id": 2101,
+                        "recorded_corporation_id": 2001,
                         "type_id": 45506
                     },
                     {
-                        "character_id": 1102,
+                        "character_id": 1002,
                         "last_updated": "2017-09-19",
                         "quantity": 1100,
-                        "recorded_corporation_id": 2102,
+                        "recorded_corporation_id": 2001,
                         "type_id": 45506
                     }
                 ]

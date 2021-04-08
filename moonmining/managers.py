@@ -244,6 +244,17 @@ class ExtractionQuerySet(models.QuerySet, UpdateCalculatedPropertiesMixin):
             "started_by",
         )
 
+    def update_status(self):
+        """Update status of given extractions according to current time."""
+        self.exclude(
+            status__in=[self.model.Status.READY, self.model.Status.CANCELED]
+        ).filter(chunk_arrival_at__lte=now(), auto_fracture_at__gt=now(),).update(
+            status=self.model.Status.READY
+        )
+        self.exclude(
+            status__in=[self.model.Status.COMPLETED, self.model.Status.CANCELED]
+        ).filter(auto_fracture_at__lte=now()).update(status=self.model.Status.COMPLETED)
+
 
 class ExtractionManager(models.Manager):
     def annotate_volume(self) -> models.QuerySet:

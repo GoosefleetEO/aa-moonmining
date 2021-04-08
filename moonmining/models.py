@@ -1,6 +1,7 @@
-# import datetime as dt
+import datetime as dt
+from collections import defaultdict
 from enum import Enum
-from typing import Iterable, Optional
+from typing import Iterable, List, Optional
 
 import yaml
 
@@ -868,6 +869,7 @@ class Owner(models.Model):
 
     def update_extractions(self):
         self.update_extractions_from_esi()
+        Extraction.objects.all().update_status()
         self.update_extractions_from_notifications()
 
     def update_extractions_from_esi(self):
@@ -881,52 +883,23 @@ class Owner(models.Model):
             ).results()
         )
         logger.info("%s: Received %d extractions from ESI.", self, len(extractions))
+        extractions_by_refinery = defaultdict(list)
+        for row in extractions:
+            extractions_by_refinery[row["structure_id"]].append(row)
         new_extractions_count = 0
-        incoming_extraction_pks = set()
-        for extraction_info in extractions:
+        for refinery_id, refinery_extractions in extractions_by_refinery.items():
             try:
-                refinery = self.refineries.get(pk=extraction_info.get("structure_id"))
+                refinery = self.refineries.get(pk=refinery_id)
             except Refinery.DoesNotExist:
                 continue
-            extraction_start_time = extraction_info["extraction_start_time"]
-            chunk_arrival_time = extraction_info["chunk_arrival_time"]
-            auto_fracture_at = extraction_info["natural_decay_time"]
-            if now() > auto_fracture_at:
-                status = Extraction.Status.COMPLETED
-            elif now() > chunk_arrival_time:
-                status = Extraction.Status.READY
-            else:
-                status = Extraction.Status.STARTED
-            extraction, created = Extraction.objects.get_or_create(
-                refinery=refinery,
-                chunk_arrival_at=extraction_info["chunk_arrival_time"],
-                defaults={
-                    "started_at": extraction_start_time,
-                    "status": status,
-                    "auto_fracture_at": auto_fracture_at,
-                },
+            new_extractions_count += refinery.create_extractions_from_esi_response(
+                refinery_extractions
             )
-            incoming_extraction_pks.add(extraction.pk)
-            if created:
-                new_extractions_count += 1
+            refinery.cancel_started_extractions_missing_from_list(
+                [row["extraction_start_time"] for row in refinery_extractions]
+            )
         if new_extractions_count:
             logger.info("%s: Created %d new extractions.", self, new_extractions_count)
-        # identify extractions that were likely canceled
-        canceled_extractions_qs = (
-            Extraction.objects.filter(refinery__owner=self)
-            .filter(status=Extraction.Status.STARTED)
-            .exclude(pk__in=incoming_extraction_pks)
-        )
-        canceled_extractions_count = canceled_extractions_qs.count()
-        if canceled_extractions_count:
-            logger.info(
-                "%s: Found %d likely canceled extractions.",
-                self,
-                canceled_extractions_count,
-            )
-            canceled_extractions_qs.update(
-                status=Extraction.Status.CANCELED, canceled_at=now()
-            )
 
     def update_extractions_from_notifications(self):
         """Add information from notifications to extractions."""
@@ -1052,6 +1025,13 @@ class Owner(models.Model):
             if row["observer_type"] == "structure"
         }
         logger.info("%s: Fetching mining observer records from ESI...", self)
+        character_2_user = {
+            obj[0]: obj[1]
+            for obj in CharacterOwnership.objects.values_list(
+                "character__character_id",
+                "user_id",
+            )
+        }
         for refinery in self.refineries.filter(id__in=observer_ids):
             records = esi.client.Industry.get_corporation_corporation_id_mining_observers_observer_id(
                 corporation_id=self.corporation.corporation_id,
@@ -1077,6 +1057,7 @@ class Owner(models.Model):
                     defaults={
                         "corporation": corporation,
                         "quantity": record["quantity"],
+                        "user_id": character_2_user.get(character.id),
                     },
                 )
             EveEntity.objects.bulk_update_new_esi()
@@ -1151,3 +1132,51 @@ class Refinery(models.Model):
         moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
         self.moon = moon
         self.save()
+
+    def create_extractions_from_esi_response(self, esi_extractions: List[dict]) -> int:
+        existing_extractions = set(
+            self.extractions.values_list("started_at", flat=True)
+        )
+        new_extractions = list()
+        for esi_extraction in esi_extractions:
+            extraction_start_time = esi_extraction["extraction_start_time"]
+            if extraction_start_time not in existing_extractions:
+                chunk_arrival_time = esi_extraction["chunk_arrival_time"]
+                auto_fracture_at = esi_extraction["natural_decay_time"]
+                if now() > auto_fracture_at:
+                    status = Extraction.Status.COMPLETED
+                elif now() > chunk_arrival_time:
+                    status = Extraction.Status.READY
+                else:
+                    status = Extraction.Status.STARTED
+                new_extractions.append(
+                    Extraction(
+                        refinery=self,
+                        chunk_arrival_at=esi_extraction["chunk_arrival_time"],
+                        started_at=extraction_start_time,
+                        status=status,
+                        auto_fracture_at=auto_fracture_at,
+                    )
+                )
+        if new_extractions:
+            Extraction.objects.bulk_create(new_extractions, batch_size=500)
+        return len(new_extractions)
+
+    def cancel_started_extractions_missing_from_list(
+        self, started_at_list: List[dt.datetime]
+    ) -> int:
+        """Cancel started extractions that are not included in given list."""
+        canceled_extractions_qs = self.extractions.filter(
+            status=Extraction.Status.STARTED
+        ).exclude(started_at__in=started_at_list)
+        canceled_extractions_count = canceled_extractions_qs.count()
+        if canceled_extractions_count:
+            logger.info(
+                "%s: Found %d likely canceled extractions.",
+                self,
+                canceled_extractions_count,
+            )
+            canceled_extractions_qs.update(
+                status=Extraction.Status.CANCELED, canceled_at=now()
+            )
+        return canceled_extractions_count

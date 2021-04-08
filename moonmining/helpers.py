@@ -32,7 +32,7 @@ def eveentity_get_or_create_esi_safe(id):
 
 
 def round_seconds(obj: dt.datetime) -> dt.datetime:
-    """Return new copy rounded to full seconds."""
+    """Return copy rounded to full seconds."""
     if obj.microsecond >= 500_000:
         obj += dt.timedelta(seconds=1)
     return obj.replace(microsecond=0)

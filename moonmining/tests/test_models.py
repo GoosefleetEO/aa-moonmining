@@ -27,10 +27,8 @@ from . import helpers
 from .testdata.esi_client_stub import esi_client_stub
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse, nearest_celestial_stub
-from .testdata.survey_data import fetch_survey_data
 
 MODELS_PATH = "moonmining.models"
-MANAGERS_PATH = "moonmining.managers"
 
 
 class TestEveOreTypeCalcRefinedValue(NoSocketsTestCase):
@@ -234,7 +232,7 @@ class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
     def test_should_create_new_mining_ledger(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
-        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
+        user, character_ownership = helpers.create_default_user_from_evecharacter(1001)
         owner = Owner.objects.create(
             corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
@@ -250,11 +248,12 @@ class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
         owner.update_mining_ledger_from_esi()
         # then
         self.assertEqual(refinery.mining_ledger.count(), 2)
-        obj = refinery.mining_ledger.get(character_id=1101)
+        obj = refinery.mining_ledger.get(character_id=1001)
         self.assertEqual(obj.day, dt.date(2017, 9, 19))
         self.assertEqual(obj.quantity, 500)
-        self.assertEqual(obj.corporation_id, 2101)
+        self.assertEqual(obj.corporation_id, 2001)
         self.assertEqual(obj.ore_type_id, 45506)
+        self.assertEqual(obj.user, user)
 
     def test_should_update_existing_mining_ledger(self, mock_esi):
         # given
@@ -273,17 +272,17 @@ class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
         )
         MiningLedgerRecord.objects.create(
             refinery=refinery,
-            character_id=1101,
+            character_id=1001,
             day=dt.date(2017, 9, 19),
             ore_type_id=45506,
-            corporation_id=2101,
+            corporation_id=2001,
             quantity=199,
         )
         # when
         owner.update_mining_ledger_from_esi()
         # then
         self.assertEqual(refinery.mining_ledger.count(), 2)
-        obj = refinery.mining_ledger.get(character_id=1101)
+        obj = refinery.mining_ledger.get(character_id=1001)
         self.assertEqual(obj.quantity, 500)
 
 
@@ -355,7 +354,6 @@ class TestOwnerUpdateExtractionsFromEsi(NoSocketsTestCase):
             corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
-        owner.fetch_notifications_from_esi()
         refinery = Refinery.objects.create(
             id=1000000000001,
             name="Test",
@@ -378,7 +376,7 @@ class TestOwnerUpdateExtractionsFromEsi(NoSocketsTestCase):
         )
         self.assertEqual(
             extraction.auto_fracture_at,
-            dt.datetime(2021, 4, 18, 18, 00, tzinfo=pytz.UTC),
+            dt.datetime(2021, 4, 15, 21, 00, tzinfo=pytz.UTC),
         )
         self.assertEqual(extraction.products.count(), 0)
         self.assertIsNone(extraction.value)
@@ -392,7 +390,6 @@ class TestOwnerUpdateExtractionsFromEsi(NoSocketsTestCase):
             corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
-        owner.fetch_notifications_from_esi()
         refinery = Refinery.objects.create(
             id=1000000000001,
             name="Test",
@@ -417,7 +414,6 @@ class TestOwnerUpdateExtractionsFromEsi(NoSocketsTestCase):
             corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
         )
-        owner.fetch_notifications_from_esi()
         refinery = Refinery.objects.create(
             id=1000000000001,
             name="Test",
@@ -780,55 +776,6 @@ class TestOwnerFetchNotifications(NoSocketsTestCase):
         )
         self.assertEqual(obj.details["moonID"], 40161708)
         self.assertEqual(obj.details["structureID"], 1000000000001)
-
-
-class TestProcessSurveyInput(NoSocketsTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        load_eveuniverse()
-        load_allianceauth()
-        cls.user, cls.character_ownership = helpers.create_user_from_evecharacter(
-            1001,
-            permissions=[
-                "moonmining.basic_access",
-                "moonmining.extractions_access",
-                "moonmining.add_refinery_owner",
-            ],
-            scopes=[
-                "esi-industry.read_corporation_mining.v1",
-                "esi-universe.read_structures.v1",
-                "esi-characters.read_notifications.v1",
-                "esi-corporations.read_structures.v1",
-            ],
-        )
-        cls.survey_data = fetch_survey_data()
-
-    @patch(MANAGERS_PATH + ".notify", new=lambda *args, **kwargs: None)
-    def test_should_process_survey_normally(self):
-        # when
-        result = Moon.objects.update_moons_from_survey(
-            self.survey_data.get(2), self.user
-        )
-        # then
-        self.assertTrue(result)
-        m1 = Moon.objects.get(pk=40161708)
-        self.assertEqual(m1.products_updated_by, self.user)
-        self.assertAlmostEqual(m1.products_updated_at, now(), delta=dt.timedelta(30))
-        self.assertEqual(m1.products.count(), 4)
-        self.assertEqual(m1.products.get(ore_type_id=45506).amount, 0.19)
-        self.assertEqual(m1.products.get(ore_type_id=46676).amount, 0.23)
-        self.assertEqual(m1.products.get(ore_type_id=46678).amount, 0.25)
-        self.assertEqual(m1.products.get(ore_type_id=46689).amount, 0.33)
-
-        m2 = Moon.objects.get(pk=40161709)
-        self.assertEqual(m2.products_updated_by, self.user)
-        self.assertAlmostEqual(m2.products_updated_at, now(), delta=dt.timedelta(30))
-        self.assertEqual(m2.products.count(), 4)
-        self.assertEqual(m2.products.get(ore_type_id=45492).amount, 0.27)
-        self.assertEqual(m2.products.get(ore_type_id=45494).amount, 0.23)
-        self.assertEqual(m2.products.get(ore_type_id=46676).amount, 0.21)
-        self.assertEqual(m2.products.get(ore_type_id=46678).amount, 0.29)
 
 
 class TestMoonCalcRarityClass(NoSocketsTestCase):
