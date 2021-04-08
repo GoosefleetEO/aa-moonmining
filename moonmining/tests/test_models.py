@@ -977,7 +977,7 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
         cls.ore_quality_excellent = EveOreType.objects.get(id=46281)
         cls.ore_quality_excellent_2 = EveOreType.objects.get(id=46283)
 
-    def test_should_identify_as_jackpot(self):
+    def test_should_be_jackpot(self):
         # given
         extraction = Extraction.objects.create(
             refinery=self.refinery,
@@ -1001,7 +1001,7 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
         # then
         self.assertTrue(result)
 
-    def test_should_not_identify_as_jackpot_1(self):
+    def test_should_not_be_jackpot_1(self):
         # given
         extraction = Extraction.objects.create(
             refinery=self.refinery,
@@ -1025,7 +1025,7 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
         # then
         self.assertFalse(result)
 
-    def test_should_not_identify_as_jackpot_2(self):
+    def test_should_not_be_jackpot_2(self):
         # given
         extraction = Extraction.objects.create(
             refinery=self.refinery,
@@ -1049,7 +1049,7 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
         # then
         self.assertFalse(result)
 
-    def test_should_not_identify_as_jackpot_3(self):
+    def test_should_not_be_jackpot_3(self):
         # given
         extraction = Extraction.objects.create(
             refinery=self.refinery,
@@ -1067,6 +1067,20 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
             extraction=extraction,
             ore_type=self.ore_quality_improved,
             volume=1000000 * 0.1,
+        )
+        # when
+        result = extraction.calc_is_jackpot()
+        # then
+        self.assertFalse(result)
+
+    def test_should_not_be_jackpot_4(self):
+        # given
+        extraction = Extraction.objects.create(
+            refinery=self.refinery,
+            chunk_arrival_at=now() + dt.timedelta(days=3),
+            auto_fracture_at=now() + dt.timedelta(days=4),
+            started_at=now() - dt.timedelta(days=3),
+            status=Extraction.Status.STARTED,
         )
         # when
         result = extraction.calc_is_jackpot()

@@ -355,16 +355,19 @@ class Extraction(models.Model):
             return None
 
     def calc_is_jackpot(self) -> Optional[bool]:
-        """Calculate if extraction is jackpot and return result"""
+        """Calculate if extraction is jackpot and return result.
+        Return None if extraction has no products"""
         try:
-            return all(
-                [
-                    product.ore_type.quality_class == OreQualityClass.EXCELLENT
-                    for product in self.products.select_related("ore_type").all()
-                ]
-            )
+            products_qualities = [
+                product.ore_type.quality_class == OreQualityClass.EXCELLENT
+                for product in self.products.select_related("ore_type").all()
+            ]
         except ObjectDoesNotExist:
             return None
+        else:
+            if not products_qualities:
+                return None
+            return all(products_qualities)
 
     def update_calculated_properties(self) -> float:
         """Update calculated properties for this extraction."""
