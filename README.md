@@ -89,6 +89,10 @@ CELERYBEAT_SCHEDULE['moonmining_run_regular_updates'] = {
     'task': 'moonmining.tasks.run_regular_updates',
     'schedule': crontab(minute='*/10'),
 }
+CELERYBEAT_SCHEDULE['moonmining_run_report_updates'] = {
+    'task': 'moonmining.tasks.run_report_updates',
+    'schedule': crontab(hour='*/2'),
+}
 CELERYBEAT_SCHEDULE['moonmining_run_value_updates'] = {
  'task': 'moonmining.tasks.run_calculated_properties_update',
  'schedule': crontab(minute=30, hour=3)

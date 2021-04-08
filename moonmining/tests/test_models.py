@@ -228,9 +228,7 @@ class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
         cls.moon = helpers.create_moon_40161708()
-        cls.user, character_ownership = helpers.create_default_user_from_evecharacter(
-            1001
-        )
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
         cls.owner = Owner.objects.create(
             corporation=EveCorporationInfo.objects.get(corporation_id=2001),
             character_ownership=character_ownership,
@@ -263,7 +261,6 @@ class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
         self.assertEqual(obj.quantity, 500)
         self.assertEqual(obj.corporation_id, 2001)
         self.assertEqual(obj.ore_type_id, 45506)
-        self.assertEqual(obj.user, self.user)
 
     def test_should_update_existing_mining_ledger(self, mock_esi):
         # given

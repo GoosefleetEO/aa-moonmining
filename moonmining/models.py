@@ -438,7 +438,7 @@ class MiningLedgerRecord(models.Model):
         related_name="mining_ledger",
         help_text="Refinery this mining activity was observed at",
     )
-    day = models.DateField(help_text="last_updated in ESI")
+    day = models.DateField(help_text="last_updated in ESI", db_index=True)
     character = models.ForeignKey(
         EveEntity,
         on_delete=models.CASCADE,
@@ -447,14 +447,6 @@ class MiningLedgerRecord(models.Model):
     )
     ore_type = models.ForeignKey(
         EveOreType, on_delete=models.CASCADE, related_name="mining_ledger"
-    )
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        null=True,
-        default=None,
-        related_name="mining_ledger",
-        help_text="user that did the mining (if any)",
     )
     # regular
     corporation = models.ForeignKey(
@@ -465,14 +457,13 @@ class MiningLedgerRecord(models.Model):
     )
     quantity = models.PositiveBigIntegerField()
 
-    # TODO: Remove comment once stable
-    # class Meta:
-    #     constraints = [
-    #         models.UniqueConstraint(
-    #             fields=["refinery", "day", "character", "ore_type"],
-    #             name="functional_pk_mining_activity",
-    #         )
-    #     ]
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["refinery", "day", "character", "ore_type"],
+                name="functional_pk_mining_activity",
+            )
+        ]
 
 
 class Moon(models.Model):
@@ -730,6 +721,8 @@ class Owner(models.Model):
 
     def fetch_token(self):
         """Fetch token for this mining corp and return it..."""
+        if not self.character_ownership:
+            raise RuntimeError("This owner has no character configured.")
         token = (
             Token.objects.filter(
                 character_id=self.character_ownership.character.character_id
@@ -1093,13 +1086,6 @@ class Refinery(models.Model):
 
     def update_mining_ledger_from_esi(self):
         logger.info("%s: Fetching mining observer records from ESI...", self)
-        character_2_user = {
-            obj[0]: obj[1]
-            for obj in CharacterOwnership.objects.values_list(
-                "character__character_id",
-                "user_id",
-            )
-        }
         records = esi.client.Industry.get_corporation_corporation_id_mining_observers_observer_id(
             corporation_id=self.owner.corporation.corporation_id,
             observer_id=self.id,
@@ -1119,11 +1105,7 @@ class Refinery(models.Model):
                 character=character,
                 day=record["last_updated"],
                 ore_type_id=record["type_id"],
-                defaults={
-                    "corporation": corporation,
-                    "quantity": record["quantity"],
-                    "user_id": character_2_user.get(character.id),
-                },
+                defaults={"corporation": corporation, "quantity": record["quantity"]},
             )
         EveEntity.objects.bulk_update_new_esi()
 

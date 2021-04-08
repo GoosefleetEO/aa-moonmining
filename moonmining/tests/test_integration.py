@@ -168,7 +168,7 @@ class TestUpdateTasks(TestCase):
             eve_type=EveType.objects.get(id=35835),
         )
         # when
-        tasks.run_ledger_updates()
+        tasks.run_report_updates()
         # then
         self.assertEqual(refinery_1.mining_ledger.count(), 2)
         self.assertEqual(refinery_2.mining_ledger.count(), 1)

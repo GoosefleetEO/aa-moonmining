@@ -74,8 +74,8 @@ def mark_successful_update_for_owner(owner_pk):
 
 
 @shared_task
-def run_ledger_updates():
-    """Run tasks for updating ledgers."""
+def run_report_updates():
+    """Run tasks for updating reports and related data."""
     owners_to_update = Owner.objects.filter(is_enabled=True)
     owner_pks = owners_to_update.values_list("pk", flat=True)
     logger.info("Updating mining ledgers for %d owners...", len(owner_pks))
