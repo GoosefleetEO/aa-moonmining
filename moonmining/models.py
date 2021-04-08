@@ -1,4 +1,4 @@
-import datetime as dt
+# import datetime as dt
 from enum import Enum
 from typing import Iterable, Optional
 
@@ -21,11 +21,7 @@ from app_utils.logging import LoggerAddTag
 from app_utils.views import bootstrap_icon_plus_name_html, bootstrap_label_html
 
 from . import __title__, constants
-from .app_settings import (
-    MOONMINING_CANCELED_EXTRACTIONS_HOURS_UNTIL_STALE,
-    MOONMINING_REPROCESSING_YIELD,
-    MOONMINING_VOLUME_PER_MONTH,
-)
+from .app_settings import MOONMINING_REPROCESSING_YIELD, MOONMINING_VOLUME_PER_MONTH
 from .constants import BootstrapContext
 from .core import CalculatedExtraction, CalculatedExtractionProduct
 from .managers import EveOreTypeManger, ExtractionManager, MoonManager
@@ -915,25 +911,22 @@ class Owner(models.Model):
                 new_extractions_count += 1
         if new_extractions_count:
             logger.info("%s: Created %d new extractions.", self, new_extractions_count)
-        # delete stale extractions
-        deadline_canceled_stale = now() - dt.timedelta(
-            hours=MOONMINING_CANCELED_EXTRACTIONS_HOURS_UNTIL_STALE
-        )
-        stale_extractions_qs = (
+        # identify extractions that were likely canceled
+        canceled_extractions_qs = (
             Extraction.objects.filter(refinery__owner=self)
+            .filter(status=Extraction.Status.STARTED)
             .exclude(pk__in=incoming_extraction_pks)
-            .exclude(
-                status=Extraction.Status.CANCELED,
-                canceled_at__isnull=False,
-                canceled_at__gt=deadline_canceled_stale,
-            )
         )
-        stale_extractions_count = stale_extractions_qs.count()
-        if stale_extractions_count:
+        canceled_extractions_count = canceled_extractions_qs.count()
+        if canceled_extractions_count:
             logger.info(
-                "%s: Deleteting %d stale extractions.", self, stale_extractions_count
+                "%s: Found %d likely canceled extractions.",
+                self,
+                canceled_extractions_count,
             )
-            stale_extractions_qs.delete()
+            canceled_extractions_qs.update(
+                status=Extraction.Status.CANCELED, canceled_at=now()
+            )
 
     def update_extractions_from_notifications(self):
         """Add information from notifications to extractions."""
