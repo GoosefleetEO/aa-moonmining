@@ -37,6 +37,15 @@ class EveOreTypeManger(EveTypeManager):
             .filter(eve_group__eve_category_id=constants.EVE_CATEGORY_ID_ASTEROID)
         )
 
+    def update_refined_prices(self):
+        """Update refined prices for all EveOreTypes"""
+        from .models import EveOreTypeRefinedPrice
+
+        for obj in self.all():
+            EveOreTypeRefinedPrice.objects.update_or_create(
+                ore_type=obj, defaults={"value": obj.calc_refined_value_per_unit}
+            )
+
 
 class UpdateCalculatedPropertiesMixin:
     """Mixin for updating all calculated properties of a query set"""

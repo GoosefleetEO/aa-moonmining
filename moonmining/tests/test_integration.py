@@ -12,7 +12,7 @@ from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 from app_utils.testing import create_user_from_evecharacter
 
 from .. import tasks
-from ..models import Moon, Owner, Refinery
+from ..models import EveOreType, Moon, Owner, Refinery
 from . import helpers
 from .testdata.esi_client_stub import esi_client_stub
 from .testdata.load_allianceauth import load_allianceauth
@@ -193,6 +193,8 @@ class TestUpdateTasks(TestCase):
         self.assertIsNotNone(moon.value)
         extraction = refinery.extractions.first()
         self.assertIsNotNone(extraction.value)
+        cinnebar = EveOreType.objects.get(id=45506)
+        self.assertIsNotNone(cinnebar.refined_price.value)
 
 
 class TestProcessSurveyInput(TestCase):

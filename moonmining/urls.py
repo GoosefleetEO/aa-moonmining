@@ -28,5 +28,10 @@ urlpatterns = [
         views.report_owned_value_data,
         name="report_owned_value_data",
     ),
+    path(
+        "report_user_mining_data",
+        views.report_user_mining_data,
+        name="report_user_mining_data",
+    ),
     path("modal_loader_body", views.modal_loader_body, name="modal_loader_body"),
 ]

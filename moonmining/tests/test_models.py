@@ -31,25 +31,28 @@ from .testdata.load_eveuniverse import load_eveuniverse, nearest_celestial_stub
 MODELS_PATH = "moonmining.models"
 
 
-class TestEveOreTypeCalcRefinedValue(NoSocketsTestCase):
+class TestEveOreTypeCalcRefinedValues(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         load_eveuniverse()
 
-    def test_should_return_correct_value(self):
-        # given
-        cinnebar = EveOreType.objects.get(id=45506)
+    def setUp(self) -> None:
+        self.cinnebar = EveOreType.objects.get(id=45506)
         tungsten = EveType.objects.get(id=16637)
         mercury = EveType.objects.get(id=16646)
         evaporite_deposits = EveType.objects.get(id=16635)
         EveMarketPrice.objects.create(eve_type=tungsten, average_price=7000)
         EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
         EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
-        # when
-        result = cinnebar.calc_refined_value(1000000, 0.7)
-        # then
-        self.assertEqual(result, 400225000.0)
+
+    def test_should_return_value_for_volume(self):
+        self.assertEqual(
+            self.cinnebar.calc_refined_value_by_volume(1000000, 0.7), 400225000.0
+        )
+
+    def test_should_return_value_per_unit(self):
+        self.assertEqual(self.cinnebar.calc_refined_value_per_unit(0.7), 4002.25)
 
 
 class TestEveOreTypeProfileUrl(NoSocketsTestCase):

@@ -3,9 +3,9 @@ from collections import defaultdict
 from enum import Enum
 
 from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-
-# from django.db.models import Count, Q
+from django.db.models import ExpressionWrapper, F, FloatField, Q, Sum
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -388,13 +388,26 @@ def upload_survey(request):
         return render(request, "moonmining/modals/upload_survey.html", context=context)
 
 
+def previous_month(obj: dt.datetime) -> dt.datetime:
+    first = obj.replace(day=1)
+    return first - dt.timedelta(days=1)
+
+
 @login_required()
 @permission_required(["moonmining.basic_access", "moonmining.reports_access"])
 def reports(request):
+    month_minus_1 = previous_month(now())
+    month_minus_2 = previous_month(month_minus_1)
+    month_minus_3 = previous_month(month_minus_2)
+    month_format = "%b '%y"
     context = {
         "page_title": "Reports",
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
+        "month_minus_3": month_minus_3.strftime(month_format),
+        "month_minus_2": month_minus_2.strftime(month_format),
+        "month_minus_1": month_minus_1.strftime(month_format),
+        "month_current": now().strftime(month_format),
     }
     return render(request, "moonmining/reports.html", context)
 
@@ -464,6 +477,61 @@ def report_owned_value_data(request):
                 "total": details["total"],
                 "is_total": True,
                 "grand_total_percent": None,
+            }
+        )
+    return JsonResponse(data, safe=False)
+
+
+@login_required()
+@permission_required(["moonmining.basic_access", "moonmining.reports_access"])
+def report_user_mining_data(request):
+    sum_volume = ExpressionWrapper(
+        F("mining_ledger__quantity") * F("mining_ledger__ore_type__volume"),
+        output_field=FloatField(),
+    )
+    # sum_price = ExpressionWrapper(
+    #     F("mining_ledger__quantity")
+    #     * F("mining_ledger__ore_type__refined_price__value"),
+    #     output_field=FloatField(),
+    # )
+    users_mining_totals = (
+        User.objects.filter(profile__main_character__isnull=False)
+        .annotate(
+            volume_month_0=Sum(
+                sum_volume, filter=Q(mining_ledger__day__month=now().month)
+            )
+        )
+        .annotate(
+            volume_month_1=Sum(
+                sum_volume, filter=Q(mining_ledger__day__month=now().month - 1)
+            )
+        )
+        .annotate(
+            volume_month_2=Sum(
+                sum_volume, filter=Q(mining_ledger__day__month=now().month - 2)
+            )
+        )
+        .annotate(
+            volume_month_3=Sum(
+                sum_volume, filter=Q(mining_ledger__day__month=now().month - 3)
+            )
+        )
+    )
+    data = list()
+    for user in users_mining_totals:
+        corporation_name = user.profile.main_character.corporation_name
+        if user.profile.main_character.alliance_ticker:
+            corporation_name += f" [{user.profile.main_character.alliance_ticker}]"
+        data.append(
+            {
+                "id": user.id,
+                "name": str(user.profile.main_character),
+                "corporation": corporation_name,
+                "state": str(user.profile.state),
+                "volume_month_0": user.volume_month_0,
+                "volume_month_1": user.volume_month_1,
+                "volume_month_2": user.volume_month_2,
+                "volume_month_3": user.volume_month_3,
             }
         )
     return JsonResponse(data, safe=False)

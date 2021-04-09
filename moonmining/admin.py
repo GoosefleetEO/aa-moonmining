@@ -53,8 +53,8 @@ class ExtractionAdmin(admin.ModelAdmin):
 
 
 @admin.register(MiningLedgerRecord)
-class MiningActivityAdmin(admin.ModelAdmin):
-    list_display = ("refinery", "day", "character", "ore_type", "quantity")
+class MiningLedgerRecordAdmin(admin.ModelAdmin):
+    list_display = ("refinery", "day", "character", "ore_type", "quantity", "user")
     ordering = ["refinery", "day", "character", "ore_type"]
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):

@@ -8,7 +8,7 @@ from allianceauth.services.hooks import get_extension_logger
 from app_utils.logging import LoggerAddTag
 
 from . import __title__
-from .models import Extraction, Moon, Owner, Refinery
+from .models import EveOreType, Extraction, Moon, Owner, Refinery
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
@@ -106,9 +106,24 @@ def update_mining_ledger_for_refinery(refinery_id):
 @shared_task
 def run_calculated_properties_update():
     """Update the calculated properties of all moons and all extractions."""
+    chain(
+        update_market_prices.si(),
+        update_refined_ore_prices.si(),
+        update_moons.si(),
+        update_extractions.si(),
+    ).apply_async(priority=TASK_PRIORITY_LOWER)
+
+
+@shared_task
+def update_market_prices():
+    """Update all market prices."""
     EveMarketPrice.objects.update_from_esi()
-    update_moons.delay()
-    update_extractions.delay()
+
+
+@shared_task
+def update_refined_ore_prices():
+    """Update refined priced for all ore types."""
+    EveOreType.objects.update_refined_prices()
 
 
 @shared_task
@@ -123,6 +138,13 @@ def update_moons():
 
 
 @shared_task
+def update_moon_calculated_properties(moon_pk):
+    """Update all calculated properties for given moon."""
+    moon = Moon.objects.get(pk=moon_pk)
+    moon.update_calculated_properties()
+
+
+@shared_task
 def update_extractions():
     """Update the calculated properties of all extractions."""
     extraction_pks = Extraction.objects.values_list("pk", flat=True)
@@ -133,13 +155,6 @@ def update_extractions():
         update_extraction_calculated_properties.apply_async(
             kwargs={"extraction_pk": extraction_pk}, priority=TASK_PRIORITY_LOWER
         )
-
-
-@shared_task
-def update_moon_calculated_properties(moon_pk):
-    """Update all calculated properties for given moon."""
-    moon = Moon.objects.get(pk=moon_pk)
-    moon.update_calculated_properties()
 
 
 @shared_task

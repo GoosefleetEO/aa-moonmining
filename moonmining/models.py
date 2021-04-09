@@ -161,10 +161,10 @@ class EveOreType(EveType):
     def profile_url(self) -> str:
         return f"{self.URL_PROFILE_TYPE}?typeId={self.id}"
 
-    def calc_refined_value(
+    def calc_refined_value_by_volume(
         self, volume: float, reprocessing_yield: float = None
     ) -> float:
-        """Calculate the refined total value and return it."""
+        """Calculate the refined total value for given volume and return it."""
         if not reprocessing_yield:
             reprocessing_yield = MOONMINING_REPROCESSING_YIELD
         if not self.volume:
@@ -183,6 +183,26 @@ class EveOreType(EveType):
             if price:
                 value += price * type_material.quantity * r_units * reprocessing_yield
         return value
+
+    def calc_refined_value_per_unit(self, reprocessing_yield: float = None) -> float:
+        """Calculate the refined total value per unit and return it."""
+        if not reprocessing_yield:
+            reprocessing_yield = MOONMINING_REPROCESSING_YIELD
+        units = 10000
+        r_units = units / 100
+        value = 0
+        for type_material in self.materials.select_related(
+            "material_eve_type__market_price"
+        ):
+            try:
+                price = type_material.material_eve_type.market_price.average_price
+            except (ObjectDoesNotExist, AttributeError):
+                continue
+            if price:
+                value += price * type_material.quantity * r_units * reprocessing_yield
+        return value / units
+
+        # EveOreType.objects.annotate(refined_price=Sum(F("materials__quantity") * Value(0.81) * F("materials__material_eve_type__market_price__average_price") / Value(100), output_field=FloatField())).get(id=45506).refined_price
 
     @property
     def icon_url_32(self) -> str:
@@ -205,6 +225,16 @@ class EveOreType(EveType):
         enabled_sections.add(cls.Section.TYPE_MATERIALS)
         enabled_sections.add(cls.Section.DOGMAS)
         return enabled_sections
+
+
+class EveOreTypeRefinedPrice(models.Model):
+    ore_type = models.OneToOneField(
+        EveOreType, on_delete=models.CASCADE, related_name="refined_price"
+    )
+    value = models.FloatField(default=None, null=True)
+
+    def __str__(self) -> str:
+        return f"{self.ore_type.name}={self.value}"
 
 
 class Extraction(models.Model):
@@ -407,7 +437,7 @@ class ExtractionProduct(models.Model):
             value estimate or None if prices are missing
 
         """
-        return self.ore_type.calc_refined_value(
+        return self.ore_type.calc_refined_value_by_volume(
             volume=self.volume, reprocessing_yield=reprocessing_yield
         )
 
@@ -456,6 +486,13 @@ class MiningLedgerRecord(models.Model):
         help_text="corporation of the character at time data was recorded",
     )
     quantity = models.PositiveBigIntegerField()
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
+        related_name="mining_ledger",
+    )
 
     class Meta:
         constraints = [
@@ -600,7 +637,7 @@ class MoonProduct(models.Model):
         """
         if not total_volume:
             total_volume = MOONMINING_VOLUME_PER_MONTH
-        return self.ore_type.calc_refined_value(
+        return self.ore_type.calc_refined_value_by_volume(
             volume=total_volume * self.amount, reprocessing_yield=reprocessing_yield
         )
 
@@ -1095,6 +1132,13 @@ class Refinery(models.Model):
         EveOreType.objects.bulk_get_or_create_esi(
             ids={record["type_id"] for record in records}
         )
+        character_2_user = {
+            obj[0]: obj[1]
+            for obj in CharacterOwnership.objects.values_list(
+                "character__character_id",
+                "user_id",
+            )
+        }
         for record in records:
             character, _ = EveEntity.objects.get_or_create(id=record["character_id"])
             corporation, _ = EveEntity.objects.get_or_create(
@@ -1105,7 +1149,11 @@ class Refinery(models.Model):
                 character=character,
                 day=record["last_updated"],
                 ore_type_id=record["type_id"],
-                defaults={"corporation": corporation, "quantity": record["quantity"]},
+                defaults={
+                    "corporation": corporation,
+                    "quantity": record["quantity"],
+                    "user_id": character_2_user.get(character.id),
+                },
             )
         EveEntity.objects.bulk_update_new_esi()
 

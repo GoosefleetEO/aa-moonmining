@@ -40,13 +40,14 @@ from django.contrib.auth.models import User
 from django.utils.timezone import now
 from eveuniverse.models import EveEntity, EveMarketPrice, EveMoon, EveType
 
-from allianceauth.eveonline.models import EveCorporationInfo
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
 from moonmining.app_settings import MOONMINING_VOLUME_PER_MONTH
 from moonmining.models import (
     EveOreType,
     Extraction,
     ExtractionProduct,
+    MiningLedgerRecord,
     Moon,
     MoonProduct,
     Owner,
@@ -55,6 +56,10 @@ from moonmining.models import (
 
 MAX_MOONS = 5
 MAX_REFINERIES = 2
+MAX_MINERS = 3
+MAX_MINING_MONTHS = 3
+MAX_MINING_ALTS_PER_MINER = 3
+MAX_MINING_DAYS = 10
 DUMMY_CORPORATION_ID = 1000127  # Guristas
 DUMMY_CHARACTER_ID = 3019491  # Guristas CEO
 
@@ -162,6 +167,37 @@ for moon in random.choices(my_moons, k=MAX_REFINERIES):
                 status=Extraction.Status.COMPLETED,
             )
         )
+print(f"Generating mining ledger...")
+
+for refinery in Refinery.objects.select_related("owner__corporation").filter(
+    owner__corporation__corporation_id=DUMMY_CORPORATION_ID
+):
+    for user in User.objects.order_by("?"):
+        for character_ownership in user.character_ownerships.select_related(
+            "character"
+        ).all()[:MAX_MINING_ALTS_PER_MINER]:
+            character, _ = EveEntity.objects.get_or_create_esi(
+                id=character_ownership.character.character_id
+            )
+            corporation, _ = EveEntity.objects.get_or_create_esi(
+                id=character_ownership.character.corporation_id
+            )
+            all_days = sorted([now() - dt.timedelta(days=day) for day in range(31 * 4)])
+            for day in random.sample(all_days, k=MAX_MINING_DAYS):
+                for ore_type_id in refinery.moon.products.values_list(
+                    "ore_type_id", flat=True
+                ):
+                    MiningLedgerRecord.objects.create(
+                        refinery=refinery,
+                        day=day,
+                        character=character,
+                        ore_type_id=ore_type_id,
+                        corporation=corporation,
+                        quantity=random.randint(10000, 100000),
+                        user=user,
+                    )
+
+
 print(f"Updating calculated properties...")
 EveMarketPrice.objects.update_from_esi()
 for moon in my_moons:
