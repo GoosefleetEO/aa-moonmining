@@ -19,7 +19,7 @@
     // magnitude: show value with given magnitude, else magnitude will be calculated
     function formatisk(data, magnitude=null) {
         if ( data != null ) {
-            let power_map = {"t": 12, "b": 9, "m": "6", "k": 3, "": 0}
+            let power_map = {"t": 12, "b": 9, "m": 6, "k": 3, "": 0}
             if (!power_map.hasOwnProperty(magnitude)) {
                 if (data >= 10 ** 12) magnitude = "t";
                 else if (data >= 10 ** 9) magnitude = "b";

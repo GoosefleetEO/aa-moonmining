@@ -9,12 +9,29 @@ register = template.Library()
 
 
 @register.filter
-def formatisk(value) -> Optional[str]:
-    """Return the formatted ISK value or None if input was invalid."""
+def formatisk(value, magnitude: str = None) -> Optional[str]:
+    """Return the formatted ISK value or None if input was invalid.
+
+    Args:
+    - magnitude: use the given magnitude to format the number, e.g. "b"
+    """
     try:
-        return "{:,.1f}b".format(float(value) / constants.VALUE_DIVIDER)
+        value = float(value)
     except (ValueError, TypeError):
         return None
+    power_map = {"t": 12, "b": 9, "m": 6, "k": 3, "": 0}
+    if magnitude not in power_map:
+        if value >= 10 ** 12:
+            magnitude = "t"
+        elif value >= 10 ** 9:
+            magnitude = "b"
+        elif value >= 10 ** 6:
+            magnitude = "m"
+        elif value >= 10 ** 3:
+            magnitude = "k"
+        else:
+            magnitude = ""
+    return f"{value / 10 ** power_map[magnitude]:,.1f}{magnitude}"
 
 
 @register.filter

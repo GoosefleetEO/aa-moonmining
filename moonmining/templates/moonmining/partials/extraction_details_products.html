@@ -27,7 +27,7 @@
                         <td>{{ product.ore_type.quality_class.bootstrap_tag_html }}</td>
                         <td>{{ product.ore_type.rarity_class.bootstrap_tag_html }}</td>
                         <td>{{ product.volume|floatformat:"0"|intcomma }}</td>
-                        <td>{{ product.value|formatisk|default:""}}</td>
+                        <td>{{ product.value|formatisk:"b"|default:""}}</td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -38,7 +38,7 @@
                     <th></th>
                     <th></th>
                     <th>{{ extraction.volume|floatformat:"0"|intcomma }}</th>
-                    <th>{{ extraction.value|formatisk|default:""}}</th>
+                    <th>{{ extraction.value|formatisk:"b"|default:""}}</th>
                 </tr>
             </tfoot>
         </table>
