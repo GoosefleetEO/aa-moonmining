@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import ExpressionWrapper, F, FloatField, Q, Sum
+from django.db.models.functions import Coalesce
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -95,6 +96,13 @@ def extraction_details_button_html(extraction: Extraction) -> str:
 def default_if_none(value, default):
     """Return given default if value is None"""
     if value is None:
+        return default
+    return value
+
+
+def default_if_false(value, default):
+    """Return given default if value is False"""
+    if not value:
         return default
     return value
 
@@ -489,11 +497,11 @@ def report_user_mining_data(request):
         F("mining_ledger__quantity") * F("mining_ledger__ore_type__volume"),
         output_field=FloatField(),
     )
-    # sum_price = ExpressionWrapper(
-    #     F("mining_ledger__quantity")
-    #     * F("mining_ledger__ore_type__refined_price__value"),
-    #     output_field=FloatField(),
-    # )
+    sum_price = ExpressionWrapper(
+        F("mining_ledger__quantity")
+        * Coalesce(F("mining_ledger__ore_type__refined_price__value"), 0),
+        output_field=FloatField(),
+    )
     users_mining_totals = (
         User.objects.filter(profile__main_character__isnull=False)
         .annotate(
@@ -516,6 +524,26 @@ def report_user_mining_data(request):
                 sum_volume, filter=Q(mining_ledger__day__month=now().month - 3)
             )
         )
+        .annotate(
+            price_month_0=Sum(
+                sum_price, filter=Q(mining_ledger__day__month=now().month)
+            )
+        )
+        .annotate(
+            price_month_1=Sum(
+                sum_price, filter=Q(mining_ledger__day__month=now().month - 1)
+            )
+        )
+        .annotate(
+            price_month_2=Sum(
+                sum_price, filter=Q(mining_ledger__day__month=now().month - 2)
+            )
+        )
+        .annotate(
+            price_month_3=Sum(
+                sum_price, filter=Q(mining_ledger__day__month=now().month - 3)
+            )
+        )
     )
     data = list()
     for user in users_mining_totals:
@@ -528,10 +556,14 @@ def report_user_mining_data(request):
                 "name": str(user.profile.main_character),
                 "corporation": corporation_name,
                 "state": str(user.profile.state),
-                "volume_month_0": user.volume_month_0,
-                "volume_month_1": user.volume_month_1,
-                "volume_month_2": user.volume_month_2,
-                "volume_month_3": user.volume_month_3,
+                "volume_month_0": default_if_false(user.volume_month_0, 0),
+                "volume_month_1": default_if_false(user.volume_month_1, 0),
+                "volume_month_2": default_if_false(user.volume_month_2, 0),
+                "volume_month_3": default_if_false(user.volume_month_3, 0),
+                "price_month_0": default_if_false(user.price_month_0, 0),
+                "price_month_1": default_if_false(user.price_month_1, 0),
+                "price_month_2": default_if_false(user.price_month_2, 0),
+                "price_month_3": default_if_false(user.price_month_3, 0),
             }
         )
     return JsonResponse(data, safe=False)

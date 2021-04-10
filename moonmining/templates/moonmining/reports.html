@@ -123,17 +123,33 @@
                         render: $.fn.dataTable.render.number(',', '.', 0)
                     },
                     {
+                        data: 'price_month_3',
+                        render: $.fn.dataTable.render.formatisk()
+                    },
+                    {
                         data: 'volume_month_2',
                         render: $.fn.dataTable.render.number(',', '.', 0)
+                    },
+                    {
+                        data: 'price_month_2',
+                        render: $.fn.dataTable.render.formatisk()
                     },
                     {
                         data: 'volume_month_1',
                         render: $.fn.dataTable.render.number(',', '.', 0)
                     },
                     {
+                        data: 'price_month_1',
+                        render: $.fn.dataTable.render.formatisk()
+                    },
+                    {
                         data: 'volume_month_0',
                         render: $.fn.dataTable.render.number(',', '.', 0)
                     },
+                      {
+                        data: 'price_month_0',
+                        render: $.fn.dataTable.render.formatisk()
+                    }
 
                 ],
                 lengthMenu: DEFAULT_LENGTH_MENU,
