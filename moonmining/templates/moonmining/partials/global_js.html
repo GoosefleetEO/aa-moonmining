@@ -4,7 +4,7 @@
     /* Global constants */
     const DEFAULT_LENGTH_MENU = [[10, 25, 50, 100 -1], [10, 25, 50, 100, "All"]]
     const DEFAULT_PAGE_LENGTH = 50
-    const VALUE_DIVIDER = 1000000000
+    const B_DIVIDER = 9
 
     /* Global functions */
     // Remove the formatting to get integer data for summation
@@ -16,11 +16,20 @@
     };
 
     // Format ISK values for output
-    function formatisk(data) {
+    // magnitude: show value with given magnitude, else magnitude will be calculated
+    function formatisk(data, magnitude=null) {
         if ( data != null ) {
-            return (data / VALUE_DIVIDER).toLocaleString(
+            let power_map = {"t": 12, "b": 9, "m": "6", "k": 3, "": 0}
+            if (!power_map.hasOwnProperty(magnitude)) {
+                if (data >= 10 ** 12) magnitude = "t";
+                else if (data >= 10 ** 9) magnitude = "b";
+                else if (data >= 10 ** 6) magnitude = "m";
+                else if (data >= 10 ** 3) magnitude = "k";
+                else magnitude = "";
+            }
+            return (data / (10 ** power_map[magnitude])).toLocaleString(
                 'en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1}
-            );
+            ) + magnitude;
         }
         else {
             return "";
@@ -28,12 +37,11 @@
     }
 
     // DataTables renderer for ISK values
-    $.fn.dataTable.render.formatisk = function () {
+    $.fn.dataTable.render.formatisk = function(magnitude=null) {
         return function ( data, type, row ) {
             if ( type === 'display' ) {
-                return formatisk(data);
+                return formatisk(data, magnitude);
             }
-
             // Search, order and type can use the original data
             return data;
         };

@@ -573,3 +573,8 @@ def report_user_mining_data(request):
 def modal_loader_body(request):
     """Draw the loader body. Useful for showing a spinner while loading a modal."""
     return render(request, "moonmining/modals/loader_body.html")
+
+
+def tests(request):
+    """Render page with JS tests."""
+    return render(request, "moonmining/tests.html")
