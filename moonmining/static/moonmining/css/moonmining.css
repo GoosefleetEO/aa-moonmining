@@ -1,7 +1,13 @@
+#table_extraction_details thead th:nth-child(4) {
+	text-align: right;
+}
 #table_extraction_details thead th:nth-child(5) {
 	text-align: right;
 }
 #table_extraction_details thead th:nth-child(6) {
+	text-align: right;
+}
+#table_extraction_details tbody td:nth-child(4) {
 	text-align: right;
 }
 #table_extraction_details tbody td:nth-child(5) {

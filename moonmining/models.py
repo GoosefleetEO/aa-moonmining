@@ -362,7 +362,9 @@ class Extraction(models.Model):
         """Return current products as sorted iterable."""
         try:
             return (
-                self.products.select_related("ore_type", "ore_type__eve_group")
+                self.products.select_related(
+                    "ore_type", "ore_type__eve_group", "ore_type__refined_price"
+                )
                 .prefetch_related("ore_type__dogma_attributes")
                 .order_by("-ore_type__eve_group_id")
             )
