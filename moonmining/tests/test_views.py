@@ -14,7 +14,14 @@ from allianceauth.eveonline.models import EveCorporationInfo
 from app_utils.testing import create_user_from_evecharacter, json_response_to_dict
 
 from .. import views
-from ..models import Extraction, Moon, Owner, Refinery
+from ..models import (
+    EveOreTypeRefinedPrice,
+    Extraction,
+    MiningLedgerRecord,
+    Moon,
+    Owner,
+    Refinery,
+)
 from . import helpers
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
@@ -457,21 +464,59 @@ class TestReportsData(TestCase):
         cls.factory = RequestFactory()
         load_eveuniverse()
         load_allianceauth()
+        helpers.generate_eve_entities_from_allianceauth()
         cls.moon = helpers.create_moon_40161708()
+        cls.refinery = helpers.add_refinery(cls.moon)
         Moon.objects.create(eve_moon=EveMoon.objects.get(id=40131695))
         Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161709))
-
-    def test_should_return_owned_moon_values(self):
-        # given
-        user, _ = create_user_from_evecharacter(
+        cls.user, _ = create_user_from_evecharacter(
             1001,
             permissions=["moonmining.basic_access", "moonmining.reports_access"],
             scopes=Owner.esi_scopes(),
         )
+
+    def test_should_return_owned_moon_values(self):
+        # given
         request = self.factory.get(reverse("moonmining:report_owned_value_data"))
-        request.user = user
+        request.user = self.user
         # when
         response = views.report_owned_value_data(request)
         # then
         self.assertEqual(response.status_code, 200)
         # TODO: Test values
+
+    def test_should_return_user_mining_data(self):
+        # given
+        EveOreTypeRefinedPrice.objects.create(ore_type_id=45506, value=10)
+        EveOreTypeRefinedPrice.objects.create(ore_type_id=45494, value=20)
+        MiningLedgerRecord.objects.create(
+            refinery=self.refinery,
+            character_id=1001,
+            day=dt.date(2021, 4, 18),
+            ore_type_id=45506,
+            corporation_id=2001,
+            quantity=100,
+            user=self.user,
+        )
+        MiningLedgerRecord.objects.create(
+            refinery=self.refinery,
+            character_id=1001,
+            day=dt.date(2021, 4, 19),
+            ore_type_id=45494,
+            corporation_id=2001,
+            quantity=200,
+            user=self.user,
+        )
+        request = self.factory.get(reverse("moonmining:report_user_mining_data"))
+        request.user = self.user
+        # when
+        with patch(MODULE_PATH + ".now") as mock_now:
+            mock_now.return_value = dt.datetime(2021, 4, 18, 18, 15, 0, tzinfo=pytz.UTC)
+            response = views.report_user_mining_data(request)
+        # then
+        self.assertEqual(response.status_code, 200)
+        # TODO: Test values
+        data = json_response_to_dict(response)
+        row = data[self.user.id]
+        self.assertEqual(row["volume_month_0"], 3000)
+        self.assertEqual(row["price_month_0"], 10 * 100 + 20 * 200)
