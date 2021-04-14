@@ -54,8 +54,15 @@ class ExtractionAdmin(admin.ModelAdmin):
 
 @admin.register(MiningLedgerRecord)
 class MiningLedgerRecordAdmin(admin.ModelAdmin):
-    list_display = ("refinery", "day", "character", "ore_type", "quantity", "user")
-    ordering = ["refinery", "day", "character", "ore_type"]
+    list_display = ("refinery", "day", "user", "character", "ore_type", "quantity")
+    ordering = ["refinery", "day", "user", "character", "ore_type"]
+    list_filter = (
+        "refinery",
+        "day",
+        "user",
+        ("character", admin.RelatedOnlyFieldListFilter),
+        "ore_type",
+    )
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "character":
@@ -71,6 +78,12 @@ class MiningLedgerRecordAdmin(admin.ModelAdmin):
         if db_field.name == "user":
             kwargs["queryset"] = User.objects.order_by("username")
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Moon)
@@ -152,11 +165,18 @@ class OwnerAdmin(admin.ModelAdmin):
 
     update_owner.short_description = "Update selected owners from ESI"
 
-    def has_change_permission(self, request, obj=None):
-        return False
-
     def has_add_permission(self, request):
         return False
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:  # editing an existing object
+            return self.readonly_fields + (
+                "corporation",
+                "character_ownership",
+                "last_update_at",
+                "last_update_ok",
+            )
+        return self.readonly_fields
 
 
 @admin.register(Refinery)
