@@ -19,6 +19,11 @@ urlpatterns = [
         views.extraction_details,
         name="extraction_details",
     ),
+    path(
+        "extraction_ledger/<int:extraction_pk>",
+        views.extraction_ledger,
+        name="extraction_ledger",
+    ),
     path("moons", views.moons, name="moons"),
     path("moons_data/<str:category>", views.moons_data, name="moons_data"),
     path("moon/<int:moon_pk>", views.moon_details, name="moon_details"),

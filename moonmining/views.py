@@ -22,11 +22,7 @@ from allianceauth.services.hooks import get_extension_logger
 from app_utils.allianceauth import notify_admins
 from app_utils.logging import LoggerAddTag
 from app_utils.messages import messages_plus
-from app_utils.views import (  # fontawesome_link_button_html,
-    bootstrap_label_html,
-    link_html,
-    yesno_str,
-)
+from app_utils.views import link_html, yesno_str
 
 from . import __title__, constants, helpers, tasks
 from .app_settings import (
@@ -37,7 +33,14 @@ from .app_settings import (
 )
 from .forms import MoonScanForm
 from .helpers import HttpResponseUnauthorized
-from .models import Extraction, Moon, OreRarityClass, Owner, Refinery
+from .models import (
+    Extraction,
+    MiningLedgerRecord,
+    Moon,
+    OreRarityClass,
+    Owner,
+    Refinery,
+)
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
@@ -53,20 +56,6 @@ class MoonsCategory(str, helpers.EnumToDict, Enum):
     OURS = "our_moons"
 
 
-def moon_details_button_html(moon: Moon) -> str:
-    return format_html(
-        '<button type="button" '
-        'class="btn btn-default" '
-        'data-toggle="modal" '
-        'data-target="#modalMoonDetails" '
-        'title="Show details for this moon." '
-        "data-ajax_url={}>"
-        '<i class="fas fa-moon"></i>'
-        "</button>",
-        reverse("moonmining:moon_details", args=[moon.pk]),
-    )
-
-
 def moon_link_html(moon: Moon) -> str:
     return format_html(
         '<a href="#" data-toggle="modal" '
@@ -79,17 +68,47 @@ def moon_link_html(moon: Moon) -> str:
     )
 
 
-def extraction_details_button_html(extraction: Extraction) -> str:
+def generic_modal_button_html(modal_id, font_awesome_icon, url, tooltip) -> str:
     return format_html(
         '<button type="button" '
         'class="btn btn-default" '
         'data-toggle="modal" '
-        'data-target="#modalExtractionDetails" '
-        'title="Show details for this extraction." '
+        'data-target="#{}" '
+        'title="{}" '
         "data-ajax_url={}>"
-        '<i class="fas fa-hammer"></i>'
+        '<i class="{}"></i>'
         "</button>",
-        reverse("moonmining:extraction_details", args=[extraction.pk]),
+        modal_id,
+        tooltip,
+        url,
+        font_awesome_icon,
+    )
+
+
+def extraction_ledger_button_html(extraction: Extraction) -> str:
+    return generic_modal_button_html(
+        modal_id="modalExtractionLedger",
+        font_awesome_icon="fas fa-money-check-alt",
+        url=reverse("moonmining:extraction_ledger", args=[extraction.pk]),
+        tooltip="Extraction ledger",
+    )
+
+
+def moon_details_button_html(moon: Moon) -> str:
+    return generic_modal_button_html(
+        modal_id="modalMoonDetails",
+        font_awesome_icon="fas fa-moon",
+        url=reverse("moonmining:moon_details", args=[moon.pk]),
+        tooltip="Moon details",
+    )
+
+
+def extraction_details_button_html(extraction: Extraction) -> str:
+    return generic_modal_button_html(
+        modal_id="modalExtractionDetails",
+        font_awesome_icon="fas fa-hammer",
+        url=reverse("moonmining:extraction_details", args=[extraction.pk]),
+        tooltip="Extraction details",
     )
 
 
@@ -152,18 +171,18 @@ def extractions_data(request, category):
         corporation_html = extraction.refinery.owner.name_html
         corporation_name = extraction.refinery.owner.name
         alliance_name = extraction.refinery.owner.alliance_name
-        actions_html = extraction_details_button_html(extraction)
-        actions_html += " " + moon_details_button_html(extraction.refinery.moon)
+        if extraction.status == Extraction.Status.COMPLETED:
+            actions_html = extraction_ledger_button_html(extraction) + "&nbsp;"
+        else:
+            actions_html = ""
+        actions_html += extraction_details_button_html(extraction)
+        actions_html += "&nbsp;" + moon_details_button_html(extraction.refinery.moon)
         data.append(
             {
                 "id": extraction.pk,
                 "chunk_arrival_at": {
-                    "display": format_html(
-                        "{}&nbsp;{}",
-                        extraction.chunk_arrival_at.strftime(constants.DATETIME_FORMAT),
-                        bootstrap_label_html("Jackpot", "warning")
-                        if extraction.is_jackpot
-                        else "",
+                    "display": extraction.chunk_arrival_at.strftime(
+                        constants.DATETIME_FORMAT
                     ),
                     "sort": extraction.chunk_arrival_at,
                 },
@@ -202,9 +221,52 @@ def extraction_details(request, extraction_pk: int):
         "extraction": extraction,
     }
     if request.GET.get("new_page"):
-        return render(request, "moonmining/extraction_details.html", context)
+        context["title"] = "Extraction"
+        context["content_file"] = "moonmining/partials/extraction_details.html"
+        return render(request, "moonmining/_generic_modal_page.html", context)
     else:
         return render(request, "moonmining/modals/extraction_details.html", context)
+
+
+@login_required
+@permission_required(["moonmining.extractions_access", "moonmining.basic_access"])
+def extraction_ledger(request, extraction_pk: int):
+    try:
+        extraction = (
+            Extraction.objects.all().selected_related_defaults().get(pk=extraction_pk)
+        )
+    except Extraction.DoesNotExist:
+        return HttpResponseNotFound()
+    max_day = extraction.chunk_arrival_at + dt.timedelta(days=6)
+    sum_price = ExpressionWrapper(
+        F("quantity") * Coalesce(F("ore_type__refined_price__value"), 0),
+        output_field=FloatField(),
+    )
+    ledger = (
+        MiningLedgerRecord.objects.filter(
+            refinery=extraction.refinery,
+            day__gte=extraction.chunk_arrival_at,
+            day__lte=max_day,
+        )
+        .select_related("ore_type", "ore_type__refined_price", "character", "user")
+        .annotate(total_price=Sum(sum_price))
+    )
+    total_value = ledger.aggregate(Sum(F("total_price")))["total_price__sum"]
+    context = {
+        "page_title": (
+            f"{extraction.refinery.moon} "
+            f"| {extraction.chunk_arrival_at.strftime(constants.DATE_FORMAT)}"
+        ),
+        "extraction": extraction,
+        "ledger": ledger,
+        "total_value": total_value,
+    }
+    if request.GET.get("new_page"):
+        context["title"] = "Extraction Ledger"
+        context["content_file"] = "moonmining/partials/extraction_ledger.html"
+        return render(request, "moonmining/_generic_modal_page.html", context)
+    else:
+        return render(request, "moonmining/modals/extraction_ledger.html", context)
 
 
 @login_required()
@@ -327,7 +389,9 @@ def moon_details(request, moon_pk: int):
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
     }
     if request.GET.get("new_page"):
-        return render(request, "moonmining/moon_details.html", context)
+        context["title"] = "Moon"
+        context["content_file"] = "moonmining/partials/moon_details.html"
+        return render(request, "moonmining/_generic_modal_page.html", context)
     else:
         return render(request, "moonmining/modals/moon_details.html", context)
 

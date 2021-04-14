@@ -1,0 +1,45 @@
+{% load i18n %}
+{% load humanize %}
+{% load moonmining %}
+
+<div class="row">
+    <div class="col-md-2">
+        <p><strong>Moon:</strong></p>
+    </div>
+    <div class="col-md-10">
+        <p>{{ extraction.refinery.moon }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-2">
+        <p><strong>Location:</strong></p>
+    </div>
+    <div class="col-md-10">
+        {% include "moonmining/partials/location.html" with eve_solar_system=extraction.refinery.moon.eve_moon.eve_planet.eve_solar_system %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-2">
+        <p><strong>Chunk arrival:</strong></p>
+    </div>
+    <div class="col-md-10">
+        <p>
+            {% if extraction.status == extraction.Status.CANCELED %}<s>{% endif %}
+            <span title="{{ extraction.chunk_arrival_at|naturaltime }}">
+                {{ extraction.chunk_arrival_at|datetime }}
+            </span>
+            {% if extraction.status == extraction.Status.CANCELED %}</s>{% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-2">
+        <p><strong>Total mined value:</strong></p>
+    </div>
+    <div class="col-md-10">
+        <p>{{ total_value|formatisk }}</p>
+    </div>
+</div>

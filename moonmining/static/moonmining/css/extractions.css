@@ -1,4 +1,4 @@
-/* Moon list */
+/* Extractions list */
 .table-extractions thead th {
 	text-align: left;
 	vertical-align: middle;
@@ -29,5 +29,25 @@
 	text-align: right;
 }
 .table-extractions tfoot th:nth-child(6) {
+	text-align: right;
+}
+
+/* Extractions ledger */
+.table-extraction-ledger thead th:nth-child(5) {
+	text-align: right;
+}
+.table-extraction-ledger thead th:nth-child(6) {
+	text-align: right;
+}
+.table-extraction-ledger thead th:nth-child(7) {
+	text-align: right;
+}
+#table-extraction-ledger tbody td:nth-child(5) {
+	text-align: right;
+}
+#table-extraction-ledger tbody td:nth-child(6) {
+	text-align: right;
+}
+#table-extraction-ledger tbody td:nth-child(7) {
 	text-align: right;
 }
