@@ -19,21 +19,19 @@
     // magnitude: show value with given magnitude, else magnitude will be calculated
     function formatisk(data, magnitude=null) {
         if ( data != null ) {
-            let power_map = {"t": 12, "b": 9, "m": 6, "k": 3, "": 0}
+            const power_map = {'t': 12, 'b': 9, 'm': 6, 'k': 3, '': 0}
             if (!power_map.hasOwnProperty(magnitude)) {
-                if (data >= 10 ** 12) magnitude = "t";
-                else if (data >= 10 ** 9) magnitude = "b";
-                else if (data >= 10 ** 6) magnitude = "m";
-                else if (data >= 10 ** 3) magnitude = "k";
-                else magnitude = "";
+                if (data >= 10 ** 12) magnitude = 't';
+                else if (data >= 10 ** 9) magnitude = 'b';
+                else if (data >= 10 ** 6) magnitude = 'm';
+                else if (data >= 10 ** 3) magnitude = 'k';
+                else magnitude = '';
             }
             return (data / (10 ** power_map[magnitude])).toLocaleString(
                 'en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1}
-            ) + magnitude;
+            ) + magnitude + ' ISK';
         }
-        else {
-            return "";
-        }
+        else return "";
     }
 
     // DataTables renderer for ISK values

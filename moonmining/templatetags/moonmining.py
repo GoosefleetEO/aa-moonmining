@@ -31,7 +31,7 @@ def formatisk(value, magnitude: str = None) -> Optional[str]:
             magnitude = "k"
         else:
             magnitude = ""
-    return f"{value / 10 ** power_map[magnitude]:,.1f}{magnitude}"
+    return f"{value / 10 ** power_map[magnitude]:,.1f}{magnitude} ISK"
 
 
 @register.filter

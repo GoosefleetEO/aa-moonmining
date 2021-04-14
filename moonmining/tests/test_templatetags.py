@@ -10,19 +10,19 @@ class TestFormatisk(TestCase):
         # when
         result = moonmining.formatisk(1260000000)
         # then
-        self.assertEqual(result, "1.3b")
+        self.assertEqual(result, "1.3b ISK")
 
     def test_should_return_formatted_string_from_number_2(self):
         # when
         result = moonmining.formatisk(123456789)
         # then
-        self.assertEqual(result, "123.5m")
+        self.assertEqual(result, "123.5m ISK")
 
     def test_should_return_formatted_string_from_string(self):
         # when
         result = moonmining.formatisk("1234567890")
         # then
-        self.assertEqual(result, "1.2b")
+        self.assertEqual(result, "1.2b ISK")
 
     def test_should_return_none_when_type_invalid(self):
         # when
@@ -34,7 +34,7 @@ class TestFormatisk(TestCase):
         # when
         result = moonmining.formatisk(123456789, "b")
         # then
-        self.assertEqual(result, "0.1b")
+        self.assertEqual(result, "0.1b ISK")
 
 
 class TestDatetime(TestCase):

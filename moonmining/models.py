@@ -237,7 +237,19 @@ class EveOreTypeRefinedPrice(models.Model):
         return f"{self.ore_type.name}={self.value}"
 
 
-class Extraction(models.Model):
+class ProductsSortedMixin:
+    @cached_property
+    def products_sorted(self):
+        """Return current products as sorted iterable."""
+        try:
+            return self.products.select_related(
+                "ore_type", "ore_type__eve_group", "ore_type__refined_price"
+            ).order_by("-ore_type__eve_group_id")
+        except ObjectDoesNotExist:
+            return type(self).objects.none()
+
+
+class Extraction(models.Model, ProductsSortedMixin):
     """A mining extraction."""
 
     class Status(models.TextChoices):
@@ -356,20 +368,6 @@ class Extraction(models.Model):
     def status_enum(self) -> "Extraction.Status":
         """Return current status as enum type."""
         return self.Status(self.status)
-
-    @cached_property
-    def products_sorted(self):
-        """Return current products as sorted iterable."""
-        try:
-            return (
-                self.products.select_related(
-                    "ore_type", "ore_type__eve_group", "ore_type__refined_price"
-                )
-                .prefetch_related("ore_type__dogma_attributes")
-                .order_by("-ore_type__eve_group_id")
-            )
-        except ObjectDoesNotExist:
-            return ExtractionProduct.objects.none()
 
     def calc_value(self) -> Optional[float]:
         """Calculate value estimate and return result."""
@@ -505,7 +503,7 @@ class MiningLedgerRecord(models.Model):
         ]
 
 
-class Moon(models.Model):
+class Moon(models.Model, ProductsSortedMixin):
     """Known moon through either survey data or anchored refinery.
 
     "Head" model for many of the other models
@@ -557,13 +555,6 @@ class Moon(models.Model):
     @property
     def rarity_tag_html(self) -> str:
         return OreRarityClass(self.rarity_class).bootstrap_tag_html
-
-    @cached_property
-    def products_sorted(self):
-        """Return current products as sorted iterable."""
-        return self.products.select_related("ore_type", "ore_type__eve_group").order_by(
-            "-ore_type__eve_group_id"
-        )
 
     def calc_rarity_class(self) -> Optional[OreRarityClass]:
         try:
