@@ -5,7 +5,7 @@ from enum import Enum
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import ExpressionWrapper, F, FloatField, Q, Sum
+from django.db.models import ExpressionWrapper, F, FloatField, Min, Q, Sum
 from django.db.models.functions import Coalesce
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
@@ -37,7 +37,7 @@ from .app_settings import (
 )
 from .forms import MoonScanForm
 from .helpers import HttpResponseUnauthorized
-from .models import Extraction, Moon, OreRarityClass, Owner
+from .models import Extraction, Moon, OreRarityClass, Owner, Refinery
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
@@ -408,6 +408,21 @@ def reports(request):
     month_minus_2 = previous_month(month_minus_1)
     month_minus_3 = previous_month(month_minus_2)
     month_format = "%b '%y"
+    if (
+        Refinery.objects.filter(
+            owner__is_enabled=True, ledger_last_update_at__isnull=False
+        )
+        .exclude(ledger_last_update_ok=True)
+        .exists()
+    ):
+        ledger_last_updated = None
+    else:
+        try:
+            ledger_last_updated = Refinery.objects.filter(
+                owner__is_enabled=True
+            ).aggregate(Min("ledger_last_update_at"))["ledger_last_update_at__min"]
+        except KeyError:
+            ledger_last_updated = None
     context = {
         "page_title": "Reports",
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
@@ -416,6 +431,7 @@ def reports(request):
         "month_minus_2": month_minus_2.strftime(month_format),
         "month_minus_1": month_minus_1.strftime(month_format),
         "month_current": now().strftime(month_format),
+        "ledger_last_updated": ledger_last_updated,
     }
     return render(request, "moonmining/reports.html", context)
 

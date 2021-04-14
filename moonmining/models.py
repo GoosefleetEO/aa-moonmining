@@ -1077,6 +1077,14 @@ class Refinery(models.Model):
         related_name="refineries",
         help_text="Corporation that owns this refinery",
     )
+    ledger_last_update_at = models.DateTimeField(
+        null=True, default=None, help_text="last successful update of mining ledger"
+    )
+    ledger_last_update_ok = models.BooleanField(
+        null=True,
+        default=None,
+        help_text="True if the last update of the mining ledger was successful",
+    )
 
     def __str__(self):
         return self.name
@@ -1116,6 +1124,9 @@ class Refinery(models.Model):
 
     def update_mining_ledger_from_esi(self):
         logger.info("%s: Fetching mining observer records from ESI...", self)
+        self.ledger_last_update_at = now()
+        self.ledger_last_update_ok = None
+        self.save()
         records = esi.client.Industry.get_corporation_corporation_id_mining_observers_observer_id(
             corporation_id=self.owner.corporation.corporation_id,
             observer_id=self.id,
@@ -1149,6 +1160,8 @@ class Refinery(models.Model):
                 },
             )
         EveEntity.objects.bulk_update_new_esi()
+        self.ledger_last_update_ok = True
+        self.save()
 
     def create_extractions_from_esi_response(self, esi_extractions: List[dict]) -> int:
         existing_extractions = set(

@@ -181,7 +181,14 @@ class OwnerAdmin(admin.ModelAdmin):
 
 @admin.register(Refinery)
 class RefineryAdmin(admin.ModelAdmin):
-    list_display = ("name", "moon", "owner", "eve_type")
+    list_display = (
+        "name",
+        "moon",
+        "owner",
+        "eve_type",
+        "ledger_last_update_ok",
+        "ledger_last_update_at",
+    )
     ordering = ["name"]
     list_filter = (("eve_type", admin.RelatedOnlyFieldListFilter), "owner__corporation")
 
@@ -190,3 +197,15 @@ class RefineryAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+    actions = ["update_mining_ledger"]
+
+    def update_mining_ledger(self, request, queryset):
+        for obj in queryset:
+            tasks.update_mining_ledger_for_refinery.delay(obj.id)
+            text = f"Started updating mining ledger: {obj}. "
+            self.message_user(request, text)
+
+    update_mining_ledger.short_description = (
+        "Update mining ledger for selected refineries from ESI"
+    )

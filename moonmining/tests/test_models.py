@@ -258,6 +258,11 @@ class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
         # when
         refinery.update_mining_ledger_from_esi()
         # then
+        refinery.refresh_from_db()
+        self.assertTrue(refinery.ledger_last_update_ok)
+        self.assertAlmostEqual(
+            refinery.ledger_last_update_at, now(), delta=dt.timedelta(minutes=1)
+        )
         self.assertEqual(refinery.mining_ledger.count(), 2)
         obj = refinery.mining_ledger.get(character_id=1001)
         self.assertEqual(obj.day, dt.date(2017, 9, 19))
@@ -289,6 +294,28 @@ class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
         self.assertEqual(refinery.mining_ledger.count(), 2)
         obj = refinery.mining_ledger.get(character_id=1001)
         self.assertEqual(obj.quantity, 500)
+
+    def test_should_mark_when_update_failed(self, mock_esi):
+        # given
+        mock_esi.client.Industry.get_corporation_corporation_id_mining_observers_observer_id.side_effect = (
+            OSError
+        )
+        refinery = Refinery.objects.create(
+            id=1000000000001,
+            name="Test",
+            moon=self.moon,
+            owner=self.owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        # when
+        with self.assertRaises(OSError):
+            refinery.update_mining_ledger_from_esi()
+        # then
+        refinery.refresh_from_db()
+        self.assertFalse(refinery.ledger_last_update_ok)
+        self.assertAlmostEqual(
+            refinery.ledger_last_update_at, now(), delta=dt.timedelta(minutes=1)
+        )
 
 
 @patch(MODELS_PATH + ".esi")

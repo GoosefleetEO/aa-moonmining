@@ -1,3 +1,5 @@
+{% load humanize %}
+
 <div role="tabpanel" class="tab-pane" id="tab_user_mining">
     <p class="report-title">Total mining of corporation moons by known mains per month</p>
     <div class="table-responsive">
@@ -19,4 +21,5 @@
             </thead>
         </table>
     </div>
+    <p class="text-muted">Last update of mining ledgers: {{ ledger_last_updated|naturaltime|default:"?" }}</p>
 </div>
