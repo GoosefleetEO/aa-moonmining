@@ -194,7 +194,7 @@ class TestUpdateTasks(TestCase):
         extraction = refinery.extractions.first()
         self.assertIsNotNone(extraction.value)
         cinnebar = EveOreType.objects.get(id=45506)
-        self.assertIsNotNone(cinnebar.refined_price.value)
+        self.assertIsNotNone(cinnebar.extras.refined_price)
 
 
 class TestProcessSurveyInput(TestCase):

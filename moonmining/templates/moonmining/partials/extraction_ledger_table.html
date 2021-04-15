@@ -24,7 +24,7 @@
                         <td>{{ record.user.profile.main_character.character_name }}</td>
                         <td>{{ record.character.name }}</td>
                         <td>{{ record.ore_type.name }}</td>
-                        <td data-order="{{ record.ore_type.refined_price.value }}">{{ record.ore_type.refined_price.value|formatisk }}</td>
+                        <td data-order="{{ record.ore_type.extras.refined_price }}">{{ record.ore_type.extras.refined_price|formatisk }}</td>
                         <td data-order="{{ record.quantity }}">{{ record.quantity|intcomma }}</td>
                         <td data-order="{{ record.total_price }}">{{ record.total_price|formatisk }}</td>
                     </tr>
@@ -44,6 +44,9 @@
             order: [ [0, "asc"], [1, "asc"], [2, "asc"], [3, "asc"] ],
             filterDropDown: {
                 columns: [
+                    {
+                        idx: 0
+                    },
                     {
                         idx: 1
                     },

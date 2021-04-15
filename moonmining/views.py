@@ -88,7 +88,7 @@ def generic_modal_button_html(modal_id, font_awesome_icon, url, tooltip) -> str:
 def extraction_ledger_button_html(extraction: Extraction) -> str:
     return generic_modal_button_html(
         modal_id="modalExtractionLedger",
-        font_awesome_icon="fas fa-money-check-alt",
+        font_awesome_icon="fas fa-table",
         url=reverse("moonmining:extraction_ledger", args=[extraction.pk]),
         tooltip="Extraction ledger",
     )
@@ -208,7 +208,16 @@ def extraction_details(request, extraction_pk: int):
     try:
         extraction = (
             Extraction.objects.annotate_volume()
-            .selected_related_defaults()
+            .select_related(
+                "refinery",
+                "refinery__moon",
+                "refinery__moon__eve_moon",
+                "refinery__moon__eve_moon__eve_planet__eve_solar_system",
+                "refinery__moon__eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
+                "canceled_by",
+                "fractured_by",
+                "started_by",
+            )
             .get(pk=extraction_pk)
         )
     except Extraction.DoesNotExist:
@@ -233,13 +242,20 @@ def extraction_details(request, extraction_pk: int):
 def extraction_ledger(request, extraction_pk: int):
     try:
         extraction = (
-            Extraction.objects.all().selected_related_defaults().get(pk=extraction_pk)
+            Extraction.objects.all()
+            .select_related(
+                "refinery",
+                "refinery__moon",
+                "refinery__moon__eve_moon__eve_planet__eve_solar_system",
+                "refinery__moon__eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
+            )
+            .get(pk=extraction_pk)
         )
     except Extraction.DoesNotExist:
         return HttpResponseNotFound()
     max_day = extraction.chunk_arrival_at + dt.timedelta(days=6)
     sum_price = ExpressionWrapper(
-        F("quantity") * Coalesce(F("ore_type__refined_price__value"), 0),
+        F("quantity") * Coalesce(F("ore_type__extras__refined_price"), 0),
         output_field=FloatField(),
     )
     ledger = (
@@ -248,7 +264,7 @@ def extraction_ledger(request, extraction_pk: int):
             day__gte=extraction.chunk_arrival_at,
             day__lte=max_day,
         )
-        .select_related("ore_type", "ore_type__refined_price", "character", "user")
+        .select_related("ore_type", "ore_type__extras", "character", "user")
         .annotate(total_price=Sum(sum_price))
     )
     total_value = ledger.aggregate(Sum(F("total_price")))["total_price__sum"]
@@ -579,7 +595,7 @@ def report_user_mining_data(request):
     )
     sum_price = ExpressionWrapper(
         F("mining_ledger__quantity")
-        * Coalesce(F("mining_ledger__ore_type__refined_price__value"), 0),
+        * Coalesce(F("mining_ledger__ore_type__extras__refined_price"), 0),
         output_field=FloatField(),
     )
     users_mining_totals = (

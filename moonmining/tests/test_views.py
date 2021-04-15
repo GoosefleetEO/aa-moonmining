@@ -15,7 +15,7 @@ from app_utils.testing import create_user_from_evecharacter, json_response_to_di
 
 from .. import views
 from ..models import (
-    EveOreTypeRefinedPrice,
+    EveOreTypeExtras,
     Extraction,
     MiningLedgerRecord,
     Moon,
@@ -487,8 +487,8 @@ class TestReportsData(TestCase):
 
     def test_should_return_user_mining_data(self):
         # given
-        EveOreTypeRefinedPrice.objects.create(ore_type_id=45506, value=10)
-        EveOreTypeRefinedPrice.objects.create(ore_type_id=45494, value=20)
+        EveOreTypeExtras.objects.create(ore_type_id=45506, refined_price=10)
+        EveOreTypeExtras.objects.create(ore_type_id=45494, refined_price=20)
         MiningLedgerRecord.objects.create(
             refinery=self.refinery,
             character_id=1001,

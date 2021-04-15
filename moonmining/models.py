@@ -202,7 +202,7 @@ class EveOreType(EveType):
                 value += price * type_material.quantity * r_units * reprocessing_yield
         return value / units
 
-        # EveOreType.objects.annotate(refined_price=Sum(F("materials__quantity") * Value(0.81) * F("materials__material_eve_type__market_price__average_price") / Value(100), output_field=FloatField())).get(id=45506).refined_price
+        # EveOreType.objects.annotate(extras=Sum(F("materials__quantity") * Value(0.81) * F("materials__material_eve_type__market_price__average_price") / Value(100), output_field=FloatField())).get(id=45506).extras
 
     @property
     def icon_url_32(self) -> str:
@@ -227,14 +227,20 @@ class EveOreType(EveType):
         return enabled_sections
 
 
-class EveOreTypeRefinedPrice(models.Model):
+class EveOreTypeExtras(models.Model):
+    """Extra fields for an EveOreType."""
+
     ore_type = models.OneToOneField(
-        EveOreType, on_delete=models.CASCADE, related_name="refined_price"
+        EveOreType, on_delete=models.CASCADE, related_name="extras"
     )
-    value = models.FloatField(default=None, null=True)
+    refined_price = models.FloatField(
+        default=None,
+        null=True,
+        help_text="price calculated as sum of prices for refined materials",
+    )
 
     def __str__(self) -> str:
-        return f"{self.ore_type.name}={self.value}"
+        return str(self.ore_type)
 
 
 class ProductsSortedMixin:
@@ -243,7 +249,7 @@ class ProductsSortedMixin:
         """Return current products as sorted iterable."""
         try:
             return self.products.select_related(
-                "ore_type", "ore_type__eve_group", "ore_type__refined_price"
+                "ore_type", "ore_type__eve_group", "ore_type__extras"
             ).order_by("-ore_type__eve_group_id")
         except ObjectDoesNotExist:
             return type(self).objects.none()

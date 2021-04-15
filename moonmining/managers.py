@@ -39,11 +39,12 @@ class EveOreTypeManger(EveTypeManager):
 
     def update_refined_prices(self):
         """Update refined prices for all EveOreTypes"""
-        from .models import EveOreTypeRefinedPrice
+        from .models import EveOreTypeExtras
 
         for obj in self.all():
-            EveOreTypeRefinedPrice.objects.update_or_create(
-                ore_type=obj, defaults={"value": obj.calc_refined_value_per_unit}
+            EveOreTypeExtras.objects.update_or_create(
+                ore_type=obj,
+                defaults={"refined_price": obj.calc_refined_value_per_unit},
             )
 
 
@@ -248,9 +249,6 @@ class ExtractionQuerySet(models.QuerySet, UpdateCalculatedPropertiesMixin):
             "refinery__owner",
             "refinery__owner__corporation",
             "refinery__owner__corporation__alliance",
-            "canceled_by",
-            "fractured_by",
-            "started_by",
         )
 
     def update_status(self):
