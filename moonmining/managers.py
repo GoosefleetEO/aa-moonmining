@@ -4,7 +4,8 @@ from typing import Tuple
 
 from django.contrib.auth.models import User
 from django.db import models, transaction
-from django.db.models import Sum
+from django.db.models import ExpressionWrapper, F, FloatField, Sum
+from django.db.models.functions import Coalesce
 from django.utils.timezone import now
 from eveuniverse.managers import EveTypeManager
 from eveuniverse.models import EveMoon
@@ -46,6 +47,22 @@ class EveOreTypeManger(EveTypeManager):
                 ore_type=obj,
                 defaults={"refined_price": obj.calc_refined_value_per_unit},
             )
+
+
+class MiningLedgerRecordManager(models.Manager):
+    def get_queryset(self):
+        """Add calculated values to all object."""
+        sum_price = ExpressionWrapper(
+            F("quantity") * Coalesce(F("unit_price"), 0),
+            output_field=FloatField(),
+        )
+        return (
+            super()
+            .get_queryset()
+            .select_related("ore_type", "ore_type__extras")
+            .annotate(unit_price=F("ore_type__extras__refined_price"))
+            .annotate(total_price=Sum(sum_price, distinct=True))
+        )
 
 
 class UpdateCalculatedPropertiesMixin:

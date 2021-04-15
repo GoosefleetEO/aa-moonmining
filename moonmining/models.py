@@ -25,7 +25,12 @@ from . import __title__, constants
 from .app_settings import MOONMINING_REPROCESSING_YIELD, MOONMINING_VOLUME_PER_MONTH
 from .constants import BootstrapContext
 from .core import CalculatedExtraction, CalculatedExtractionProduct
-from .managers import EveOreTypeManger, ExtractionManager, MoonManager
+from .managers import (
+    EveOreTypeManger,
+    ExtractionManager,
+    MiningLedgerRecordManager,
+    MoonManager,
+)
 from .providers import esi
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
@@ -500,6 +505,8 @@ class MiningLedgerRecord(models.Model):
         related_name="mining_ledger",
     )
 
+    objects = MiningLedgerRecordManager()
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -572,8 +579,8 @@ class Moon(models.Model, ProductsSortedMixin):
                     ).values_list("ore_type__eve_group_id", flat=True)
                 ]
             )
-        except ObjectDoesNotExist:
-            return None
+        except (ObjectDoesNotExist, ValueError):
+            return OreRarityClass.NONE
 
     def calc_value(self) -> Optional[float]:
         """Calculate value estimate."""

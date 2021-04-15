@@ -876,6 +876,14 @@ class TestMoonCalcRarityClass(NoSocketsTestCase):
         # then
         self.assertEqual(result, OreRarityClass.R64)
 
+    def test_should_handle_moon_without_products(self):
+        # given
+        moon = Moon.objects.create(eve_moon_id=40161708)
+        # when
+        result = moon.calc_rarity_class()
+        # then
+        self.assertEqual(result, OreRarityClass.NONE)
+
 
 class TestOreQualityClass(NoSocketsTestCase):
     @classmethod
