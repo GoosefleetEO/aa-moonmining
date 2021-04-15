@@ -380,6 +380,15 @@ class Extraction(models.Model, ProductsSortedMixin):
         """Return current status as enum type."""
         return self.Status(self.status)
 
+    @cached_property
+    def ledger(self) -> models.QuerySet:
+        """Return ledger for this extraction."""
+        max_day = self.chunk_arrival_at + dt.timedelta(days=6)
+        return self.refinery.mining_ledger.filter(
+            day__gte=self.chunk_arrival_at,
+            day__lte=max_day,
+        )
+
     def calc_value(self) -> Optional[float]:
         """Calculate value estimate and return result."""
         try:

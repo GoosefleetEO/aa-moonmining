@@ -15,6 +15,9 @@
 .table-extractions thead th:nth-child(6) {
 	text-align: right;
 }
+.table-extractions thead th:nth-child(7) {
+	text-align: right;
+}
 .table-extractions tbody td:nth-child(5) {
 	text-align: right;
 }
@@ -23,12 +26,19 @@
 }
 .table-extractions tbody td:nth-child(7) {
 	text-align: right;
+}
+.table-extractions tbody td:nth-child(8) {
+	text-align: right;
 	white-space: nowrap;
+	max-width: 5em;
 }
 .table-extractions tfoot th:nth-child(5) {
 	text-align: right;
 }
 .table-extractions tfoot th:nth-child(6) {
+	text-align: right;
+}
+.table-extractions tfoot th:nth-child(7) {
 	text-align: right;
 }
 

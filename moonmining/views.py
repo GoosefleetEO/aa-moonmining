@@ -33,14 +33,7 @@ from .app_settings import (
 )
 from .forms import MoonScanForm
 from .helpers import HttpResponseUnauthorized
-from .models import (
-    Extraction,
-    MiningLedgerRecord,
-    Moon,
-    OreRarityClass,
-    Owner,
-    Refinery,
-)
+from .models import Extraction, Moon, OreRarityClass, Owner, Refinery
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
@@ -173,8 +166,12 @@ def extractions_data(request, category):
         alliance_name = extraction.refinery.owner.alliance_name
         if extraction.status == Extraction.Status.COMPLETED:
             actions_html = extraction_ledger_button_html(extraction) + "&nbsp;"
+            mined_value = extraction.ledger.aggregate(Sum(F("total_price")))[
+                "total_price__sum"
+            ]
         else:
             actions_html = ""
+            mined_value = None
         actions_html += extraction_details_button_html(extraction)
         actions_html += "&nbsp;" + moon_details_button_html(extraction.refinery.moon)
         data.append(
@@ -187,16 +184,21 @@ def extractions_data(request, category):
                     "sort": extraction.chunk_arrival_at,
                 },
                 "moon": str(extraction.refinery.moon),
-                "status_str": extraction.status_enum.bootstrap_tag_html,
+                "status_tag": {
+                    "display": extraction.status_enum.bootstrap_tag_html,
+                    "sort": Extraction.Status(extraction.status).label,
+                },
                 "corporation": {"display": corporation_html, "sort": corporation_name},
                 "volume": extraction.volume,
                 "value": extraction.value if extraction.value else None,
+                "mined_value": mined_value,
                 "details": actions_html,
                 "corporation_name": corporation_name,
                 "alliance_name": alliance_name,
                 "is_jackpot_str": yesno_str(extraction.is_jackpot),
                 "is_ready": extraction.chunk_arrival_at <= now(),
                 "status": extraction.status,
+                "status_str": Extraction.Status(extraction.status).label,
             }
         )
     return JsonResponse(data, safe=False)
@@ -253,12 +255,7 @@ def extraction_ledger(request, extraction_pk: int):
         )
     except Extraction.DoesNotExist:
         return HttpResponseNotFound()
-    max_day = extraction.chunk_arrival_at + dt.timedelta(days=6)
-    ledger = MiningLedgerRecord.objects.filter(
-        refinery=extraction.refinery,
-        day__gte=extraction.chunk_arrival_at,
-        day__lte=max_day,
-    ).select_related("character", "user")
+    ledger = extraction.ledger.select_related("character", "user")
     total_value = ledger.aggregate(Sum(F("total_price")))["total_price__sum"]
     context = {
         "page_title": (
