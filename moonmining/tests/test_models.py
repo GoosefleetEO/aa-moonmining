@@ -394,7 +394,9 @@ class TestOwnerUpdateExtractionsFromEsi(NoSocketsTestCase):
             eve_type=helpers.eve_type_athanor(),
         )
         # when
-        owner.update_extractions_from_esi()
+        with patch(MODELS_PATH + ".now") as mock_now:
+            mock_now.return_value = dt.datetime(2021, 4, 5, 12, 0, 0, tzinfo=pytz.UTC)
+            owner.update_extractions_from_esi()
         # then
         self.assertEqual(refinery.extractions.count(), 1)
         extraction = refinery.extractions.first()
