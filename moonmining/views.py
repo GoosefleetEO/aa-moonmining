@@ -646,22 +646,30 @@ def report_user_mining_data(request):
         corporation_name = user.profile.main_character.corporation_name
         if user.profile.main_character.alliance_ticker:
             corporation_name += f" [{user.profile.main_character.alliance_ticker}]"
-        data.append(
-            {
-                "id": user.id,
-                "name": str(user.profile.main_character),
-                "corporation": corporation_name,
-                "state": str(user.profile.state),
-                "volume_month_0": default_if_false(user.volume_month_0, 0),
-                "volume_month_1": default_if_false(user.volume_month_1, 0),
-                "volume_month_2": default_if_false(user.volume_month_2, 0),
-                "volume_month_3": default_if_false(user.volume_month_3, 0),
-                "price_month_0": default_if_false(user.price_month_0, 0),
-                "price_month_1": default_if_false(user.price_month_1, 0),
-                "price_month_2": default_if_false(user.price_month_2, 0),
-                "price_month_3": default_if_false(user.price_month_3, 0),
-            }
-        )
+        if any(
+            [
+                user.volume_month_0,
+                user.volume_month_1,
+                user.volume_month_2,
+                user.volume_month_3,
+            ]
+        ):
+            data.append(
+                {
+                    "id": user.id,
+                    "name": str(user.profile.main_character),
+                    "corporation": corporation_name,
+                    "state": str(user.profile.state),
+                    "volume_month_0": default_if_false(user.volume_month_0, 0),
+                    "volume_month_1": default_if_false(user.volume_month_1, 0),
+                    "volume_month_2": default_if_false(user.volume_month_2, 0),
+                    "volume_month_3": default_if_false(user.volume_month_3, 0),
+                    "price_month_0": default_if_false(user.price_month_0, 0),
+                    "price_month_1": default_if_false(user.price_month_1, 0),
+                    "price_month_2": default_if_false(user.price_month_2, 0),
+                    "price_month_3": default_if_false(user.price_month_3, 0),
+                }
+            )
     return JsonResponse(data, safe=False)
 
 
