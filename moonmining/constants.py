@@ -1,4 +1,4 @@
-from enum import Enum, IntEnum
+from enum import IntEnum
 
 # EVE IDs
 EVE_CATEGORY_ID_ASTEROID = 25
@@ -24,17 +24,3 @@ VALUE_DIVIDER = 1_000_000_000
 class IconSize(IntEnum):
     SMALL = 32
     MEDIUM = 64
-
-
-class BootstrapContext(str, Enum):
-    """Bootstrap context style names, e.g. for labels"""
-
-    DANGER = "danger"
-    DEFAULT = "default"
-    INFO = "info"
-    PRIMARY = "primary"
-    SUCCESS = "success"
-    WARNING = "warning"
-
-    def __str__(self) -> str:
-        return self.value

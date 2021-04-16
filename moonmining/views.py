@@ -22,7 +22,7 @@ from allianceauth.services.hooks import get_extension_logger
 from app_utils.allianceauth import notify_admins
 from app_utils.logging import LoggerAddTag
 from app_utils.messages import messages_plus
-from app_utils.views import link_html, yesno_str
+from app_utils.views import fontawesome_modal_button_html, link_html, yesno_str
 
 from . import __title__, constants, helpers, tasks
 from .app_settings import (
@@ -61,46 +61,29 @@ def moon_link_html(moon: Moon) -> str:
     )
 
 
-def generic_modal_button_html(modal_id, font_awesome_icon, url, tooltip) -> str:
-    return format_html(
-        '<button type="button" '
-        'class="btn btn-default" '
-        'data-toggle="modal" '
-        'data-target="#{}" '
-        'title="{}" '
-        "data-ajax_url={}>"
-        '<i class="{}"></i>'
-        "</button>",
-        modal_id,
-        tooltip,
-        url,
-        font_awesome_icon,
-    )
-
-
 def extraction_ledger_button_html(extraction: Extraction) -> str:
-    return generic_modal_button_html(
+    return fontawesome_modal_button_html(
         modal_id="modalExtractionLedger",
-        font_awesome_icon="fas fa-table",
-        url=reverse("moonmining:extraction_ledger", args=[extraction.pk]),
+        fa_code="fas fa-table",
+        ajax_url=reverse("moonmining:extraction_ledger", args=[extraction.pk]),
         tooltip="Extraction ledger",
     )
 
 
 def moon_details_button_html(moon: Moon) -> str:
-    return generic_modal_button_html(
+    return fontawesome_modal_button_html(
         modal_id="modalMoonDetails",
-        font_awesome_icon="fas fa-moon",
-        url=reverse("moonmining:moon_details", args=[moon.pk]),
+        fa_code="fas fa-moon",
+        ajax_url=reverse("moonmining:moon_details", args=[moon.pk]),
         tooltip="Moon details",
     )
 
 
 def extraction_details_button_html(extraction: Extraction) -> str:
-    return generic_modal_button_html(
+    return fontawesome_modal_button_html(
         modal_id="modalExtractionDetails",
-        font_awesome_icon="fas fa-hammer",
-        url=reverse("moonmining:extraction_details", args=[extraction.pk]),
+        fa_code="fas fa-hammer",
+        ajax_url=reverse("moonmining:extraction_details", args=[extraction.pk]),
         tooltip="Extraction details",
     )
 
@@ -353,7 +336,7 @@ def moons_data(request, category):
             details_html = ""
         moon_data = {
             "id": moon.pk,
-            "moon_name": moon.eve_moon.name,
+            "moon_name": moon.name,
             "corporation": {"display": corporation_html, "sort": corporation_name},
             "solar_system_link": solar_system_link,
             "region_name": region_name,

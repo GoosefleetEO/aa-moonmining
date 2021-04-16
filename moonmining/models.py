@@ -19,11 +19,14 @@ from allianceauth.eveonline.models import EveCorporationInfo
 from allianceauth.services.hooks import get_extension_logger
 from app_utils.datetime import ldap_time_2_datetime
 from app_utils.logging import LoggerAddTag
-from app_utils.views import bootstrap_icon_plus_name_html, bootstrap_label_html
+from app_utils.views import (
+    BootstrapStyle,
+    bootstrap_icon_plus_name_html,
+    bootstrap_label_html,
+)
 
 from . import __title__, constants
 from .app_settings import MOONMINING_REPROCESSING_YIELD, MOONMINING_VOLUME_PER_MONTH
-from .constants import BootstrapContext
 from .core import CalculatedExtraction, CalculatedExtractionProduct
 from .managers import (
     EveOreTypeManger,
@@ -74,11 +77,11 @@ class OreRarityClass(models.IntegerChoices):
     @property
     def bootstrap_tag_html(self) -> str:
         map_rarity_to_type = {
-            self.R4: BootstrapContext.PRIMARY,
-            self.R8: BootstrapContext.INFO,
-            self.R16: BootstrapContext.SUCCESS,
-            self.R32: BootstrapContext.WARNING,
-            self.R64: BootstrapContext.DANGER,
+            self.R4: BootstrapStyle.PRIMARY,
+            self.R8: BootstrapStyle.INFO,
+            self.R16: BootstrapStyle.SUCCESS,
+            self.R32: BootstrapStyle.WARNING,
+            self.R64: BootstrapStyle.DANGER,
         }
         try:
             return bootstrap_label_html(
@@ -120,8 +123,8 @@ class OreQualityClass(models.TextChoices):
     def bootstrap_tag_html(self) -> str:
         """Return bootstrap tag."""
         map_quality_to_label_def = {
-            self.IMPROVED: {"text": "+15%", "label": BootstrapContext.SUCCESS},
-            self.EXCELLENT: {"text": "+100%", "label": BootstrapContext.WARNING},
+            self.IMPROVED: {"text": "+15%", "label": BootstrapStyle.SUCCESS},
+            self.EXCELLENT: {"text": "+100%", "label": BootstrapStyle.WARNING},
         }
         try:
             label_def = map_quality_to_label_def[self.value]
@@ -273,10 +276,10 @@ class Extraction(models.Model, ProductsSortedMixin):
         @property
         def bootstrap_tag_html(self) -> str:
             map_to_type = {
-                self.STARTED: BootstrapContext.SUCCESS,
-                self.CANCELED: BootstrapContext.DANGER,
-                self.READY: BootstrapContext.WARNING,
-                self.COMPLETED: BootstrapContext.DEFAULT,
+                self.STARTED: BootstrapStyle.SUCCESS,
+                self.CANCELED: BootstrapStyle.DANGER,
+                self.READY: BootstrapStyle.WARNING,
+                self.COMPLETED: BootstrapStyle.DEFAULT,
                 self.UNDEFINED: "",
             }
             try:
@@ -564,7 +567,7 @@ class Moon(models.Model, ProductsSortedMixin):
 
     @property
     def name(self) -> str:
-        return self.eve_moon.name
+        return self.eve_moon.name.replace("Moon ", "")
 
     @cached_property
     def region(self) -> str:

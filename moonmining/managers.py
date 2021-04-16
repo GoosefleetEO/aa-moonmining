@@ -204,7 +204,7 @@ class MoonManager(models.Manager):
                     MoonProduct.objects.bulk_create(moon_products, batch_size=500)
 
                 moon.update_calculated_properties()
-                logger.info("Added moon survey for %s", moon.eve_moon.name)
+                logger.info("Added moon survey for %s", moon.name)
 
             except Exception as ex:
                 logger.warning(

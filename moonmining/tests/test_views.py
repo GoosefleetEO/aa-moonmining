@@ -141,7 +141,7 @@ class TestMoonsData(TestCase):
         data = json_response_to_dict(response)
         self.assertSetEqual(set(data.keys()), {40131695, 40161708, 40161709})
         obj = data[40161708]
-        self.assertEqual(obj["moon_name"], "Auga V - Moon 1")
+        self.assertEqual(obj["moon_name"], "Auga V - 1")
 
     def test_should_return_our_moons_only(self):
         # given
