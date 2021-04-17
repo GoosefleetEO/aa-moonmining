@@ -100,6 +100,24 @@
                     "timestamp": "2019-11-22 05:00:00",
                     "text": "moonID: 40161708\noreVolumeByType:\n  46311: 1928443.0826145012\n  46676: 3308839.521195312\n  46678: 1780056.9386565287\nsolarSystemID: 30002542\nstructureID: 1000000000005\nstructureLink: <a href=\"showinfo:35835\/\/1000000000005\">Dummy<\/a>\nstructureName: Dummy\nstructureTypeID: 35835\n",
                     "is_read": false
+                },
+                {
+                    "notification_id": 1001000603,
+                    "type": "MoonminingExtractionFinished",
+                    "sender_id": 2101,
+                    "sender_type": "corporation",
+                    "timestamp": "2019-11-22 03:00:00",
+                    "text": "autoTime: 132629940000000000\nmoonID: 40161708\noreVolumeByType:\n  46311: 6022254.470615254\n  46676: 1920395.2662618621\n  46678: 5420930.859831968\n  46689: 4866796.773587994\nsolarSystemID: 30002542\nstructureID: 1000000000006\nstructureLink: <a href=\"showinfo:35835\/\/1000000000006\">Dummy<\/a>\nstructureName: Dummy\nstructureTypeID: 35835\n",
+                    "is_read": false
+                },
+                {
+                    "notification_id": 1001000604,
+                    "type": "MoonminingLaserFired",
+                    "sender_id": 2101,
+                    "sender_type": "corporation",
+                    "timestamp": "2019-11-22 04:00:00",
+                    "text": "firedBy: 1001\nfiredByLink: <a href=\"showinfo:1383\/\/1001\">Bruce Wayne<\/a>\nmoonID: 40161708\noreVolumeByType:\n  46311: 6022254.470615254\n  46676: 1920395.2662618621\n  46678: 5420930.859831968\n  46689: 4866796.773587994\nsolarSystemID: 30002542\nstructureID: 1000000000006\nstructureLink: <a href=\"showinfo:35835\/\/1000000000006\">Dummy<\/a>\nstructureName: Dummy\nstructureTypeID: 35835\n",
+                    "is_read": true
                 }
             ],
             "1002": [

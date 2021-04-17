@@ -1043,6 +1043,21 @@ class Owner(models.Model):
                             )
                             updated_count += 1 if updated else 0
                             extraction = None
+                else:
+                    if (
+                        notif.notif_type
+                        == NotificationType.MOONMINING_EXTRACTION_FINISHED
+                    ):
+                        extraction = CalculatedExtraction(
+                            refinery_id=refinery.id,
+                            status=CalculatedExtraction.Status.READY,
+                            auto_fracture_at=ldap_time_2_datetime(
+                                notif.details["autoTime"]
+                            ),
+                            products=CalculatedExtractionProduct.create_list_from_dict(
+                                notif.details["oreVolumeByType"]
+                            ),
+                        )
 
             if extraction:
                 updated = Extraction.objects.update_from_calculated(extraction)

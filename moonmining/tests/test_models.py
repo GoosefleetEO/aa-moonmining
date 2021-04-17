@@ -657,6 +657,44 @@ class TestOwnerUpdateExtractionsFromNotifications(NoSocketsTestCase):
             {46311, 46676, 46678},
         )
 
+    def test_should_create_manually_fractured_extraction_with_products_2(
+        self, mock_esi
+    ):
+        """notification chain starting with 'finished' and missing 'started'"""
+        # given
+        mock_esi.client = esi_client_stub
+        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        owner.fetch_notifications_from_esi()
+        refinery = Refinery.objects.create(
+            id=1000000000006,
+            name="Test",
+            moon=self.moon,
+            owner=owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        extraction = Extraction.objects.create(
+            refinery=refinery,
+            chunk_arrival_at=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
+            started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
+            auto_fracture_at=dt.datetime(2021, 4, 15, 21, 00, tzinfo=pytz.UTC),
+            status=Extraction.Status.STARTED,
+        )
+        # when
+        owner.update_extractions_from_notifications()
+        # then
+        self.assertEqual(refinery.extractions.count(), 1)
+        extraction.refresh_from_db()
+        self.assertEqual(extraction.status, Extraction.Status.COMPLETED)
+        self.assertEqual(extraction.fractured_by_id, 1001)
+        self.assertEqual(
+            set(extraction.products.values_list("ore_type_id", flat=True)),
+            {46311, 46676, 46678, 46689},
+        )
+
     def test_should_cancel_existing_extraction(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub

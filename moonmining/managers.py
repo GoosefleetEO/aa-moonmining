@@ -296,12 +296,28 @@ class ExtractionManager(models.Manager):
         """
         from .models import EveOreType, ExtractionProduct
 
-        try:
-            extraction = self.get(
-                refinery_id=calculated.refinery_id,
-                chunk_arrival_at=calculated.chunk_arrival_at,
+        if calculated.chunk_arrival_at:
+            try:
+                extraction = self.get(
+                    refinery_id=calculated.refinery_id,
+                    chunk_arrival_at=calculated.chunk_arrival_at,
+                )
+            except self.model.DoesNotExist:
+                logger.debug("%s: Could not find matching extraction", calculated)
+                return False
+        elif calculated.auto_fracture_at:
+            try:
+                extraction = self.get(
+                    refinery_id=calculated.refinery_id,
+                    auto_fracture_at=calculated.auto_fracture_at,
+                )
+            except self.model.DoesNotExist:
+                logger.debug("%s: Could not find matching extraction", calculated)
+                return False
+        else:
+            logger.debug(
+                "%s: Not enough data to search for matching extraction", calculated
             )
-        except self.model.DoesNotExist:
             return False
 
         needs_update = False
