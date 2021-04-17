@@ -54,6 +54,12 @@ You can also review the extraction details, incl. which ore qualities you got.
 
 ![moons](https://i.imgur.com/mt9eyNN.png)
 
+### Mining ledger
+
+See what has been minded from an extraction in the mining ledger:
+
+![Mining Ledger](https://i.imgur.com/mQen9Y8.png)
+
 ### Reports
 
 Check out the reporting section for detail reports on your operation, e.g. Breakdown by corporation and moon of your potential total gross moon income per months:
