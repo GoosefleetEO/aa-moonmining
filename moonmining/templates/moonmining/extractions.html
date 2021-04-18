@@ -99,40 +99,9 @@
                 footerCallback: function (row, data, start, end, display) {
                     var api = this.api(), data;
 
-                    const columnVolume = 4
-                    var total_1 = api
-                        .column(columnVolume)
-                        .data()
-                        .reduce(function (a, b) {
-                                return intVal(a) + intVal(b);
-                            },
-                            0
-                        );
-                    $(api.column(columnVolume).footer()).html(
-                        total_1.toLocaleString('en-US', {maximumFractionDigits: 0})
-                    );
-
-                    const columnValue = 5
-                    var total_2 = api
-                        .column(columnValue)
-                        .data()
-                        .reduce(function (a, b) {
-                                return intVal(a) + intVal(b);
-                            },
-                            0
-                        );
-                    $(api.column(columnValue).footer()).html(formatisk(total_2));
-
-                    const columnMinedValue = 6
-                    var total_3 = api
-                        .column(columnMinedValue)
-                        .data()
-                        .reduce(function (a, b) {
-                                return intVal(a) + intVal(b);
-                            },
-                            0
-                        );
-                    $(api.column(columnMinedValue).footer()).html(formatisk(total_3));
+                    dataTableFooterSumColumn(api, 4);
+                    dataTableFooterSumColumn(api, 5, 'isk');
+                    dataTableFooterSumColumn(api, 6, 'isk');
                 }
             };
 

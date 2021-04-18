@@ -6,15 +6,6 @@
     const DEFAULT_PAGE_LENGTH = 50
     const B_DIVIDER = 9
 
-    /* Global functions */
-    // Remove the formatting to get integer data for summation
-    var intVal = function (i) {
-        return typeof i === 'string' ?
-            i.replace(/[\$,]/g, '') * 1 :
-            typeof i === 'number' ?
-                i : 0;
-    };
-
     // Format ISK values for output
     // magnitude: show value with given magnitude, else magnitude will be calculated
     function formatisk(data, magnitude=null) {
@@ -32,6 +23,36 @@
             ) + magnitude;
         }
         else return "";
+    }
+
+    // sum numbers in column and write result in footer row
+    // Args:
+    // - api: current api object
+    // - columnIdx: Index number of columns to sum, starts with 0
+    // - format: format of output. either 'number' or 'isk'
+    function dataTableFooterSumColumn(api, columnIdx, format='number'){
+        // Remove the formatting to get integer data for summation
+        var intVal = function (i) {
+            return typeof i === 'string' ?
+                i.replace(/[\$,]/g, '') * 1 :
+                typeof i === 'number' ?
+                    i : 0;
+        };
+
+        var columnTotal = api
+            .column(columnIdx)
+            .data()
+            .reduce(function (a, b) {
+                    return intVal(a) + intVal(b);
+                },
+                0
+            );
+        if (format == 'isk'){
+            var result = formatisk(columnTotal)
+        } else {
+            var result = columnTotal.toLocaleString('en-US', {maximumFractionDigits: 0})
+        }
+        $(api.column(columnIdx).footer()).html(result);
     }
 
     // DataTables renderer for ISK values

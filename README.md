@@ -20,6 +20,7 @@ An Alliance Auth app for tracking moon extractions and scouting new moons.
 - [Settings](#settings)
 - [Management Commands](#management-commands)
 - [FAQ](#faq)
+- [History](#history)
 - [Change Log](CHANGELOG.md)
 
 ## Features
@@ -196,3 +197,7 @@ Name | Description
 - Q: How are the prices and values of ores calculated?
 - A: The price of an ore is calculated as the sum of prices for it's refined minerals. Since most people are refining their ores before selling them this approach is a better measure of the real value of ores then the direct price.
 The prices themselves are the average item prices across new Eden (not Jita prices), which are the same prices that the in-game client is using to show estimates.
+
+## History
+
+This project started as a fork from [aa-moonstuff](https://gitlab.com/colcrunch/aa-moonstuff) in 2019, but as diverged heavily since then through two major iterations. The first iteration was called Moon Planner and used internally. It had a very different data model build upon [allianceauth-evesde](https://gitlab.com/ErikKalkoken/allianceauth-evesde). The current version is the second iteration and is build upon [django-eveuniverse](https://gitlab.com/ErikKalkoken/django-eveuniverse). Nevertheless, we like to take the opportunity to thank @colcrunch for providing a great starting point with moonstuff.

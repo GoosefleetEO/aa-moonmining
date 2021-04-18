@@ -83,27 +83,8 @@
                 footerCallback: function (row, data, start, end, display) {
                     var api = this.api(), data;
 
-                    const columnPercent = 5
-                    var total_percent = api
-                        .column(columnPercent)
-                        .data()
-                        .reduce(function (a, b) {
-                                return intVal(a) + intVal(b);
-                            },
-                            0
-                        );
-                    $(api.column(columnPercent).footer()).html(total_percent.toFixed(0));
-
-                    const columnTotal = 7
-                    var total_value = api
-                        .column(columnTotal)
-                        .data()
-                        .reduce(function (a, b) {
-                                return intVal(a) + intVal(b);
-                            },
-                            0
-                        );
-                    $(api.column(columnTotal).footer()).html(formatisk(total_value));
+                    dataTableFooterSumColumn(api, 5);
+                    dataTableFooterSumColumn(api, 7, 'isk');
                 }
             });
 
@@ -168,6 +149,18 @@
                     ],
                     bootstrap: true,
                     autoSize: false
+                },
+                footerCallback: function (row, data, start, end, display) {
+                    var api = this.api(), data;
+
+                    dataTableFooterSumColumn(api, 3);
+                    dataTableFooterSumColumn(api, 4, 'isk');
+                    dataTableFooterSumColumn(api, 5);
+                    dataTableFooterSumColumn(api, 6, 'isk');
+                    dataTableFooterSumColumn(api, 7);
+                    dataTableFooterSumColumn(api, 8, 'isk');
+                    dataTableFooterSumColumn(api, 9);
+                    dataTableFooterSumColumn(api, 10, 'isk');
                 }
             });
 
