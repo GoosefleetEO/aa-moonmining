@@ -46,11 +46,6 @@ class TestEveOreTypeCalcRefinedValues(NoSocketsTestCase):
         EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
         EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
 
-    def test_should_return_value_for_volume(self):
-        self.assertEqual(
-            self.cinnebar.calc_refined_value_by_volume(1000000, 0.7), 400225000.0
-        )
-
     def test_should_return_value_per_unit(self):
         self.assertEqual(self.cinnebar.calc_refined_value_per_unit(0.7), 4002.25)
 
@@ -97,12 +92,13 @@ class TestMoonUpdateValue(NoSocketsTestCase):
         EveMarketPrice.objects.create(eve_type=tritanium, average_price=5)
         mexallon = EveType.objects.get(id=36)
         EveMarketPrice.objects.create(eve_type=mexallon, average_price=117)
+        EveOreType.objects.update_refined_prices()
         # when
         result = self.moon.calc_value()
         # then
         self.assertEqual(result, 180498825.5)
 
-    def test_should_return_0_if_prices_are_missing(self):
+    def test_should_return_None_if_prices_are_missing(self):
         # given
         EveMarketPrice.objects.create(
             eve_type=EveType.objects.get(id=45506), average_price=1, adjusted_price=2
@@ -111,32 +107,6 @@ class TestMoonUpdateValue(NoSocketsTestCase):
         result = self.moon.calc_value()
         # then
         self.assertEqual(result, 0)
-
-
-class TestExtractionProduct(NoSocketsTestCase):
-    def test_should_calculate_value_estimate(self):
-        # given
-        load_eveuniverse()
-        load_allianceauth()
-        moon = helpers.create_moon_40161708()
-        helpers.add_refinery(moon)
-        EveMarketPrice.objects.create(
-            eve_type=EveType.objects.get(id=45506), average_price=1, adjusted_price=2
-        )
-        EveMarketPrice.objects.create(
-            eve_type=EveType.objects.get(id=46676), average_price=2, adjusted_price=3
-        )
-        EveMarketPrice.objects.create(
-            eve_type=EveType.objects.get(id=46678), average_price=3, adjusted_price=4
-        )
-        EveMarketPrice.objects.create(
-            eve_type=EveType.objects.get(id=46689), average_price=4, adjusted_price=5
-        )
-        obj = ExtractionProduct.objects.first()
-        # when
-        result = obj.calc_value()
-        # then
-        self.assertIsNotNone(result)
 
 
 @patch(MODELS_PATH + ".esi")

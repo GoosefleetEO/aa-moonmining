@@ -9,6 +9,8 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models import F, Sum, Value
+from django.db.models.functions import Coalesce
 from django.utils.functional import cached_property, classproperty
 from django.utils.timezone import now
 from esi.models import Token
@@ -169,28 +171,25 @@ class EveOreType(EveType):
     def profile_url(self) -> str:
         return f"{self.URL_PROFILE_TYPE}?typeId={self.id}"
 
-    def calc_refined_value_by_volume(
-        self, volume: float, reprocessing_yield: float = None
-    ) -> float:
-        """Calculate the refined total value for given volume and return it."""
-        if not reprocessing_yield:
-            reprocessing_yield = MOONMINING_REPROCESSING_YIELD
-        if not self.volume:
-            return 0
-        volume_per_unit = self.volume
-        units = volume / volume_per_unit
-        r_units = units / 100
-        value = 0
-        for type_material in self.materials.select_related(
-            "material_eve_type__market_price"
-        ):
-            try:
-                price = type_material.material_eve_type.market_price.average_price
-            except (ObjectDoesNotExist, AttributeError):
-                continue
-            if price:
-                value += price * type_material.quantity * r_units * reprocessing_yield
-        return value
+    @property
+    def icon_url_32(self) -> str:
+        return self.icon_url(32)
+
+    @property
+    def rarity_class(self) -> OreRarityClass:
+        return OreRarityClass.from_eve_type(self)
+
+    @cached_property
+    def quality_class(self) -> OreQualityClass:
+        return OreQualityClass.from_eve_type(self)
+
+    def price_by_volume(self, volume: int) -> float:
+        """Return calculated price estimate in ISK for volume in m3."""
+        return self.price_by_units(volume / self.volume)
+
+    def price_by_units(self, units: int) -> float:
+        """Return calculated price estimate in ISK for units."""
+        return self.extras.refined_price * units
 
     def calc_refined_value_per_unit(self, reprocessing_yield: float = None) -> float:
         """Calculate the refined total value per unit and return it."""
@@ -211,18 +210,6 @@ class EveOreType(EveType):
         return value / units
 
         # EveOreType.objects.annotate(extras=Sum(F("materials__quantity") * Value(0.81) * F("materials__material_eve_type__market_price__average_price") / Value(100), output_field=FloatField())).get(id=45506).extras
-
-    @property
-    def icon_url_32(self) -> str:
-        return self.icon_url(32)
-
-    @property
-    def rarity_class(self) -> OreRarityClass:
-        return OreRarityClass.from_eve_type(self)
-
-    @cached_property
-    def quality_class(self) -> OreQualityClass:
-        return OreQualityClass.from_eve_type(self)
 
     @classmethod
     def _enabled_sections_union(cls, enabled_sections: Iterable[str]) -> set:
@@ -393,15 +380,20 @@ class Extraction(models.Model, ProductsSortedMixin):
         )
 
     def calc_value(self) -> Optional[float]:
-        """Calculate value estimate and return result."""
+        """Calculate value estimate."""
         try:
-            return sum(
-                [
-                    product.calc_value()
-                    for product in self.products.select_related("ore_type")
-                ]
-            )
-        except ObjectDoesNotExist:
+            return self.products.select_related(
+                "ore_type", "ore_type__extras"
+            ).aggregate(
+                total_value=Sum(
+                    Coalesce(F("ore_type__extras__refined_price"), 0)
+                    * F("volume")
+                    / F("ore_type__volume")
+                )
+            )[
+                "total_value"
+            ]
+        except (ObjectDoesNotExist, KeyError, AttributeError):
             return None
 
     def calc_is_jackpot(self) -> Optional[bool]:
@@ -449,20 +441,8 @@ class ExtractionProduct(models.Model):
 
     @cached_property
     def value(self) -> float:
-        return self.calc_value()
-
-    def calc_value(self, reprocessing_yield=None) -> float:
-        """returns calculated value estimate in ISK
-
-        Args:
-            reprocessing_yield: expected average yield for ore reprocessing
-        Returns:
-            value estimate or None if prices are missing
-
-        """
-        return self.ore_type.calc_refined_value_by_volume(
-            volume=self.volume, reprocessing_yield=reprocessing_yield
-        )
+        """returns calculated value estimate in ISK"""
+        return self.ore_type.price_by_volume(self.volume)
 
 
 class General(models.Model):
@@ -597,13 +577,19 @@ class Moon(models.Model, ProductsSortedMixin):
     def calc_value(self) -> Optional[float]:
         """Calculate value estimate."""
         try:
-            return sum(
-                [
-                    product.calc_value(total_volume=MOONMINING_VOLUME_PER_MONTH)
-                    for product in self.products.select_related("ore_type")
-                ]
-            )
-        except ObjectDoesNotExist:
+            return self.products.select_related(
+                "ore_type", "ore_type__extras"
+            ).aggregate(
+                total_value=Sum(
+                    Coalesce(F("ore_type__extras__refined_price"), 0)
+                    * F("amount")
+                    * Value(float(MOONMINING_VOLUME_PER_MONTH))
+                    / F("ore_type__volume")
+                )
+            )[
+                "total_value"
+            ]
+        except (ObjectDoesNotExist, KeyError, AttributeError):
             return None
 
     def update_calculated_properties(self):
@@ -634,30 +620,14 @@ class MoonProduct(models.Model):
         ]
 
     @cached_property
-    def value(self):
-        """Return the calculated value for this product."""
-        return self.calc_value()
+    def value(self) -> float:
+        """returns calculated value estimate in ISK"""
+        return self.ore_type.price_by_volume(MOONMINING_VOLUME_PER_MONTH * self.amount)
 
     @property
     def amount_percent(self) -> float:
         """Return the amount of this product as percent"""
         return self.amount * 100
-
-    def calc_value(self, total_volume=None, reprocessing_yield=None) -> float:
-        """Return calculated value estimate for given parameters.
-
-        Args:
-            total_volume: total excepted ore volume for this moon
-            reprocessing_yield: expected average yield for ore reprocessing
-
-        Returns:
-            value estimate for moon or None if prices or products are missing
-        """
-        if not total_volume:
-            total_volume = MOONMINING_VOLUME_PER_MONTH
-        return self.ore_type.calc_refined_value_by_volume(
-            volume=total_volume * self.amount, reprocessing_yield=reprocessing_yield
-        )
 
 
 class Notification(models.Model):

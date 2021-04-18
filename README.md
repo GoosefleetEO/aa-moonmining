@@ -19,6 +19,7 @@ An Alliance Auth app for tracking moon extractions and scouting new moons.
 - [Permissions](#permissions)
 - [Settings](#settings)
 - [Management Commands](#management-commands)
+- [FAQ](#faq)
 - [Change Log](CHANGELOG.md)
 
 ## Features
@@ -182,3 +183,16 @@ Name | Description
 `moonmining_calculate_all`| Calculate all properties for moons and extractions.
 `moonmining_load_eve`| Pre-loads data required for this app from ESI to improve app performance.
 `moonmining_import_moons`| Import moons from an CSV file. Example:<br>`moon_id,ore_type_id,amount`<br>`40161708,45506,0.19`
+
+## FAQ
+
+### Extractions
+
+- Q: Why does the tool not show values and ores for all my extractions?
+- A: Unfortunately, the Eve Online API does only provide basic information for extractions. Additional information like the list of ores are retrieved by trying to match moon mining notifications to extractions. However, that process it not 100% reliable. For example the API returns the latest notifications only, so  notifications for extractions that have been setup weeks ago might no longer be available.
+
+### Prices
+
+- Q: How are the prices and values of ores calculated?
+- A: The price of an ore is calculated as the sum of prices for it's refined minerals. Since most people are refining their ores before selling them this approach is a better measure of the real value of ores then the direct price.
+The prices themselves are the average item prices across new Eden (not Jita prices), which are the same prices that the in-game client is using to show estimates.
