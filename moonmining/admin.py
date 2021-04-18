@@ -1,18 +1,7 @@
 from django.contrib import admin
-from django.contrib.auth.models import User
-from eveuniverse.models import EveEntity
 
 from . import tasks
-from .models import (
-    EveOreType,
-    Extraction,
-    ExtractionProduct,
-    MiningLedgerRecord,
-    Moon,
-    Notification,
-    Owner,
-    Refinery,
-)
+from .models import Extraction, ExtractionProduct, Moon, Notification, Owner, Refinery
 
 
 class ExtractionProductAdmin(admin.TabularInline):
@@ -52,38 +41,23 @@ class ExtractionAdmin(admin.ModelAdmin):
         return False
 
 
-@admin.register(MiningLedgerRecord)
-class MiningLedgerRecordAdmin(admin.ModelAdmin):
-    list_display = ("refinery", "day", "user", "character", "ore_type", "quantity")
-    ordering = ["refinery", "day", "user", "character", "ore_type"]
-    list_filter = (
-        "refinery",
-        "day",
-        "user",
-        ("character", admin.RelatedOnlyFieldListFilter),
-        "ore_type",
-    )
+# @admin.register(MiningLedgerRecord)
+# class MiningLedgerRecordAdmin(admin.ModelAdmin):
+#     list_display = ("refinery", "day", "user", "character", "ore_type", "quantity")
+#     ordering = ["refinery", "day", "user", "character", "ore_type"]
+#     list_filter = (
+#         "refinery",
+#         "day",
+#         "user",
+#         ("character", admin.RelatedOnlyFieldListFilter),
+#         "ore_type",
+#     )
 
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == "character":
-            kwargs["queryset"] = EveEntity.objects.filter(
-                category=EveEntity.CATEGORY_CHARACTER
-            ).order_by("name")
-        if db_field.name == "corporation":
-            kwargs["queryset"] = EveEntity.objects.filter(
-                category=EveEntity.CATEGORY_CORPORATION
-            ).order_by("name")
-        if db_field.name == "ore_type":
-            kwargs["queryset"] = EveOreType.objects.order_by("name")
-        if db_field.name == "user":
-            kwargs["queryset"] = User.objects.order_by("username")
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+#     def has_add_permission(self, request):
+#         return False
 
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
+#     def has_change_permission(self, request, obj=None):
+#         return False
 
 
 @admin.register(Moon)
@@ -190,7 +164,10 @@ class RefineryAdmin(admin.ModelAdmin):
         "ledger_last_update_at",
     )
     ordering = ["name"]
-    list_filter = (("eve_type", admin.RelatedOnlyFieldListFilter), "owner__corporation")
+    list_filter = (
+        ("owner__corporation", admin.RelatedOnlyFieldListFilter),
+        "ledger_last_update_ok",
+    )
 
     def has_change_permission(self, request, obj=None):
         return False

@@ -24,9 +24,9 @@ An Alliance Auth app for tracking moon extractions and scouting new moons.
 
 ## Features
 
-- Upload survey scans and research your moon database.
-- Monitor active extractions from your refineries.
-- Automatic value estimates for all moons and extractions.
+- Upload survey scans and research your moon database
+- Monitor active extractions from your refineries
+- Price estimates for potential monthly income of moons and for extractions
 - Mining ledger per extraction
 - Reports (e.g. potential total income of all owned moons)
 - Tool for mass importing moon scans from external sources
@@ -99,7 +99,7 @@ CELERYBEAT_SCHEDULE['moonmining_run_regular_updates'] = {
 }
 CELERYBEAT_SCHEDULE['moonmining_run_report_updates'] = {
     'task': 'moonmining.tasks.run_report_updates',
-    'schedule': crontab(hour='*/2'),
+    'schedule': crontab(hour='*/1'),
 }
 CELERYBEAT_SCHEDULE['moonmining_run_value_updates'] = {
  'task': 'moonmining.tasks.run_calculated_properties_update',
