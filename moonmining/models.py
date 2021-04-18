@@ -183,13 +183,18 @@ class EveOreType(EveType):
     def quality_class(self) -> OreQualityClass:
         return OreQualityClass.from_eve_type(self)
 
+    @cached_property
+    def price(self) -> float:
+        """Return calculated price estimate in ISK per unit."""
+        return self.extras.refined_price
+
     def price_by_volume(self, volume: int) -> float:
         """Return calculated price estimate in ISK for volume in m3."""
         return self.price_by_units(volume / self.volume)
 
     def price_by_units(self, units: int) -> float:
         """Return calculated price estimate in ISK for units."""
-        return self.extras.refined_price * units
+        return self.price * units
 
     def calc_refined_value_per_unit(self, reprocessing_yield: float = None) -> float:
         """Calculate the refined total value per unit and return it."""
@@ -209,7 +214,9 @@ class EveOreType(EveType):
                 value += price * type_material.quantity * r_units * reprocessing_yield
         return value / units
 
-        # EveOreType.objects.annotate(extras=Sum(F("materials__quantity") * Value(0.81) * F("materials__material_eve_type__market_price__average_price") / Value(100), output_field=FloatField())).get(id=45506).extras
+        # EveOreType.objects.annotate(extras=Sum(
+        # F("materials__quantity") * Value(0.81)
+        # * F("materials__material_eve_type__market_price__average_price") / Value(100), output_field=FloatField()))
 
     @classmethod
     def _enabled_sections_union(cls, enabled_sections: Iterable[str]) -> set:
@@ -238,19 +245,7 @@ class EveOreTypeExtras(models.Model):
         return str(self.ore_type)
 
 
-class ProductsSortedMixin:
-    @cached_property
-    def products_sorted(self):
-        """Return current products as sorted iterable."""
-        try:
-            return self.products.select_related(
-                "ore_type", "ore_type__eve_group", "ore_type__extras"
-            ).order_by("-ore_type__eve_group_id")
-        except ObjectDoesNotExist:
-            return type(self).objects.none()
-
-
-class Extraction(models.Model, ProductsSortedMixin):
+class Extraction(models.Model):
     """A mining extraction."""
 
     class Status(models.TextChoices):
@@ -371,6 +366,20 @@ class Extraction(models.Model, ProductsSortedMixin):
         return self.Status(self.status)
 
     @cached_property
+    def products_sorted(self):
+        """Return current products as sorted iterable."""
+        try:
+            return (
+                self.products.select_related(
+                    "ore_type", "ore_type__eve_group", "ore_type__extras"
+                )
+                .annotate(total_price=self._total_price_db_func())
+                .order_by("-ore_type__eve_group_id")
+            )
+        except (ObjectDoesNotExist, AttributeError):
+            return type(self).objects.none()
+
+    @cached_property
     def ledger(self) -> models.QuerySet:
         """Return ledger for this extraction."""
         max_day = self.chunk_arrival_at + dt.timedelta(days=6)
@@ -384,17 +393,17 @@ class Extraction(models.Model, ProductsSortedMixin):
         try:
             return self.products.select_related(
                 "ore_type", "ore_type__extras"
-            ).aggregate(
-                total_value=Sum(
-                    Coalesce(F("ore_type__extras__refined_price"), 0)
-                    * F("volume")
-                    / F("ore_type__volume")
-                )
-            )[
-                "total_value"
-            ]
+            ).aggregate(total_price=self._total_price_db_func())["total_price"]
         except (ObjectDoesNotExist, KeyError, AttributeError):
             return None
+
+    @staticmethod
+    def _total_price_db_func():
+        return Sum(
+            Coalesce(F("ore_type__extras__refined_price"), 0)
+            * F("volume")
+            / F("ore_type__volume")
+        )
 
     def calc_is_jackpot(self) -> Optional[bool]:
         """Calculate if extraction is jackpot and return result.
@@ -404,7 +413,7 @@ class Extraction(models.Model, ProductsSortedMixin):
                 product.ore_type.quality_class == OreQualityClass.EXCELLENT
                 for product in self.products.select_related("ore_type").all()
             ]
-        except ObjectDoesNotExist:
+        except (ObjectDoesNotExist, AttributeError):
             return None
         else:
             if not products_qualities:
@@ -439,10 +448,10 @@ class ExtractionProduct(models.Model):
     def __str__(self) -> str:
         return f"{self.extraction} - {self.ore_type}"
 
-    @cached_property
-    def value(self) -> float:
-        """returns calculated value estimate in ISK"""
-        return self.ore_type.price_by_volume(self.volume)
+    # @cached_property
+    # def value(self) -> float:
+    #     """returns calculated value estimate in ISK"""
+    #     return self.ore_type.price_by_volume(self.volume)
 
 
 class General(models.Model):
@@ -508,7 +517,7 @@ class MiningLedgerRecord(models.Model):
         ]
 
 
-class Moon(models.Model, ProductsSortedMixin):
+class Moon(models.Model):
     """Known moon through either survey data or anchored refinery.
 
     "Head" model for many of the other models
@@ -557,6 +566,20 @@ class Moon(models.Model, ProductsSortedMixin):
     def is_owned(self) -> bool:
         return hasattr(self, "refinery")
 
+    @cached_property
+    def products_sorted(self):
+        """Return current products as sorted iterable."""
+        try:
+            return (
+                self.products.select_related(
+                    "ore_type", "ore_type__eve_group", "ore_type__extras"
+                )
+                .annotate(total_price=self._total_price_db_func())
+                .order_by("-ore_type__eve_group_id")
+            )
+        except (ObjectDoesNotExist, AttributeError):
+            return type(self).objects.none()
+
     @property
     def rarity_tag_html(self) -> str:
         return OreRarityClass(self.rarity_class).bootstrap_tag_html
@@ -579,18 +602,18 @@ class Moon(models.Model, ProductsSortedMixin):
         try:
             return self.products.select_related(
                 "ore_type", "ore_type__extras"
-            ).aggregate(
-                total_value=Sum(
-                    Coalesce(F("ore_type__extras__refined_price"), 0)
-                    * F("amount")
-                    * Value(float(MOONMINING_VOLUME_PER_MONTH))
-                    / F("ore_type__volume")
-                )
-            )[
-                "total_value"
-            ]
+            ).aggregate(total_value=self._total_price_db_func())["total_value"]
         except (ObjectDoesNotExist, KeyError, AttributeError):
             return None
+
+    @staticmethod
+    def _total_price_db_func():
+        return Sum(
+            Coalesce(F("ore_type__extras__refined_price"), 0)
+            * F("amount")
+            * Value(float(MOONMINING_VOLUME_PER_MONTH))
+            / F("ore_type__volume")
+        )
 
     def update_calculated_properties(self):
         """Update all calculated properties for this moon."""
@@ -619,10 +642,10 @@ class MoonProduct(models.Model):
             )
         ]
 
-    @cached_property
-    def value(self) -> float:
-        """returns calculated value estimate in ISK"""
-        return self.ore_type.price_by_volume(MOONMINING_VOLUME_PER_MONTH * self.amount)
+    # @cached_property
+    # def value(self) -> float:
+    #     """returns calculated value estimate in ISK"""
+    #     return self.ore_type.price_by_volume(MOONMINING_VOLUME_PER_MONTH * self.amount)
 
     @property
     def amount_percent(self) -> float:
