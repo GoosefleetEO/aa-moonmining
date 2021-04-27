@@ -132,7 +132,14 @@ def extractions_data(request, category):
     cutover_dt = now() - dt.timedelta(
         hours=MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE
     )
-    extractions = Extraction.objects.annotate_volume().selected_related_defaults()
+    extractions = (
+        Extraction.objects.annotate_volume()
+        .selected_related_defaults()
+        .select_related(
+            "refinery__moon__eve_moon__eve_planet__eve_solar_system",
+            "refinery__moon__eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
+        )
+    )
     if category == ExtractionsCategory.UPCOMING:
         extractions = extractions.filter(auto_fracture_at__gte=cutover_dt).exclude(
             status=Extraction.Status.CANCELED
@@ -147,6 +154,15 @@ def extractions_data(request, category):
         corporation_html = extraction.refinery.owner.name_html
         corporation_name = extraction.refinery.owner.name
         alliance_name = extraction.refinery.owner.alliance_name
+        moon_name = str(extraction.refinery.moon)
+        refinery_name = str(extraction.refinery.name)
+        solar_system = extraction.refinery.moon.eve_moon.eve_planet.eve_solar_system
+        region = solar_system.eve_constellation.eve_region
+        location = format_html(
+            "{}<br><i>{}</i>",
+            link_html(dotlan.solar_system_url(solar_system.name), moon_name),
+            region.name,
+        )
         if extraction.status == Extraction.Status.COMPLETED:
             actions_html = extraction_ledger_button_html(extraction) + "&nbsp;"
             mined_value = extraction.ledger.aggregate(Sum(F("total_price")))[
@@ -166,7 +182,14 @@ def extractions_data(request, category):
                     ),
                     "sort": extraction.chunk_arrival_at,
                 },
-                "moon": str(extraction.refinery.moon),
+                "refinery": {
+                    "display": refinery_name,
+                    "sort": refinery_name,
+                },
+                "location": {
+                    "display": location,
+                    "sort": moon_name,
+                },
                 "status_tag": {
                     "display": extraction.status_enum.bootstrap_tag_html,
                     "sort": Extraction.Status(extraction.status).label,
@@ -178,6 +201,8 @@ def extractions_data(request, category):
                 "details": actions_html,
                 "corporation_name": corporation_name,
                 "alliance_name": alliance_name,
+                "moon_name": moon_name,
+                "region_name": region.name,
                 "is_jackpot_str": yesno_str(extraction.is_jackpot),
                 "is_ready": extraction.chunk_arrival_at <= now(),
                 "status": extraction.status,
@@ -238,7 +263,24 @@ def extraction_ledger(request, extraction_pk: int):
         )
     except Extraction.DoesNotExist:
         return HttpResponseNotFound()
-    ledger = extraction.ledger.select_related("character", "user")
+    ledger = extraction.ledger.select_related(
+        "character", "corporation", "user__profile__main_character", "ore_type"
+    )
+    sum_price = ExpressionWrapper(
+        F("quantity") * Coalesce(F("unit_price"), 0), output_field=FloatField()
+    )
+    sum_volume = ExpressionWrapper(
+        F("quantity") * F("ore_type__volume"), output_field=FloatField()
+    )
+    character_totals = (
+        ledger.values(
+            character_name=F("character__name"),
+            main_name=F("user__profile__main_character__character_name"),
+            corporation_name=F("user__profile__main_character__corporation_name"),
+        )
+        .annotate(character_total_price=Sum(sum_price, distinct=True))
+        .annotate(character_total_volume=Sum(sum_volume, distinct=True))
+    )
     total_value = ledger.aggregate(Sum(F("total_price")))["total_price__sum"]
     context = {
         "page_title": (
@@ -246,8 +288,9 @@ def extraction_ledger(request, extraction_pk: int):
             f"| {extraction.chunk_arrival_at.strftime(constants.DATE_FORMAT)}"
         ),
         "extraction": extraction,
-        "ledger": ledger,
         "total_value": total_value,
+        "ledger": ledger,
+        "character_totals": character_totals,
     }
     if request.GET.get("new_page"):
         context["title"] = "Extraction Ledger"

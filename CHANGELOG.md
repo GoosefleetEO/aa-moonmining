@@ -15,7 +15,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
-## [1.0.0] - tbd
+## [1.0.0b3] - 2021-04-24
+
+### Added
+
+- Tool for exporting moons from moonstuff v1 (for details see management commands in README)
+- Mining ledger now includes page showing totals per character
+
+### Changed
+
+- Added name of refineries to the extractions list ([#1](https://gitlab.com/ErikKalkoken/aa-moonmining/-/issues/1))
+- Reduced page load time for mining ledger
+
+## [1.0.0b2] - 2021-04-18
 
 > **Note for 1.0.0a3**<br>This alpha release includes a migration reset. Please make sure to migrate to zero BEFORE installing this new version.
 

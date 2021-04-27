@@ -1,3 +1,70 @@
 {% include 'moonmining/partials/extraction_ledger_head.html' %}
-<hr>
-{% include 'moonmining/partials/extraction_ledger_table.html' %}
+<!-- Nav tabs -->
+<ul class="nav nav-tabs" role="tablist">
+    <li role="presentation" class="active"><a href="#ledger" aria-controls="ledger" role="tab" data-toggle="tab">Ledger</a></li>
+    <li role="presentation"><a href="#characters" aria-controls="characters" role="tab" data-toggle="tab">Totals by character</a></li>
+</ul>
+<!-- Tab panes -->
+<div class="panel panel-default panel-tabs">
+    <div class="panel-body">
+        <div class="tab-content">
+            <div role="tabpanel" class="tab-pane active" id="ledger">
+                {% include 'moonmining/partials/extraction_ledger_ledger.html' %}
+            </div>
+            <div role="tabpanel" class="tab-pane" id="characters">
+                {% include 'moonmining/partials/extraction_ledger_characters.html' %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    $(function() {
+        $('#table-ledger-ledger').DataTable({
+            lengthMenu: DEFAULT_LENGTH_MENU,
+            pageLength: DEFAULT_PAGE_LENGTH,
+            order: [ [0, "asc"], [1, "asc"], [2, "asc"], [3, "asc"] ],
+            filterDropDown: {
+                columns: [
+                    {
+                        idx: 0
+                    },
+                    {
+                        idx: 1
+                    },
+                    {
+                        idx: 2
+                    },
+                    {
+                        idx: 3
+                    },
+                    {
+                        idx: 4
+                    }
+                ],
+                bootstrap: true,
+                autoSize: false
+            }
+        });
+    });
+
+    $(function() {
+        $('#table-ledger-character-totals').DataTable({
+            lengthMenu: DEFAULT_LENGTH_MENU,
+            pageLength: DEFAULT_PAGE_LENGTH,
+            order: [ [0, "asc"] ],
+            filterDropDown: {
+                columns: [
+                    {
+                        idx: 1
+                    },
+                    {
+                        idx: 2
+                    }
+                ],
+                bootstrap: true,
+                autoSize: false
+            }
+        });
+    });
+</script>

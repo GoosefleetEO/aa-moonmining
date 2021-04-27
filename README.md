@@ -182,8 +182,9 @@ The following management commands are available to perform administrative tasks:
 Name | Description
 -- | --
 `moonmining_calculate_all`| Calculate all properties for moons and extractions.
+`moonstuff_export_moons`| Export all moons from aa-moonstuff v1 to a CSV file, which can later be used to import the moons into the Moon Mining app
 `moonmining_load_eve`| Pre-loads data required for this app from ESI to improve app performance.
-`moonmining_import_moons`| Import moons from an CSV file. Example:<br>`moon_id,ore_type_id,amount`<br>`40161708,45506,0.19`
+`moonmining_import_moons`| Import moons from a CSV file. Example:<br>`moon_id,ore_type_id,amount`<br>`40161708,45506,0.19`
 
 ## FAQ
 

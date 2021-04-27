@@ -9,16 +9,13 @@
 	vertical-align: middle !important;
 }
 
-.table-extractions thead th:nth-child(5) {
-	text-align: right;
-}
 .table-extractions thead th:nth-child(6) {
 	text-align: right;
 }
 .table-extractions thead th:nth-child(7) {
 	text-align: right;
 }
-.table-extractions tbody td:nth-child(5) {
+.table-extractions thead th:nth-child(8) {
 	text-align: right;
 }
 .table-extractions tbody td:nth-child(6) {
@@ -29,10 +26,10 @@
 }
 .table-extractions tbody td:nth-child(8) {
 	text-align: right;
-	white-space: nowrap;
 }
-.table-extractions tfoot th:nth-child(5) {
+.table-extractions tbody td:nth-child(9) {
 	text-align: right;
+	white-space: nowrap;
 }
 .table-extractions tfoot th:nth-child(6) {
 	text-align: right;
@@ -40,23 +37,39 @@
 .table-extractions tfoot th:nth-child(7) {
 	text-align: right;
 }
+.table-extractions tfoot th:nth-child(8) {
+	text-align: right;
+}
 
 /* Extractions ledger */
-.table-extraction-ledger thead th:nth-child(5) {
+#table-ledger-ledger thead th:nth-child(6) {
 	text-align: right;
 }
-.table-extraction-ledger thead th:nth-child(6) {
+#table-ledger-ledger thead th:nth-child(7) {
 	text-align: right;
 }
-.table-extraction-ledger thead th:nth-child(7) {
+#table-ledger-ledger thead th:nth-child(8) {
 	text-align: right;
 }
-#table-extraction-ledger tbody td:nth-child(5) {
+#table-ledger-ledger tbody td:nth-child(6) {
 	text-align: right;
 }
-#table-extraction-ledger tbody td:nth-child(6) {
+#table-ledger-ledger tbody td:nth-child(7) {
 	text-align: right;
 }
-#table-extraction-ledger tbody td:nth-child(7) {
+#table-ledger-ledger tbody td:nth-child(8) {
+	text-align: right;
+}
+
+#table-ledger-character-totals thead th:nth-child(4) {
+	text-align: right;
+}
+#table-ledger-character-totals thead th:nth-child(5) {
+	text-align: right;
+}
+#table-ledger-character-totals tbody td:nth-child(4) {
+	text-align: right;
+}
+#table-ledger-character-totals tbody td:nth-child(5) {
 	text-align: right;
 }
