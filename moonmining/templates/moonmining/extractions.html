@@ -42,13 +42,20 @@
                         data: 'chunk_arrival_at',
                         render: { _: 'display', sort: 'sort'}
                     },
-                    { data: 'moon' },
                     {
-                        data: 'status_tag',
+                        data: 'refinery',
+                        render: { _: 'display', sort: 'sort'}
+                    },
+                    {
+                        data: 'location',
                         render: { _: 'display', sort: 'sort'}
                     },
                     {
                         data: 'corporation',
+                        render: { _: 'display', sort: 'sort'}
+                    },
+                    {
+                        data: 'status_tag',
                         render: { _: 'display', sort: 'sort'}
                     },
                     {
@@ -68,30 +75,37 @@
                     { data: 'corporation_name' },
                     { data: 'alliance_name' },
                     { data: 'status_str' },
+                    { data: 'moon_name' },
+                    { data: 'region_name' },
                 ],
                 lengthMenu: DEFAULT_LENGTH_MENU,
                 pageLength: DEFAULT_PAGE_LENGTH,
                 columnDefs: [
-                    { "orderable": false, "targets": [ 7 ] },
-                    { "visible": false, "targets": [ 8, 9, 10 ] },
+                    { "orderable": false, "targets": [ 8 ] },
+                    { "visible": false, "targets": [ 9, 10, 11, 12, 13 ] },
                 ],
                 filterDropDown: {
                     columns: [
                         {
-                            idx: 9,
+                            idx: 10,
                             title: "Alliance"
                         },
                         {
-                            idx: 8,
+                            idx: 9,
                             title: "Corporation"
                         },
                         {
-                            idx: 1
+                            idx: 13,
+                            title: "Region"
                         },
                         {
-                            idx: 10,
-                            title: "Status"
+                            idx: 12,
+                            title: "Moon"
                         },
+                        {
+                            idx: 11,
+                            title: "Status"
+                        }
                     ],
                     bootstrap: true,
                     autoSize: false
@@ -99,9 +113,9 @@
                 footerCallback: function (row, data, start, end, display) {
                     var api = this.api(), data;
 
-                    dataTableFooterSumColumn(api, 4);
-                    dataTableFooterSumColumn(api, 5, 'isk');
+                    dataTableFooterSumColumn(api, 5);
                     dataTableFooterSumColumn(api, 6, 'isk');
+                    dataTableFooterSumColumn(api, 7, 'isk');
                 }
             };
 
