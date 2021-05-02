@@ -72,13 +72,13 @@ Check out the reporting section for detail reports on your operation, e.g. Break
 
 ## Installation
 
-### Preconditions
+### Step 1 - Check prerequisites
 
 1. Moon Mining is a plugin for Alliance Auth. If you don't have Alliance Auth running already, please install it first before proceeding. (see the official [AA installation guide](https://allianceauth.readthedocs.io/en/latest/installation/auth/allianceauth/) for details)
 
 2. Moon Mining needs the app [django-eveuniverse](https://gitlab.com/ErikKalkoken/django-eveuniverse) to function. Please make sure it is installed, before before continuing.
 
-### Step 1 - Install app
+### Step 2 - Install app
 
 Make sure you are in the virtual environment (venv) of your Alliance Auth installation. Then install the newest release from PyPI:
 
@@ -86,7 +86,7 @@ Make sure you are in the virtual environment (venv) of your Alliance Auth instal
 pip install aa-moonmining
 ```
 
-### Step 2 - Configure Auth settings
+### Step 3 - Configure Auth settings
 
 Configure your Auth settings (`local.py`) as follows:
 
@@ -112,7 +112,7 @@ CELERYBEAT_SCHEDULE['moonmining_run_value_updates'] = {
 
 - Optional: Add additional settings if you want to change any defaults. See [Settings](#settings) for the full list.
 
-### Step 3 - Finalize App installation
+### Step 4 - Finalize App installation
 
 Run migrations & copy static files
 
@@ -123,7 +123,7 @@ python manage.py collectstatic
 
 Restart your supervisor services for Auth.
 
-### Step 4 - Load ores from ESI
+### Step 5 - Load ores from ESI
 
 Please run the following management command to load all ores from ESI. This has to be done once only.
 
@@ -135,7 +135,19 @@ Please wait until the loading is complete before continuing.
 
 > **Note**<br>You can monitor the progress on by looking at how many tasks are running on the dashboard.
 
-### Step 5 - Update EVE Online API Application
+### Step 6 - Load prices from ESI
+
+In order to get the current prices from ESI initially, please run the following command (assuming the name of your Auth installation is `myauth`):
+
+```bash
+celery -A myauth call moonmining.tasks.run_calculated_properties_update
+```
+
+Please wait until the loading is complete before continuing.
+
+> **Hint**<br>You can monitor the loading progress on the dashboard. As long as the Task Queue shows more than 0 tasks the process is most likely still ongoing.
+
+### Step 7 - Update EVE Online API Application
 
 Update the Eve Online API app used for authentication in your AA installation to include the following scopes:
 
@@ -143,7 +155,7 @@ Update the Eve Online API app used for authentication in your AA installation to
 - `esi-universe.read_structures.v1`
 - `esi-characters.read_notifications.v1`
 
-### Step 6 - Setup permissions
+### Step 8 - Setup permissions
 
 Finally you want to setup permission to define which users / groups will have access to which parts of the app. Check out [permissions](#permissions) for details.
 

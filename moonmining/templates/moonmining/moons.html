@@ -6,7 +6,7 @@
     <span class="pull-right">
         {% if perms.moonmining.upload_moon_scan %}
             <button type="button" class="btn btn-success btn-tabs" data-toggle="modal" data-target="#modalUploadSurvey" data-ajax_url="{% url 'moonmining:upload_survey' %}">
-                {% trans "Upload Moon Surveys" %}
+                {% translate "Upload Moon Surveys" %}
             </button>
         {% endif %}
     </span>
@@ -15,17 +15,17 @@
     <ul id="myTabs" class="nav nav-tabs" role="tablist">
         {% if perms.moonmining.extractions_access %}
             <li role="presentation">
-                <a href="#tab_{{ MoonsCategory.OURS }}" aria-controls="tab_{{ MoonsCategory.OURS }}" role="tab" data-toggle="tab">{% trans "Owned Moons" %}</a>
+                <a href="#tab_{{ MoonsCategory.OURS }}" aria-controls="tab_{{ MoonsCategory.OURS }}" role="tab" data-toggle="tab">{% translate "Owned Moons" %}</a>
             </li>
         {% endif %}
         {% if perms.moonmining.view_all_moons %}
             <li role="presentation">
-                <a href="#tab_{{ MoonsCategory.ALL }}" aria-controls="tab_{{ MoonsCategory.ALL }}" role="tab" data-toggle="tab">{% trans "All Moons" %}</a>
+                <a href="#tab_{{ MoonsCategory.ALL }}" aria-controls="tab_{{ MoonsCategory.ALL }}" role="tab" data-toggle="tab">{% translate "All Moons" %}</a>
             </li>
         {% endif %}
         {% if perms.moonmining.upload_moon_scan %}
             <li role="presentation">
-                <a href="#tab_{{ MoonsCategory.UPLOADS }}" aria-controls="tab_{{ MoonsCategory.UPLOADS }}" role="tab" data-toggle="tab">{% trans "My Uploaded Moons" %}</a>
+                <a href="#tab_{{ MoonsCategory.UPLOADS }}" aria-controls="tab_{{ MoonsCategory.UPLOADS }}" role="tab" data-toggle="tab">{% translate "My Uploaded Moons" %}</a>
             </li>
          {% endif %}
     </ul>
