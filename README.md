@@ -32,6 +32,8 @@ An Alliance Auth app for tracking moon extractions and scouting new moons.
 - Reports (e.g. potential total income of all owned moons)
 - Tool for mass importing moon scans from external sources
 
+>**Hint**<br>If you like to see all extraction events in a calendar view please consider checking out the amazing app [Allianceauth Opcalendar](https://gitlab.com/paulipa/allianceauth-opcalendar), which is fully integrated with **Moon Mining**.
+
 ## Highlights
 
 ### Research your moon database
