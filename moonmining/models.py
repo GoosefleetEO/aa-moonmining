@@ -35,6 +35,7 @@ from .managers import (
     ExtractionManager,
     MiningLedgerRecordManager,
     MoonManager,
+    RefineryManager,
 )
 from .providers import esi
 
@@ -473,7 +474,6 @@ class General(models.Model):
 class MiningLedgerRecord(models.Model):
     """A recorded mining activity in the vicinity of a refinery."""
 
-    # pk
     refinery = models.ForeignKey(
         "Refinery",
         on_delete=models.CASCADE,
@@ -787,14 +787,14 @@ class Owner(models.Model):
         refineries = self._fetch_refineries_from_esi()
         for structure_id, _ in refineries.items():
             self._update_or_create_refinery_from_esi(structure_id)
-
         # remove refineries that no longer exist
         self.refineries.exclude(id__in=refineries).delete()
 
         self.last_update_at = now()
         self.save()
 
-    def _fetch_refineries_from_esi(self) -> dict:
+    def _fetch_refineries_from_esi(self) -> Optional[dict]:
+        """Return refineries fetched from ESI or None if there was an error."""
         logger.info("%s: Fetching refineries from ESI...", self)
         structures = esi.client.Corporation.get_corporations_corporation_id_structures(
             corporation_id=self.corporation.corporation_id,
@@ -810,15 +810,14 @@ class Owner(models.Model):
                 refineries[structure_info["structure_id"]] = structure_info
         return refineries
 
-    def _update_or_create_refinery_from_esi(self, structure_id: int):
+    def _update_or_create_refinery_from_esi(self, structure_id: int) -> bool:
+        """Update or create a refinery from ESI and return True if successful
+        else False.
+        """
         logger.info("%s: Fetching details for refinery #%d", self, structure_id)
-        try:
-            structure_info = esi.client.Universe.get_universe_structures_structure_id(
-                structure_id=structure_id, token=self.fetch_token().valid_access_token()
-            ).results()
-        except OSError:
-            logger.exception("%s: Failed to fetch refinery #%d", self, structure_id)
-            return
+        structure_info = esi.client.Universe.get_universe_structures_structure_id(
+            structure_id=structure_id, token=self.fetch_token().valid_access_token()
+        ).results()
         refinery, _ = Refinery.objects.update_or_create(
             id=structure_id,
             defaults={
@@ -829,6 +828,7 @@ class Owner(models.Model):
         )
         if not refinery.moon:
             refinery.update_moon_from_structure_info(structure_info)
+        return True
 
     def fetch_notifications_from_esi(self) -> bool:
         """fetches notification for the current owners and proceses them"""
@@ -1118,6 +1118,8 @@ class Refinery(models.Model):
         default=None,
         help_text="True if the last update of the mining ledger was successful",
     )
+
+    objects = RefineryManager()
 
     def __str__(self):
         return self.name

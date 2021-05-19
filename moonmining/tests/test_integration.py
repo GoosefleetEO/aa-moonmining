@@ -72,7 +72,9 @@ class TestUpdateTasks(TestCase):
         tasks.run_regular_updates.delay()
         # then
         moon.refresh_from_db()
-        self.assertSetEqual(helpers.model_ids(Refinery), {1000000000001, 1000000000002})
+        self.assertSetEqual(
+            Refinery.objects.ids(), {1000000000001, 1000000000002, 1000000000021}
+        )
         refinery = Refinery.objects.get(id=1000000000001)
         self.assertEqual(refinery.extractions.count(), 1)
         corporation_2001.refresh_from_db()

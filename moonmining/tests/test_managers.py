@@ -131,3 +131,34 @@ class TestProcessSurveyInput(NoSocketsTestCase):
         self.assertEqual(m2.products.get(ore_type_id=45494).amount, 0.23)
         self.assertEqual(m2.products.get(ore_type_id=46676).amount, 0.21)
         self.assertEqual(m2.products.get(ore_type_id=46678).amount, 0.29)
+
+
+class TestRefineryManager(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        load_allianceauth()
+        helpers.generate_eve_entities_from_allianceauth()
+        cls.owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+        )
+
+    def test_should_return_ids(self):
+        # given
+        Refinery.objects.create(
+            id=1001,
+            name="Test",
+            owner=self.owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        Refinery.objects.create(
+            id=1002,
+            name="Test",
+            owner=self.owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        # when
+        result = Refinery.objects.ids()
+        # then
+        self.assertSetEqual(result, {1001, 1002})

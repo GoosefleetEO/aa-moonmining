@@ -306,6 +306,27 @@
                     "next_reinforce_hour": null,
                     "profile_id": 52436,
                     "reinforce_hour": 19,
+                    "services": [
+                        {
+                            "name": "Reprocessing",
+                            "state": "online"
+                        }
+                    ],
+                    "state": "shield_vulnerable",
+                    "state_timer_end": null,
+                    "state_timer_start": null,
+                    "structure_id": 1000000000021,
+                    "system_id": 30002542,
+                    "type_id": 35835,
+                    "unanchors_at": null
+                },
+                {
+                    "corporation_id": 2001,
+                    "fuel_expires": "2020-03-05T05:00:00Z",
+                    "next_reinforce_apply": null,
+                    "next_reinforce_hour": null,
+                    "profile_id": 52436,
+                    "reinforce_hour": 19,
                     "services": [],
                     "state": "shield_vulnerable",
                     "state_timer_end": null,
@@ -455,6 +476,17 @@
                     "z": -163686684205.0
                 },
                 "solar_system_id": 30002063,
+                "type_id": 35835
+            },
+            "1000000000021": {
+                "owner_id": 2001,
+                "name": "Auga - Reprocessing",
+                "position": {
+                    "x": 25028384780.0,
+                    "y": 7310316270.0,
+                    "z": -163686684205.0
+                },
+                "solar_system_id": 30002542,
                 "type_id": 35835
             },
             "1000000000099": {

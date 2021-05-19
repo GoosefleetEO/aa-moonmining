@@ -378,3 +378,8 @@ class ExtractionManager(models.Manager):
             extraction.update_calculated_properties()
             updated = True
         return updated
+
+
+class RefineryManager(models.Manager):
+    def ids(self) -> set:
+        return set(self.values_list("id", flat=True))
