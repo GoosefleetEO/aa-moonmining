@@ -9,11 +9,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
-- Show volume totals in header, row totals for price and volume and % totals for characters
-
 ### Changed
 
--
+### Fixed
+
+## [1.0.0b4] - 2021-05-19
+
+### Added
+
+- Show volume totals in header, row totals for price and volume and % totals for characters
 
 ### Fixed
 
