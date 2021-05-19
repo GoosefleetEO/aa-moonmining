@@ -5,7 +5,16 @@ from enum import Enum
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import ExpressionWrapper, F, FloatField, Min, Q, Sum
+from django.db.models import (
+    ExpressionWrapper,
+    F,
+    FloatField,
+    IntegerField,
+    Min,
+    Q,
+    Sum,
+    Value,
+)
 from django.db.models.functions import Coalesce
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
@@ -266,11 +275,13 @@ def extraction_ledger(request, extraction_pk: int):
     ledger = extraction.ledger.select_related(
         "character", "corporation", "user__profile__main_character", "ore_type"
     )
+    total_value = ledger.aggregate(Sum(F("total_price")))["total_price__sum"]
+    total_volume = ledger.aggregate(Sum(F("total_volume")))["total_volume__sum"]
     sum_price = ExpressionWrapper(
         F("quantity") * Coalesce(F("unit_price"), 0), output_field=FloatField()
     )
     sum_volume = ExpressionWrapper(
-        F("quantity") * F("ore_type__volume"), output_field=FloatField()
+        F("quantity") * F("ore_type__volume"), output_field=IntegerField()
     )
     character_totals = (
         ledger.values(
@@ -280,8 +291,18 @@ def extraction_ledger(request, extraction_pk: int):
         )
         .annotate(character_total_price=Sum(sum_price, distinct=True))
         .annotate(character_total_volume=Sum(sum_volume, distinct=True))
+        .annotate(
+            character_percent_value=ExpressionWrapper(
+                F("character_total_price") / Value(total_value) * Value(100),
+                output_field=IntegerField(),
+            )
+        )
+        .annotate(
+            character_percent_volume=F("character_total_volume")
+            / Value(total_volume)
+            * Value(100)
+        )
     )
-    total_value = ledger.aggregate(Sum(F("total_price")))["total_price__sum"]
     context = {
         "page_title": (
             f"{extraction.refinery.moon} "
@@ -289,6 +310,7 @@ def extraction_ledger(request, extraction_pk: int):
         ),
         "extraction": extraction,
         "total_value": total_value,
+        "total_volume": total_volume,
         "ledger": ledger,
         "character_totals": character_totals,
     }

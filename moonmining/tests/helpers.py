@@ -1,6 +1,5 @@
 import datetime as dt
 
-from django.db import models
 from django.utils.timezone import now
 from eveuniverse.models import EveEntity, EveMoon, EveType
 
@@ -87,11 +86,6 @@ def create_default_user_1001():
 
 def eve_type_athanor():
     return EveType.objects.get(id=35835)
-
-
-def model_ids(MyModel: models.Model, key="pk") -> set:
-    """Return all ids of given model as set."""
-    return set(MyModel.objects.values_list(key, flat=True))
 
 
 def generate_eve_entities_from_allianceauth():

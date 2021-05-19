@@ -11,8 +11,10 @@
                     <th>Character</th>
                     <th>Main</th>
                     <th>Corporation</th>
-                    <th>Total Volume</th>
-                    <th>Total Price</th>
+                    <th class="text-right">Volume</th>
+                    <th class="text-right">Price</th>
+                    <th class="text-right">% Total Volume</th>
+                    <th class="text-right">% Total Price</th>
                 </tr>
             </thead>
             <tbody>
@@ -21,11 +23,28 @@
                         <td>{{ record.character_name }}</td>
                         <td>{{ record.main_name|default:"" }}</td>
                         <td>{{ record.corporation_name|default:"" }}</td>
-                        <td data-order="{{ record.character_total_volume }}">{{ record.character_total_volume|intcomma }}</td>
-                        <td data-order="{{ record.character_total_price }}">{{ record.character_total_price|formatisk }}</td>
+                        <td class="text-right" data-order="{{ record.character_total_volume }}">
+                            {{ record.character_total_volume|intcomma }}
+                        </td>
+                        <td class="text-right" data-order="{{ record.character_total_price }}">
+                            {{ record.character_total_price|formatisk:"m" }}
+                        </td>
+                        <td class="text-right">{{ record.character_percent_volume }}</td>
+                        <td class="text-right">{{ record.character_percent_value }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
+            <tfoot>
+                <tr class="info">
+                    <th>TOTALS</th>
+                    <th></th>
+                    <th></th>
+                    <th class="text-right">{{ total_volume|intcomma }}</th>
+                    <th class="text-right">{{ total_value|formatisk:"m" }}</th>
+                    <th></th>
+                    <th></th>
+                </tr>
+            </tfoot>
         </table>
     {% else %}
         <p class="text-muted">No data.</p>

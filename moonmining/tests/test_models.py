@@ -24,7 +24,7 @@ from ..models import (
     Refinery,
 )
 from . import helpers
-from .testdata.esi_client_stub import esi_client_stub
+from .testdata.esi_client_stub import _esi_data, esi_client_stub
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse, nearest_celestial_stub
 
@@ -125,13 +125,14 @@ class TestOwnerUpdateRefineries(NoSocketsTestCase):
     @patch(
         MODELS_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub
     )
-    def test_should_create_two_new_refineries(self, mock_esi):
+    def test_should_create_new_refineries_from_scratch(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
         my_eve_moon = EveMoon.objects.get(id=40161708)
         # when
         self.owner.update_refineries_from_esi()
         # then
+        self.assertSetEqual(Refinery.objects.ids(), {1000000000001, 1000000000002})
         refinery = Refinery.objects.get(id=1000000000001)
         self.assertEqual(refinery.name, "Auga - Paradise Alpha")
         self.assertEqual(refinery.moon.eve_moon, my_eve_moon)
@@ -139,23 +140,31 @@ class TestOwnerUpdateRefineries(NoSocketsTestCase):
     @patch(
         MODELS_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub
     )
-    def test_should_handle_OSError_exceptions_from_universe_structure(self, mock_esi):
+    def test_should_not_remove_refiners_after_OSError_from_universe_structure(
+        self, mock_esi
+    ):
         # given
         mock_esi.client.Corporation.get_corporations_corporation_id_structures.return_value = BravadoOperationStub(
-            [
-                {"type_id": 35835, "structure_id": 1000000000001},
-                {"type_id": 35835, "structure_id": 1000000000002},
+            _esi_data["Corporation"]["get_corporations_corporation_id_structures"][
+                "2001"
             ]
         )
         mock_esi.client.Universe.get_universe_structures_structure_id.side_effect = (
             OSError
         )
+        Refinery.objects.create(
+            id=1990000000001,
+            owner=self.owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
         # when
-        self.owner.update_refineries_from_esi()
+        with self.assertRaises(OSError):
+            self.owner.update_refineries_from_esi()
         # then
         self.assertEqual(
-            mock_esi.client.Universe.get_universe_structures_structure_id.call_count, 2
+            mock_esi.client.Universe.get_universe_structures_structure_id.call_count, 1
         )
+        self.assertSetEqual(Refinery.objects.ids(), {1990000000001})
 
     @patch(MODELS_PATH + ".EveSolarSystem.nearest_celestial")
     def test_should_handle_OSError_exceptions_from_nearest_celestial(
@@ -167,6 +176,7 @@ class TestOwnerUpdateRefineries(NoSocketsTestCase):
         # when
         self.owner.update_refineries_from_esi()
         # then
+        self.assertSetEqual(Refinery.objects.ids(), {1000000000001, 1000000000002})
         refinery = Refinery.objects.get(id=1000000000001)
         self.assertIsNone(refinery.moon)
         self.assertEqual(mock_nearest_celestial.call_count, 2)
@@ -179,17 +189,34 @@ class TestOwnerUpdateRefineries(NoSocketsTestCase):
         mock_esi.client = esi_client_stub
         Refinery.objects.create(
             id=1990000000001,
-            moon=None,
             owner=self.owner,
             eve_type=helpers.eve_type_athanor(),
         )
         # when
         self.owner.update_refineries_from_esi()
         # then
-        self.assertSetEqual(
-            set(self.owner.refineries.values_list("id", flat=True)),
-            {1000000000001, 1000000000002},
+        self.assertSetEqual(Refinery.objects.ids(), {1000000000001, 1000000000002})
+
+    @patch(
+        MODELS_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub
+    )
+    def test_should_not_remove_refineries_after_OSError_in_corporation_structures(
+        self, mock_esi
+    ):
+        # given
+        mock_esi.client.Corporation.get_corporations_corporation_id_structures.side_effect = (
+            OSError
         )
+        Refinery.objects.create(
+            id=1990000000001,
+            owner=self.owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        # when
+        with self.assertRaises(OSError):
+            self.owner.update_refineries_from_esi()
+        # then
+        self.assertSetEqual(Refinery.objects.ids(), {1990000000001})
 
 
 @patch(MODELS_PATH + ".esi")
