@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- Refinery update fails when there are multiple refineries next to the same moon (#5)
+
 ### Changed
 
 ## [1.0.0b3] - 2021-04-24

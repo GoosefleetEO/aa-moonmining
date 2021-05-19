@@ -24,7 +24,7 @@ from ..models import (
     Refinery,
 )
 from . import helpers
-from .testdata.esi_client_stub import esi_client_stub
+from .testdata.esi_client_stub import _esi_data, esi_client_stub
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse, nearest_celestial_stub
 
@@ -132,9 +132,7 @@ class TestOwnerUpdateRefineries(NoSocketsTestCase):
         # when
         self.owner.update_refineries_from_esi()
         # then
-        self.assertSetEqual(
-            Refinery.objects.ids(), {1000000000001, 1000000000002, 1000000000021}
-        )
+        self.assertSetEqual(Refinery.objects.ids(), {1000000000001, 1000000000002})
         refinery = Refinery.objects.get(id=1000000000001)
         self.assertEqual(refinery.name, "Auga - Paradise Alpha")
         self.assertEqual(refinery.moon.eve_moon, my_eve_moon)
@@ -147,9 +145,8 @@ class TestOwnerUpdateRefineries(NoSocketsTestCase):
     ):
         # given
         mock_esi.client.Corporation.get_corporations_corporation_id_structures.return_value = BravadoOperationStub(
-            [
-                {"type_id": 35835, "structure_id": 1000000000001},
-                {"type_id": 35835, "structure_id": 1000000000002},
+            _esi_data["Corporation"]["get_corporations_corporation_id_structures"][
+                "2001"
             ]
         )
         mock_esi.client.Universe.get_universe_structures_structure_id.side_effect = (
@@ -179,9 +176,10 @@ class TestOwnerUpdateRefineries(NoSocketsTestCase):
         # when
         self.owner.update_refineries_from_esi()
         # then
+        self.assertSetEqual(Refinery.objects.ids(), {1000000000001, 1000000000002})
         refinery = Refinery.objects.get(id=1000000000001)
         self.assertIsNone(refinery.moon)
-        self.assertEqual(mock_nearest_celestial.call_count, 3)
+        self.assertEqual(mock_nearest_celestial.call_count, 2)
 
     @patch(
         MODELS_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub
@@ -197,9 +195,7 @@ class TestOwnerUpdateRefineries(NoSocketsTestCase):
         # when
         self.owner.update_refineries_from_esi()
         # then
-        self.assertSetEqual(
-            Refinery.objects.ids(), {1000000000001, 1000000000002, 1000000000021}
-        )
+        self.assertSetEqual(Refinery.objects.ids(), {1000000000001, 1000000000002})
 
     @patch(
         MODELS_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub

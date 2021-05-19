@@ -713,6 +713,8 @@ class Notification(models.Model):
 class Owner(models.Model):
     """A EVE Online corporation owning refineries."""
 
+    ESI_SERVICE_NAME_MOON_DRILLING = "Moon Drilling"
+
     # pk
     corporation = models.OneToOneField(
         EveCorporationInfo,
@@ -793,8 +795,8 @@ class Owner(models.Model):
         self.last_update_at = now()
         self.save()
 
-    def _fetch_refineries_from_esi(self) -> Optional[dict]:
-        """Return refineries fetched from ESI or None if there was an error."""
+    def _fetch_refineries_from_esi(self) -> dict:
+        """Return current refineries with moon drills from ESI for this owner."""
         logger.info("%s: Fetching refineries from ESI...", self)
         structures = esi.client.Corporation.get_corporations_corporation_id_structures(
             corporation_id=self.corporation.corporation_id,
@@ -806,14 +808,20 @@ class Owner(models.Model):
                 id=structure_info["type_id"]
             )
             structure_info["_eve_type"] = eve_type
-            if eve_type.eve_group_id == constants.EVE_GROUP_ID_REFINERY:
+            service_names = (
+                {row["name"] for row in structure_info["services"]}
+                if structure_info.get("services")
+                else set()
+            )
+            if (
+                eve_type.eve_group_id == constants.EVE_GROUP_ID_REFINERY
+                and self.ESI_SERVICE_NAME_MOON_DRILLING in service_names
+            ):
                 refineries[structure_info["structure_id"]] = structure_info
         return refineries
 
-    def _update_or_create_refinery_from_esi(self, structure_id: int) -> bool:
-        """Update or create a refinery from ESI and return True if successful
-        else False.
-        """
+    def _update_or_create_refinery_from_esi(self, structure_id: int):
+        """Update or create a refinery with universe data from ESI."""
         logger.info("%s: Fetching details for refinery #%d", self, structure_id)
         structure_info = esi.client.Universe.get_universe_structures_structure_id(
             structure_id=structure_id, token=self.fetch_token().valid_access_token()
