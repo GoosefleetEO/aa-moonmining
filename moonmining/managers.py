@@ -4,7 +4,7 @@ from typing import Tuple
 
 from django.contrib.auth.models import User
 from django.db import models, transaction
-from django.db.models import ExpressionWrapper, F, FloatField, Sum
+from django.db.models import ExpressionWrapper, F, FloatField, IntegerField, Sum
 from django.db.models.functions import Coalesce
 from django.utils.timezone import now
 from eveuniverse.managers import EveTypeManager
@@ -56,12 +56,16 @@ class MiningLedgerRecordManager(models.Manager):
             F("quantity") * Coalesce(F("unit_price"), 0),
             output_field=FloatField(),
         )
+        sum_volume = ExpressionWrapper(
+            F("quantity") * F("ore_type__volume"), output_field=IntegerField()
+        )
         return (
             super()
             .get_queryset()
             .select_related("ore_type", "ore_type__extras")
             .annotate(unit_price=F("ore_type__extras__refined_price"))
             .annotate(total_price=Sum(sum_price, distinct=True))
+            .annotate(total_volume=Sum(sum_volume, distinct=True))
         )
 
 

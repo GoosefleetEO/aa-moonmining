@@ -13,9 +13,10 @@
                     <th>Character</th>
                     <th>Corporation</th>
                     <th>Ore</th>
-                    <th>Unit Price</th>
-                    <th>Quantity</th>
-                    <th>Total Price</th>
+                    <th class="text-right">Total Volume</th>
+                    <th class="text-right">Unit Price</th>
+                    <th class="text-right">Quantity</th>
+                    <th class="text-right">Total Price</th>
                 </tr>
             </thead>
             <tbody>
@@ -26,12 +27,34 @@
                         <td>{{ record.character.name }}</td>
                         <td>{{ record.corporation.name }}</td>
                         <td>{{ record.ore_type.name }}</td>
-                        <td data-order="{{ record.ore_type.extras.refined_price }}">{{ record.ore_type.extras.refined_price|formatisk }}</td>
-                        <td data-order="{{ record.quantity }}">{{ record.quantity|intcomma }}</td>
-                        <td data-order="{{ record.total_price }}">{{ record.total_price|formatisk }}</td>
+                        <td class="text-right" data-order="{{ record.total_volume }}">
+                            {{ record.total_volume|intcomma }}
+                        </td>
+                        <td class="text-right" data-order="{{ record.ore_type.extras.refined_price }}">
+                            {{ record.ore_type.extras.refined_price|formatisk }}
+                        </td>
+                        <td class="text-right" data-order="{{ record.quantity }}">
+                            {{ record.quantity|intcomma }}
+                        </td>
+                        <td class="text-right" data-order="{{ record.total_price }}">
+                            {{ record.total_price|formatisk:"m" }}
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>
+            <tfoot>
+                <tr class="info">
+                    <th>TOTALS</th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th class="text-right">{{ total_volume|intcomma }}</th>
+                    <th class="text-right"></th>
+                    <th class="text-right"></th>
+                    <th class="text-right">{{ total_value|formatisk:"m" }}</th>
+                </tr>
+            </tfoot>
         </table>
     {% else %}
         <p class="text-muted">No data.</p>
