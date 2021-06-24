@@ -19,6 +19,7 @@ from eveuniverse.models import EveEntity, EveMoon, EveSolarSystem, EveType
 from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.models import EveCorporationInfo
 from allianceauth.services.hooks import get_extension_logger
+from app_utils.allianceauth import notify_admins_throttled
 from app_utils.datetime import ldap_time_2_datetime
 from app_utils.logging import LoggerAddTag
 from app_utils.views import (
@@ -769,8 +770,8 @@ class Owner(models.Model):
             size=constants.IconSize.SMALL,
         )
 
-    def fetch_token(self):
-        """Fetch token for this mining corp and return it..."""
+    def fetch_token(self) -> Token:
+        """Return valid token for this mining corp or raise exception on any error."""
         if not self.character_ownership:
             raise RuntimeError("This owner has no character configured.")
         token = (
@@ -781,6 +782,8 @@ class Owner(models.Model):
             .require_valid()
             .first()
         )
+        if not token:
+            raise Token.DoesNotExist(f"{self}: No valid token found.")
         return token
 
     def update_refineries_from_esi(self):
@@ -788,7 +791,21 @@ class Owner(models.Model):
         logger.info("%s: Updating refineries...", self)
         refineries = self._fetch_refineries_from_esi()
         for structure_id, _ in refineries.items():
-            self._update_or_create_refinery_from_esi(structure_id)
+            try:
+                self._update_or_create_refinery_from_esi(structure_id)
+            except OSError:
+                msg = (
+                    f"{self}: Failed to fetch refinery with ID {structure_id} from ESI."
+                    " Please double check access rights for this owner."
+                )
+                message_id = f"{__title__}-update_refineries_from_esi-{structure_id}"
+                notify_admins_throttled(
+                    message_id=message_id,
+                    message=msg,
+                    title=f"{__title__}: Failed to fetch refinery",
+                    level="warning",
+                )
+                logger.warning(msg)
         # remove refineries that no longer exist
         self.refineries.exclude(id__in=refineries).delete()
 

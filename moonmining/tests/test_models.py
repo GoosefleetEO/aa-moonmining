@@ -4,10 +4,10 @@ from unittest.mock import patch
 import pytz
 
 from django.utils.timezone import now
+from esi.models import Token
 from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 
 from allianceauth.eveonline.models import EveCorporationInfo
-from app_utils.esi_testing import BravadoOperationStub
 from app_utils.testing import NoSocketsTestCase
 
 from ..models import (
@@ -24,7 +24,7 @@ from ..models import (
     Refinery,
 )
 from . import helpers
-from .testdata.esi_client_stub import _esi_data, esi_client_stub
+from .testdata.esi_client_stub import esi_client_stub
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse, nearest_celestial_stub
 
@@ -109,7 +109,49 @@ class TestMoonUpdateValue(NoSocketsTestCase):
         self.assertEqual(result, 0)
 
 
+class TestOwner(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        load_allianceauth()
+
+    def test_should_return_token(self):
+        # given
+        _, character_ownership = helpers.create_default_user_1001()
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        # when
+        result = owner.fetch_token()
+        # then
+        self.assertIsInstance(result, Token)
+
+    def test_should_raise_error_when_no_character_ownership(self):
+        # given
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001)
+        )
+        # when
+        with self.assertRaises(RuntimeError):
+            owner.fetch_token()
+
+    def test_should_raise_error_when_no_token_found(self):
+        # given
+        user, character_ownership = helpers.create_default_user_1001()
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+            character_ownership=character_ownership,
+        )
+        Token.objects.filter(user=user).delete()
+        # when
+        with self.assertRaises(Token.DoesNotExist):
+            owner.fetch_token()
+
+
 @patch(MODELS_PATH + ".esi")
+@patch(MODELS_PATH + ".notify_admins_throttled", lambda *args, **kwargs: None)
 class TestOwnerUpdateRefineries(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
@@ -136,35 +178,6 @@ class TestOwnerUpdateRefineries(NoSocketsTestCase):
         refinery = Refinery.objects.get(id=1000000000001)
         self.assertEqual(refinery.name, "Auga - Paradise Alpha")
         self.assertEqual(refinery.moon.eve_moon, my_eve_moon)
-
-    @patch(
-        MODELS_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub
-    )
-    def test_should_not_remove_refiners_after_OSError_from_universe_structure(
-        self, mock_esi
-    ):
-        # given
-        mock_esi.client.Corporation.get_corporations_corporation_id_structures.return_value = BravadoOperationStub(
-            _esi_data["Corporation"]["get_corporations_corporation_id_structures"][
-                "2001"
-            ]
-        )
-        mock_esi.client.Universe.get_universe_structures_structure_id.side_effect = (
-            OSError
-        )
-        Refinery.objects.create(
-            id=1990000000001,
-            owner=self.owner,
-            eve_type=helpers.eve_type_athanor(),
-        )
-        # when
-        with self.assertRaises(OSError):
-            self.owner.update_refineries_from_esi()
-        # then
-        self.assertEqual(
-            mock_esi.client.Universe.get_universe_structures_structure_id.call_count, 1
-        )
-        self.assertSetEqual(Refinery.objects.ids(), {1990000000001})
 
     @patch(MODELS_PATH + ".EveSolarSystem.nearest_celestial")
     def test_should_handle_OSError_exceptions_from_nearest_celestial(
@@ -217,6 +230,48 @@ class TestOwnerUpdateRefineries(NoSocketsTestCase):
             self.owner.update_refineries_from_esi()
         # then
         self.assertSetEqual(Refinery.objects.ids(), {1990000000001})
+
+    @patch(
+        MODELS_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub
+    )
+    def test_should_continue_with_other_refineries_after_OS_error(self, mock_esi):
+        def my_get_corporations_corporation_id_structures(*args, **kwargs):
+            """Pass through"""
+            return (
+                esi_client_stub.Corporation.get_corporations_corporation_id_structures(
+                    *args, **kwargs
+                )
+            )
+
+        def my_get_universe_structures_structure_id(*args, **kwargs):
+            """Return OS error for specific structure only."""
+            if "structure_id" in kwargs and kwargs["structure_id"] == 1000000000001:
+                raise OSError
+            return esi_client_stub.Universe.get_universe_structures_structure_id(
+                *args, **kwargs
+            )
+
+        # given
+        mock_esi.client.Corporation.get_corporations_corporation_id_structures = (
+            my_get_corporations_corporation_id_structures
+        )
+        mock_esi.client.Universe.get_universe_structures_structure_id = (
+            my_get_universe_structures_structure_id
+        )
+        Refinery.objects.create(
+            id=1000000000001,
+            owner=self.owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        Refinery.objects.create(
+            id=1000000000002,
+            owner=self.owner,
+            eve_type=helpers.eve_type_athanor(),
+        )
+        # when
+        self.owner.update_refineries_from_esi()
+        # then
+        self.assertSetEqual(Refinery.objects.ids(), {1000000000001, 1000000000002})
 
 
 @patch(MODELS_PATH + ".esi")

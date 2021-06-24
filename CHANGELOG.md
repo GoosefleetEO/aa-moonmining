@@ -13,6 +13,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [1.0.0] - 2021-06-24
+
+### Changed
+
+- Improved error handling and admin notifications for invalid tokens and ESI errors
+
+### Fixed
+
+- Refinery update aborts when one refinery can not be accessed
+
 ## [1.0.0b4] - 2021-05-19
 
 ### Added

@@ -29,11 +29,11 @@ compilemessages:
 	django-admin compilemessages -l zh_Hans
 
 coverage:
-	coverage run ../myauth/manage.py test $(package) --keepdb --failfast --debug-mode && coverage html && coverage report
+	coverage run ../myauth/manage.py test $(package) --keepdb --failfast && coverage html && coverage report
 
 test:
 	# runs a full test incl. re-creating of the test DB
-	python ../myauth/manage.py test $(package) --failfast --debug-mode -v 2
+	python ../myauth/manage.py test $(package) --failfast -v 2
 
 pylint:
 	pylint --load-plugins pylint_django $(package)
