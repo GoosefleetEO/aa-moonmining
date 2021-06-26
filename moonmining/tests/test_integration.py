@@ -9,6 +9,7 @@ from django.utils.timezone import now
 from django_webtest import WebTest
 from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 
+from app_utils.esi import EsiStatus
 from app_utils.testing import create_user_from_evecharacter
 
 from .. import tasks
@@ -50,6 +51,7 @@ class TestUI(WebTest):
     # TODO: Add more UI tests
 
 
+@patch(TASKS_PATH + ".fetch_esi_status", lambda: EsiStatus(True, 100, 60))
 @patch(MODELS_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub)
 @override_settings(CELERY_ALWAYS_EAGER=True)
 class TestUpdateTasks(TestCase):

@@ -793,19 +793,22 @@ class Owner(models.Model):
         for structure_id, _ in refineries.items():
             try:
                 self._update_or_create_refinery_from_esi(structure_id)
-            except OSError:
+            except OSError as exc:
+                exc_name = type(exc).__name__
                 msg = (
-                    f"{self}: Failed to fetch refinery with ID {structure_id} from ESI."
-                    " Please double check access rights for this owner."
+                    f"{self}: Failed to fetch refinery with ID {structure_id} from ESI"
                 )
-                message_id = f"{__title__}-update_refineries_from_esi-{structure_id}"
+                message_id = (
+                    f"{__title__}-update_refineries_from_esi-"
+                    f"{structure_id}-{exc_name}"
+                )
                 notify_admins_throttled(
                     message_id=message_id,
-                    message=msg,
+                    message=f"{msg}: {exc_name}: {exc}.",
                     title=f"{__title__}: Failed to fetch refinery",
                     level="warning",
                 )
-                logger.warning(msg)
+                logger.warning(msg, exc_info=True)
         # remove refineries that no longer exist
         self.refineries.exclude(id__in=refineries).delete()
 

@@ -5,6 +5,7 @@ from django.utils.timezone import now
 from eveuniverse.models import EveMarketPrice
 
 from allianceauth.services.hooks import get_extension_logger
+from app_utils.esi import fetch_esi_status
 from app_utils.logging import LoggerAddTag
 
 from . import __title__
@@ -36,12 +37,15 @@ def run_regular_updates():
 @shared_task
 def update_owner(owner_pk):
     """Update refineries and extractions for given owner."""
-    chain(
-        update_refineries_from_esi_for_owner.si(owner_pk),
-        fetch_notifications_from_esi_for_owner.si(owner_pk),
-        update_extractions_for_owner.si(owner_pk),
-        mark_successful_update_for_owner.si(owner_pk),
-    ).delay()
+    if fetch_esi_status().is_ok:
+        chain(
+            update_refineries_from_esi_for_owner.si(owner_pk),
+            fetch_notifications_from_esi_for_owner.si(owner_pk),
+            update_extractions_for_owner.si(owner_pk),
+            mark_successful_update_for_owner.si(owner_pk),
+        ).delay()
+    else:
+        logger.warning("ESI ist not available. Aborting.")
 
 
 @shared_task
@@ -86,14 +90,17 @@ def run_report_updates():
 @shared_task
 def update_mining_ledger_for_owner(owner_pk):
     """Update mining ledger for a owner from ESI."""
-    owner = Owner.objects.get(pk=owner_pk)
-    observer_ids = owner.fetch_mining_ledger_observers_from_esi()
-    for refinery_id in owner.refineries.filter(id__in=observer_ids).values_list(
-        "id", flat=True
-    ):
-        update_mining_ledger_for_refinery.apply_async(
-            kwargs={"refinery_id": refinery_id}, priority=TASK_PRIORITY_LOWER
-        )
+    if fetch_esi_status().is_ok:
+        owner = Owner.objects.get(pk=owner_pk)
+        observer_ids = owner.fetch_mining_ledger_observers_from_esi()
+        for refinery_id in owner.refineries.filter(id__in=observer_ids).values_list(
+            "id", flat=True
+        ):
+            update_mining_ledger_for_refinery.apply_async(
+                kwargs={"refinery_id": refinery_id}, priority=TASK_PRIORITY_LOWER
+            )
+    else:
+        logger.warning("ESI ist not available. Aborting.")
 
 
 @shared_task
@@ -106,12 +113,15 @@ def update_mining_ledger_for_refinery(refinery_id):
 @shared_task
 def run_calculated_properties_update():
     """Update the calculated properties of all moons and all extractions."""
-    chain(
-        update_market_prices.si(),
-        update_refined_ore_prices.si(),
-        update_moons.si(),
-        update_extractions.si(),
-    ).apply_async(priority=TASK_PRIORITY_LOWER)
+    if fetch_esi_status().is_ok:
+        chain(
+            update_market_prices.si(),
+            update_refined_ore_prices.si(),
+            update_moons.si(),
+            update_extractions.si(),
+        ).apply_async(priority=TASK_PRIORITY_LOWER)
+    else:
+        logger.warning("ESI ist not available. Aborting.")
 
 
 @shared_task

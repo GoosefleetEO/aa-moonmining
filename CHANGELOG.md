@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [1.0.1] - 2021-06-26
+
+### Changed
+
+- Now checks if ESI is available before starting any update tasks. This should eliminate ESI exceptions during the daily downtime.
+- Improved admin error message if refinery updates fail
+
 ## [1.0.0] - 2021-06-24
 
 ### Changed
