@@ -402,9 +402,10 @@ class Extraction(models.Model):
     @staticmethod
     def _total_price_db_func():
         return Sum(
-            Coalesce(F("ore_type__extras__refined_price"), 0)
+            Coalesce(F("ore_type__extras__refined_price"), 0.0)
             * F("volume")
-            / F("ore_type__volume")
+            / F("ore_type__volume"),
+            output_field=models.FloatField(),
         )
 
     def calc_is_jackpot(self) -> Optional[bool]:
@@ -568,7 +569,7 @@ class Moon(models.Model):
         return hasattr(self, "refinery")
 
     @cached_property
-    def products_sorted(self):
+    def products_sorted(self) -> models.QuerySet:
         """Return current products as sorted iterable."""
         try:
             return (
@@ -610,10 +611,11 @@ class Moon(models.Model):
     @staticmethod
     def _total_price_db_func():
         return Sum(
-            Coalesce(F("ore_type__extras__refined_price"), 0)
+            Coalesce(F("ore_type__extras__refined_price"), 0.0)
             * F("amount")
             * Value(float(MOONMINING_VOLUME_PER_MONTH))
-            / F("ore_type__volume")
+            / F("ore_type__volume"),
+            output_field=models.FloatField(),
         )
 
     def update_calculated_properties(self):

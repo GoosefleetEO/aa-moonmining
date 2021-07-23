@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [1.0.2] - 2021-07-23
+
+### Fixed
+
+- Fix attempt: Expression contains mixed types: FloatField, IntegerField. You must set output_field (#6)
+
 ## [1.0.1] - 2021-06-26
 
 ### Changed

@@ -120,7 +120,7 @@ Run migrations & copy static files
 
 ```bash
 python manage.py migrate
-python manage.py collectstatic
+python manage.py collectstatic --noinput
 ```
 
 Restart your supervisor services for Auth.

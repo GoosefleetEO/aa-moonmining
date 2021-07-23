@@ -1,13 +1,21 @@
 import datetime as dt
 
 from django.utils.timezone import now
-from eveuniverse.models import EveEntity, EveMoon, EveType
+from eveuniverse.models import EveEntity, EveMarketPrice, EveMoon, EveType
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from app_utils.testing import create_user_from_evecharacter
 
 from ..app_settings import MOONMINING_VOLUME_PER_MONTH
-from ..models import Extraction, ExtractionProduct, Moon, MoonProduct, Owner, Refinery
+from ..models import (
+    EveOreType,
+    Extraction,
+    ExtractionProduct,
+    Moon,
+    MoonProduct,
+    Owner,
+    Refinery,
+)
 
 
 def create_moon_40161708() -> EveMoon:
@@ -106,3 +114,23 @@ def generate_eve_entities_from_allianceauth():
                 name=character.alliance_name,
                 category=EveEntity.CATEGORY_ALLIANCE,
             )
+
+
+def generate_market_prices():
+    tungsten = EveType.objects.get(id=16637)
+    EveMarketPrice.objects.create(eve_type=tungsten, average_price=7000)
+    mercury = EveType.objects.get(id=16646)
+    EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
+    evaporite_deposits = EveType.objects.get(id=16635)
+    EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
+    pyerite = EveType.objects.get(id=35)
+    EveMarketPrice.objects.create(eve_type=pyerite, average_price=10)
+    zydrine = EveType.objects.get(id=39)
+    EveMarketPrice.objects.create(eve_type=zydrine, average_price=1.7)
+    megacyte = EveType.objects.get(id=40)
+    EveMarketPrice.objects.create(eve_type=megacyte, average_price=640)
+    tritanium = EveType.objects.get(id=34)
+    EveMarketPrice.objects.create(eve_type=tritanium, average_price=5)
+    mexallon = EveType.objects.get(id=36)
+    EveMarketPrice.objects.create(eve_type=mexallon, average_price=117)
+    EveOreType.objects.update_refined_prices()

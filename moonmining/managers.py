@@ -53,7 +53,7 @@ class MiningLedgerRecordManager(models.Manager):
     def get_queryset(self):
         """Add calculated values to all object."""
         sum_price = ExpressionWrapper(
-            F("quantity") * Coalesce(F("unit_price"), 0),
+            F("quantity") * Coalesce(F("unit_price"), 0.0),
             output_field=FloatField(),
         )
         sum_volume = ExpressionWrapper(

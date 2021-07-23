@@ -76,23 +76,7 @@ class TestMoonUpdateValue(NoSocketsTestCase):
 
     def test_should_calc_correct_value(self):
         # given
-        tungsten = EveType.objects.get(id=16637)
-        EveMarketPrice.objects.create(eve_type=tungsten, average_price=7000)
-        mercury = EveType.objects.get(id=16646)
-        EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
-        evaporite_deposits = EveType.objects.get(id=16635)
-        EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
-        pyerite = EveType.objects.get(id=35)
-        EveMarketPrice.objects.create(eve_type=pyerite, average_price=10)
-        zydrine = EveType.objects.get(id=39)
-        EveMarketPrice.objects.create(eve_type=zydrine, average_price=1.7)
-        megacyte = EveType.objects.get(id=40)
-        EveMarketPrice.objects.create(eve_type=megacyte, average_price=640)
-        tritanium = EveType.objects.get(id=34)
-        EveMarketPrice.objects.create(eve_type=tritanium, average_price=5)
-        mexallon = EveType.objects.get(id=36)
-        EveMarketPrice.objects.create(eve_type=mexallon, average_price=117)
-        EveOreType.objects.update_refined_prices()
+        helpers.generate_market_prices()
         # when
         result = self.moon.calc_value()
         # then
@@ -1124,3 +1108,61 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
         result = extraction.calc_is_jackpot()
         # then
         self.assertFalse(result)
+
+
+class TestMoonProductsSorted(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        helpers.generate_market_prices()
+
+    def test_should_return_moon_products_in_order(self):
+        # given
+        moon = helpers.create_moon_40161708()
+        # when
+        result = moon.products_sorted
+        # then
+        moon_product = result.get(ore_type_id=45506)
+        self.assertEqual(moon_product.total_price, 1296800127.64395)
+        ore_type_ids = list(result.values_list("ore_type_id", flat=True))
+        self.assertListEqual([45506, 46689, 46676, 46678], ore_type_ids)
+
+    def test_should_handle_products_without_price(self):
+        # given
+        moon = helpers.create_moon_40161708()
+        moon_product = moon.products.get(ore_type_id=45506)
+        moon_product.ore_type.extras.refined_price = None
+        moon_product.ore_type.extras.save()
+        # when
+        result = moon.products_sorted
+        # then
+        ore_type_ids = list(result.values_list("ore_type_id", flat=True))
+        self.assertListEqual([45506, 46689, 46676, 46678], ore_type_ids)
+
+    def test_should_handle_products_without_amount(self):
+        # given
+        moon = helpers.create_moon_40161708()
+        moon_product = moon.products.get(ore_type_id=45506)
+        moon_product.amount = 0
+        moon_product.save()
+        # when
+        result = moon.products_sorted
+        # then
+        ore_type_ids = list(result.values_list("ore_type_id", flat=True))
+        self.assertListEqual([45506, 46689, 46676, 46678], ore_type_ids)
+
+    def test_should_handle_products_without_volume(self):
+        # given
+        moon = helpers.create_moon_40161708()
+        moon_product = moon.products.get(ore_type_id=45506)
+        volume_backup = moon_product.ore_type.volume
+        moon_product.ore_type.volume = None
+        moon_product.ore_type.save()
+        # when
+        result = moon.products_sorted
+        # then
+        moon_product.ore_type.volume = volume_backup
+        moon_product.ore_type.save()
+        ore_type_ids = list(result.values_list("ore_type_id", flat=True))
+        self.assertListEqual([45506, 46689, 46676, 46678], ore_type_ids)
