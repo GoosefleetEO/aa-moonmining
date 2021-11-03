@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+- Added tests for AA 2.9 / Django 3.2
+
 ### Fixed
 
 ## [1.0.2] - 2021-07-23
