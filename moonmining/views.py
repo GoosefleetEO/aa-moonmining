@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import (
+    Count,
     ExpressionWrapper,
     F,
     FloatField,
@@ -723,6 +724,28 @@ def report_user_mining_data(request):
                     "price_month_3": default_if_false(user.price_month_3, 0),
                 }
             )
+    return JsonResponse(data, safe=False)
+
+
+@login_required()
+@permission_required(["moonmining.basic_access", "moonmining.reports_access"])
+def report_user_uploaded_data(request) -> JsonResponse:
+    data = list(
+        Moon.objects.values(
+            name=F("products_updated_by__profile__main_character__character_name"),
+            corporation=F(
+                "products_updated_by__profile__main_character__corporation_name"
+            ),
+            state=F("products_updated_by__profile__state__name"),
+        ).annotate(num_moons=Count("eve_moon_id"))
+    )
+    for row in data:
+        if row["name"] is None:
+            row["name"] = "?"
+        if row["corporation"] is None:
+            row["corporation"] = "?"
+        if row["state"] is None:
+            row["state"] = "?"
     return JsonResponse(data, safe=False)
 
 

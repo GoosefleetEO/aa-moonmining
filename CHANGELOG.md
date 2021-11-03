@@ -11,9 +11,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
-- Added tests for AA 2.9 / Django 3.2
-
 ### Fixed
+
+## [1.1.0] - 2021-11-03
+
+### Added
+
+- New report showing number of uploaded moons by mains
+
+### Changed
+
+- Added tests for AA 2.9 / Django 3.2
 
 ## [1.0.2] - 2021-07-23
 

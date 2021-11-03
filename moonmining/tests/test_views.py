@@ -11,7 +11,11 @@ from esi.models import Token
 from eveuniverse.models import EveMoon
 
 from allianceauth.eveonline.models import EveCorporationInfo
-from app_utils.testing import create_user_from_evecharacter, json_response_to_dict
+from app_utils.testing import (
+    create_user_from_evecharacter,
+    json_response_to_dict,
+    json_response_to_python,
+)
 
 from .. import views
 from ..models import (
@@ -467,12 +471,16 @@ class TestReportsData(TestCase):
         helpers.generate_eve_entities_from_allianceauth()
         cls.moon = helpers.create_moon_40161708()
         cls.refinery = helpers.add_refinery(cls.moon)
-        Moon.objects.create(eve_moon=EveMoon.objects.get(id=40131695))
-        Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161709))
         cls.user, _ = create_user_from_evecharacter(
             1001,
             permissions=["moonmining.basic_access", "moonmining.reports_access"],
             scopes=Owner.esi_scopes(),
+        )
+        Moon.objects.create(
+            eve_moon=EveMoon.objects.get(id=40131695), products_updated_by=cls.user
+        )
+        Moon.objects.create(
+            eve_moon=EveMoon.objects.get(id=40161709), products_updated_by=cls.user
         )
 
     def test_should_return_owned_moon_values(self):
@@ -520,3 +528,18 @@ class TestReportsData(TestCase):
         row = data[self.user.id]
         self.assertEqual(row["volume_month_0"], 3000)
         self.assertEqual(row["price_month_0"], 10 * 100 + 20 * 200)
+
+    def test_should_return_user_uploads_data(self):
+        # given
+        request = self.factory.get(reverse("moonmining:report_user_uploaded_data"))
+        request.user = self.user
+        # when
+        response = views.report_user_uploaded_data(request)
+        # then
+        self.assertEqual(response.status_code, 200)
+        user_data = [
+            row
+            for row in json_response_to_python(response)
+            if row["name"] == "Bruce Wayne"
+        ]
+        self.assertEqual(user_data[0]["num_moons"], 2)
