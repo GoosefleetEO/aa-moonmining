@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Restrict access to mining ledger with permission (#8)
 
+### Changed
+
+- Improved view tests
+
+### Fixed
+
+- Access to extractions was possible with "view_all_moons" permission only, now user always needs "extractions_access" permission
+
 ## [1.1.0] - 2021-11-03
 
 ### Added

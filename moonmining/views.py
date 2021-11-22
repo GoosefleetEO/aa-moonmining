@@ -352,8 +352,10 @@ def moons_data(request, category):
     """returns moon list in JSON for DataTables AJAX"""
     data = list()
     moon_query = Moon.objects.selected_related_defaults()
-    if category == MoonsCategory.ALL and request.user.has_perm(
-        "moonmining.view_all_moons"
+    if (
+        category == MoonsCategory.ALL
+        and request.user.has_perm("moonmining.extractions_access")
+        and request.user.has_perm("moonmining.view_all_moons")
     ):
         pass
     elif category == MoonsCategory.OURS and request.user.has_perm(
@@ -441,11 +443,8 @@ def moon_details(request, moon_pk: int):
         moon = Moon.objects.selected_related_defaults().get(pk=moon_pk)
     except Moon.DoesNotExist:
         return HttpResponseNotFound()
-    if not request.user.has_perm(
-        "moonmining.view_all_moons"
-    ) and not request.user.has_perm("moonmining.extractions_access"):
+    if not request.user.has_perm("moonmining.extractions_access"):
         return HttpResponseUnauthorized()
-
     context = {
         "page_title": moon.name,
         "moon": moon,
@@ -456,8 +455,7 @@ def moon_details(request, moon_pk: int):
         context["title"] = "Moon"
         context["content_file"] = "moonmining/partials/moon_details.html"
         return render(request, "moonmining/_generic_modal_page.html", context)
-    else:
-        return render(request, "moonmining/modals/moon_details.html", context)
+    return render(request, "moonmining/modals/moon_details.html", context)
 
 
 @permission_required(["moonmining.add_refinery_owner", "moonmining.basic_access"])
@@ -520,8 +518,7 @@ def upload_survey(request):
                 ),
             )
         return redirect("moonmining:moons")
-    else:
-        return render(request, "moonmining/modals/upload_survey.html", context=context)
+    return render(request, "moonmining/modals/upload_survey.html", context=context)
 
 
 def previous_month(obj: dt.datetime) -> dt.datetime:

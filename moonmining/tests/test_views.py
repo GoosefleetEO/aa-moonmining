@@ -120,7 +120,6 @@ class TestMoonsData(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.factory = RequestFactory()
         load_eveuniverse()
         load_allianceauth()
         cls.moon = helpers.create_moon_40161708()
@@ -131,15 +130,16 @@ class TestMoonsData(TestCase):
         # given
         user, _ = create_user_from_evecharacter(
             1001,
-            permissions=["moonmining.basic_access", "moonmining.view_all_moons"],
+            permissions=[
+                "moonmining.basic_access",
+                "moonmining.extractions_access",
+                "moonmining.view_all_moons",
+            ],
             scopes=Owner.esi_scopes(),
         )
-        request = self.factory.get(
-            reverse("moonmining:moons_data", args={"category": views.MoonsCategory.ALL})
-        )
-        request.user = user
+        self.client.force_login(user)
         # when
-        response = views.moons_data(request, category=views.MoonsCategory.ALL)
+        response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.ALL}")
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
@@ -149,21 +149,16 @@ class TestMoonsData(TestCase):
 
     def test_should_return_our_moons_only(self):
         # given
-        request = self.factory.get(
-            reverse(
-                "moonmining:moons_data", args={"category": views.MoonsCategory.OURS}
-            )
-        )
+        moon = Moon.objects.get(pk=40131695)
+        helpers.add_refinery(moon)
         user, _ = create_user_from_evecharacter(
             1001,
             permissions=["moonmining.basic_access", "moonmining.extractions_access"],
             scopes=Owner.esi_scopes(),
         )
-        request.user = user
-        moon = Moon.objects.get(pk=40131695)
-        helpers.add_refinery(moon)
+        self.client.force_login(user)
         # when
-        response = views.moons_data(request, category=views.MoonsCategory.OURS)
+        response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.OURS}")
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
@@ -171,24 +166,19 @@ class TestMoonsData(TestCase):
 
     def test_should_handle_empty_refineries(self):
         # given
-        request = self.factory.get(
-            reverse(
-                "moonmining:moons_data", args={"category": views.MoonsCategory.OURS}
-            )
-        )
         user, _ = create_user_from_evecharacter(
             1001,
             permissions=["moonmining.basic_access", "moonmining.extractions_access"],
             scopes=Owner.esi_scopes(),
         )
-        request.user = user
+        self.client.force_login(user)
         moon = Moon.objects.get(pk=40131695)
         refinery = helpers.add_refinery(moon)
         Refinery.objects.create(
             id=99, name="Empty refinery", owner=refinery.owner, eve_type_id=35835
         )
         # when
-        response = views.moons_data(request, category=views.MoonsCategory.OURS)
+        response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.OURS}")
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
@@ -201,12 +191,9 @@ class TestMoonsData(TestCase):
             permissions=["moonmining.basic_access", "moonmining.extractions_access"],
             scopes=Owner.esi_scopes(),
         )
-        request = self.factory.get(
-            reverse("moonmining:moons_data", args={"category": views.MoonsCategory.ALL})
-        )
-        request.user = user
+        self.client.force_login(user)
         # when
-        response = views.moons_data(request, category=views.MoonsCategory.ALL)
+        response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.ALL}")
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
@@ -219,14 +206,9 @@ class TestMoonsData(TestCase):
             permissions=["moonmining.basic_access"],
             scopes=Owner.esi_scopes(),
         )
-        request = self.factory.get(
-            reverse(
-                "moonmining:moons_data", args={"category": views.MoonsCategory.OURS}
-            )
-        )
-        request.user = user
+        self.client.force_login(user)
         # when
-        response = views.moons_data(request, category=views.MoonsCategory.OURS)
+        response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.OURS}")
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
@@ -234,22 +216,18 @@ class TestMoonsData(TestCase):
 
     def test_should_return_uploaded_moons_only(self):
         # given
-        request = self.factory.get(
-            reverse(
-                "moonmining:moons_data",
-                args={"category": views.MoonsCategory.UPLOADS},
-            )
-        )
         user, _ = create_user_from_evecharacter(
             1001,
             permissions=["moonmining.basic_access", "moonmining.upload_moon_scan"],
             scopes=Owner.esi_scopes(),
         )
-        request.user = user
+        self.client.force_login(user)
         self.moon.products_updated_by = user
         self.moon.save()
         # when
-        response = views.moons_data(request, category=views.MoonsCategory.UPLOADS)
+        response = self.client.get(
+            f"/moonmining/moons_data/{views.MoonsCategory.UPLOADS}"
+        )
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
@@ -260,10 +238,14 @@ class TestMoonInfo(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.factory = RequestFactory()
         load_eveuniverse()
         load_allianceauth()
-        cls.user, _ = create_user_from_evecharacter(
+
+    def test_should_open_page(self):
+        # given
+        moon = helpers.create_moon_40161708()
+        helpers.add_refinery(moon)
+        user, _ = create_user_from_evecharacter(
             1001,
             permissions=[
                 "moonmining.basic_access",
@@ -279,26 +261,17 @@ class TestMoonInfo(TestCase):
                 "esi-corporations.read_structures.v1",
             ],
         )
-        moon = helpers.create_moon_40161708()
-        helpers.add_refinery(moon)
-
-    def test_should_open_page(self):
-        # given
-        request = self.factory.get(
-            reverse("moonmining:moon_details", args=["40161708"])
-        )
-        request.user = self.user
+        self.client.force_login(user)
         # when
-        response = views.moon_details(request, 40161708)
+        response = self.client.get("/moonmining/moon/40161708")
         # then
-        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "moonmining/modals/moon_details.html")
 
 
 class TestViewsAreWorking(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.factory = RequestFactory()
         load_eveuniverse()
         load_allianceauth()
         cls.user, _ = create_user_from_evecharacter(
@@ -323,79 +296,66 @@ class TestViewsAreWorking(TestCase):
 
     def test_should_redirect_to_extractions_page(self):
         # given
-        request = self.factory.get(reverse("moonmining:index"))
-        request.user = self.user
+        self.client.force_login(self.user)
         # when
-        response = views.index(request)
+        response = self.client.get("/moonmining/")
         # then
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, reverse("moonmining:extractions"))
+        self.assertEqual(response.url, "/moonmining/extractions")
 
     def test_should_open_extractions_page(self):
         # given
-        request = self.factory.get(reverse("moonmining:extractions"))
-        request.user = self.user
+        self.client.force_login(self.user)
         # when
-        response = views.extractions(request)
+        response = self.client.get("/moonmining/extractions")
         # then
-        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "moonmining/extractions.html")
 
     def test_should_open_moon_details_page(self):
         # given
-        request = self.factory.get(
-            path=reverse("moonmining:moon_details", args=[self.moon.pk]),
-            data={"new_page": "yes"},
-        )
-        request.user = self.user
+        self.client.force_login(self.user)
         # when
-        response = views.moon_details(request, self.moon.pk)
+        response = self.client.get(f"/moonmining/moon/{self.moon.pk}?new_page=yes")
         # then
-        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "moonmining/_generic_modal_page.html")
 
     def test_should_open_extraction_details_page(self):
         # given
         extraction = self.refinery.extractions.first()
-        request = self.factory.get(
-            path=reverse("moonmining:extraction_details", args=[extraction.pk]),
-            data={"new_page": "yes"},
-        )
-        request.user = self.user
+        self.client.force_login(self.user)
         # when
-        response = views.extraction_details(request, extraction.pk)
+        response = self.client.get(
+            f"/moonmining/extraction/{extraction.pk}?new_page=yes"
+        )
         # then
-        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "moonmining/_generic_modal_page.html")
 
     def test_should_open_add_moon_scan_page(self):
         # given
-        request = self.factory.get(reverse("moonmining:upload_survey"))
-        request.user = self.user
+        self.client.force_login(self.user)
         # when
-        response = views.upload_survey(request)
+        response = self.client.get("/moonmining/upload_survey")
         # then
-        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "moonmining/modals/upload_survey.html")
 
     def test_should_open_moons_page(self):
         # given
-        request = self.factory.get(reverse("moonmining:moons"))
-        request.user = self.user
+        self.client.force_login(self.user)
         # when
-        response = views.moons(request)
+        response = self.client.get("/moonmining/moons")
         # then
-        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "moonmining/moons.html")
 
     def test_should_open_reports_page(self):
         # given
-        request = self.factory.get(reverse("moonmining:reports"))
-        request.user = self.user
+        self.client.force_login(self.user)
         # when
-        response = views.reports(request)
+        response = self.client.get("/moonmining/reports")
         # then
-        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "moonmining/reports.html")
 
     def test_should_handle_empty_refineries_extractions_page(self):
         # given
-        request = self.factory.get(reverse("moonmining:extractions"))
-        request.user = self.user
         refinery = Refinery.objects.create(
             id=99,
             name="Empty refinery",
@@ -409,10 +369,11 @@ class TestViewsAreWorking(TestCase):
             started_at=now() - dt.timedelta(days=3),
             status=Extraction.Status.STARTED,
         )
+        self.client.force_login(self.user)
         # when
-        response = views.extractions(request)
+        response = self.client.get("/moonmining/extractions")
         # then
-        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "moonmining/extractions.html")
 
 
 class TestExtractionsData(TestCase):
@@ -473,7 +434,6 @@ class TestReportsData(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.factory = RequestFactory()
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
@@ -493,10 +453,9 @@ class TestReportsData(TestCase):
 
     def test_should_return_owned_moon_values(self):
         # given
-        request = self.factory.get(reverse("moonmining:report_owned_value_data"))
-        request.user = self.user
+        self.client.force_login(self.user)
         # when
-        response = views.report_owned_value_data(request)
+        response = self.client.get("/moonmining/report_owned_value_data")
         # then
         self.assertEqual(response.status_code, 200)
         # TODO: Test values
@@ -523,12 +482,11 @@ class TestReportsData(TestCase):
             quantity=200,
             user=self.user,
         )
-        request = self.factory.get(reverse("moonmining:report_user_mining_data"))
-        request.user = self.user
+        self.client.force_login(self.user)
         # when
         with patch(MODULE_PATH + ".now") as mock_now:
             mock_now.return_value = dt.datetime(2021, 4, 18, 18, 15, 0, tzinfo=pytz.UTC)
-            response = views.report_user_mining_data(request)
+            response = self.client.get("/moonmining/report_user_mining_data")
         # then
         self.assertEqual(response.status_code, 200)
         # TODO: Test values
@@ -539,10 +497,9 @@ class TestReportsData(TestCase):
 
     def test_should_return_user_uploads_data(self):
         # given
-        request = self.factory.get(reverse("moonmining:report_user_uploaded_data"))
-        request.user = self.user
+        self.client.force_login(self.user)
         # when
-        response = views.report_user_uploaded_data(request)
+        response = self.client.get("/moonmining/report_user_uploaded_data")
         # then
         self.assertEqual(response.status_code, 200)
         user_data = [
