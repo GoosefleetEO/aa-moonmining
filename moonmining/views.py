@@ -160,6 +160,7 @@ def extractions_data(request, category):
         ) | extractions.filter(status=Extraction.Status.CANCELED)
     else:
         extractions = Extraction.objects.none()
+    can_see_ledger = request.user.has_perm("moonmining.view_moon_ledgers")
     for extraction in extractions:
         corporation_html = extraction.refinery.owner.name_html
         corporation_name = extraction.refinery.owner.name
@@ -174,10 +175,14 @@ def extractions_data(request, category):
             region.name,
         )
         if extraction.status == Extraction.Status.COMPLETED:
-            actions_html = extraction_ledger_button_html(extraction) + "&nbsp;"
             mined_value = extraction.ledger.aggregate(Sum(F("total_price")))[
                 "total_price__sum"
             ]
+            actions_html = (
+                extraction_ledger_button_html(extraction) + "&nbsp;"
+                if can_see_ledger
+                else ""
+            )
         else:
             actions_html = ""
             mined_value = None
@@ -258,7 +263,13 @@ def extraction_details(request, extraction_pk: int):
 
 
 @login_required
-@permission_required(["moonmining.extractions_access", "moonmining.basic_access"])
+@permission_required(
+    [
+        "moonmining.extractions_access",
+        "moonmining.basic_access",
+        "moonmining.view_moon_ledgers",
+    ]
+)
 def extraction_ledger(request, extraction_pk: int):
     try:
         extraction = (
@@ -319,8 +330,7 @@ def extraction_ledger(request, extraction_pk: int):
         context["title"] = "Extraction Ledger"
         context["content_file"] = "moonmining/partials/extraction_ledger.html"
         return render(request, "moonmining/_generic_modal_page.html", context)
-    else:
-        return render(request, "moonmining/modals/extraction_ledger.html", context)
+    return render(request, "moonmining/modals/extraction_ledger.html", context)
 
 
 @login_required()

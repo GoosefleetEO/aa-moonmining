@@ -419,46 +419,54 @@ class TestExtractionsData(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.factory = RequestFactory()
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
         moon = helpers.create_moon_40161708()
         cls.refinery = helpers.add_refinery(moon)
-
-    def test_should_return_all_moons(self):
-        # given
-        user, _ = create_user_from_evecharacter(
-            1001,
-            permissions=["moonmining.basic_access", "moonmining.extractions_access"],
-            scopes=Owner.esi_scopes(),
-        )
-        extraction = Extraction.objects.create(
-            refinery=self.refinery,
+        cls.extraction = Extraction.objects.create(
+            refinery=cls.refinery,
             chunk_arrival_at=dt.datetime(2019, 11, 20, 0, 1, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2019, 11, 20, 3, 1, 0, tzinfo=pytz.UTC),
             started_by_id=1001,
             started_at=now() - dt.timedelta(days=3),
             status=Extraction.Status.STARTED,
         )
-        request = self.factory.get(
-            reverse(
-                "moonmining:extractions_data",
-                args={"category": views.ExtractionsCategory.PAST},
-            )
+
+    def test_should_show_extraction(self):
+        # given
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=["moonmining.basic_access", "moonmining.extractions_access"],
+            scopes=Owner.esi_scopes(),
         )
-        request.user = user
+        self.client.force_login(user)
         # when
-        response = views.extractions_data(
-            request, category=views.ExtractionsCategory.PAST
+        response = self.client.get(
+            f"/moonmining/extractions_data/{views.ExtractionsCategory.PAST}",
         )
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
-        self.assertSetEqual(set(data.keys()), {extraction.pk})
-        obj = data[extraction.pk]
+        self.assertSetEqual(set(data.keys()), {self.extraction.pk})
+        obj = data[self.extraction.pk]
         self.assertIn("2019-Nov-20 00:01", obj["chunk_arrival_at"]["display"])
         self.assertEqual(obj["corporation_name"], "Wayne Technologies [WYN]")
+
+    def test_should_not_show_extraction(self):
+        # given
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=["moonmining.basic_access"],
+            scopes=Owner.esi_scopes(),
+        )
+        self.client.force_login(user)
+        # when
+        response = self.client.get(
+            f"/moonmining/extractions_data/{views.ExtractionsCategory.PAST}",
+        )
+        # then
+        self.assertEqual(response.status_code, 302)
 
 
 class TestReportsData(TestCase):
@@ -543,3 +551,79 @@ class TestReportsData(TestCase):
             if row["name"] == "Bruce Wayne"
         ]
         self.assertEqual(user_data[0]["num_moons"], 2)
+
+
+class TestExtractionLedgerData(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        load_allianceauth()
+        helpers.generate_eve_entities_from_allianceauth()
+        moon = helpers.create_moon_40161708()
+        cls.refinery = helpers.add_refinery(moon)
+        cls.extraction = Extraction.objects.create(
+            refinery=cls.refinery,
+            chunk_arrival_at=dt.datetime(2019, 11, 20, 0, 1, 0, tzinfo=pytz.UTC),
+            auto_fracture_at=dt.datetime(2019, 11, 20, 3, 1, 0, tzinfo=pytz.UTC),
+            started_by_id=1001,
+            started_at=now() - dt.timedelta(days=3),
+            status=Extraction.Status.STARTED,
+        )
+        user_1001, _ = create_user_from_evecharacter(
+            1001,
+            permissions=[
+                "moonmining.basic_access",
+                "moonmining.extractions_access",
+                "moonmining.view_moon_ledgers",
+            ],
+            scopes=Owner.esi_scopes(),
+        )
+        EveOreTypeExtras.objects.create(ore_type_id=45506, refined_price=10)
+        EveOreTypeExtras.objects.create(ore_type_id=45494, refined_price=20)
+        MiningLedgerRecord.objects.create(
+            refinery=cls.refinery,
+            character_id=1001,
+            day=dt.date(2021, 4, 18),
+            ore_type_id=45506,
+            corporation_id=2001,
+            quantity=100,
+            user=user_1001,
+        )
+
+    def test_should_show_ledger(self):
+        # given
+        user_1002, _ = create_user_from_evecharacter(
+            1002,
+            permissions=[
+                "moonmining.basic_access",
+                "moonmining.extractions_access",
+                "moonmining.view_moon_ledgers",
+            ],
+            scopes=Owner.esi_scopes(),
+        )
+        self.client.force_login(user_1002)
+        # when
+        response = self.client.get(
+            f"/moonmining/extraction_ledger/{self.extraction.pk}",
+        )
+        # then
+        self.assertTemplateUsed(response, "moonmining/modals/extraction_ledger.html")
+
+    def test_should_not_show_ledger(self):
+        # given
+        user_1002, _ = create_user_from_evecharacter(
+            1002,
+            permissions=[
+                "moonmining.basic_access",
+                "moonmining.extractions_access",
+            ],
+            scopes=Owner.esi_scopes(),
+        )
+        self.client.force_login(user_1002)
+        # when
+        response = self.client.get(
+            f"/moonmining/extraction_ledger/{self.extraction.pk}",
+        )
+        # then
+        self.assertEqual(response.status_code, 302)

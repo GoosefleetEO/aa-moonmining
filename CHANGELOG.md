@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [1.2.0] - 2021-11-22
+
+### Added
+
+- Restrict access to mining ledger with permission (#8)
+
 ## [1.1.0] - 2021-11-03
 
 ### Added

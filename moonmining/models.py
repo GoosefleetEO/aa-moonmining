@@ -470,6 +470,7 @@ class General(models.Model):
             ("view_all_moons", "Can view all known moons"),
             ("upload_moon_scan", "Can upload moon scans"),
             ("add_refinery_owner", "Can add refinery owner"),
+            ("view_moon_ledgers", "Can view moon ledgers"),
         )
 
 

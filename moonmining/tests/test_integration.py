@@ -34,10 +34,7 @@ class TestUI(WebTest):
         load_allianceauth()
         cls.user, cls.character_ownership = create_user_from_evecharacter(
             1001,
-            permissions=[
-                "moonmining.basic_access",
-                "moonmining.extractions_access",
-            ],
+            permissions=["moonmining.basic_access", "moonmining.extractions_access"],
         )
 
     def test_should_open_extractions(self):
