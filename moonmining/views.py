@@ -236,7 +236,8 @@ def extractions_data(request, category):
 def extraction_details(request, extraction_pk: int):
     try:
         extraction = (
-            Extraction.objects.annotate_volume()
+            Extraction.objects.visible_for_user(request.user)
+            .annotate_volume()
             .select_related(
                 "refinery",
                 "refinery__moon",
