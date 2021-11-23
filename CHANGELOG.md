@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.3.0] - tbd.
+
+>**Note**:<br>This release introduces a more granular permission system for viewing extractions. You most likely will need to assign the new permissions to retain functionality for some of your users.
+
 ### Added
 
 - New permission granting access to all extractions of an alliance
@@ -14,9 +18,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
-- BREAKING CHANGE: The extraction permission (`extractions_access`) now gives access to extractions from the user's own corporations only. Users need additional permission to see extractions from their alliance or any extraction.
-
-### Fixed
+- A user with the permission `extractions_access` can no longer see all known extractions, but his corporations extractions only.
+He needs additional permission to see extractions from their alliance or any extraction.<br>**Hint**: To restore the previous functionality give your users also the `view_all_extractions` permission.
 
 ## [1.3.1] - 2022-03-02
 

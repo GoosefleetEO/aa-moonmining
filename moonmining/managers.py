@@ -284,7 +284,7 @@ class ExtractionQuerySet(models.QuerySet, UpdateCalculatedPropertiesMixin):
             status__in=[self.model.Status.COMPLETED, self.model.Status.CANCELED]
         ).filter(auto_fracture_at__lte=now()).update(status=self.model.Status.COMPLETED)
 
-    def visible_for_user(self, user: User) -> models.QuerySet:
+    def visible_to_user(self, user: User) -> models.QuerySet:
         """Filter extractions visible to given user."""
         if not user.has_perm("moonmining.extractions_access"):
             return self.none()

@@ -117,8 +117,7 @@ def default_if_false(value, default):
 def index(request):
     if request.user.has_perm("moonmining.extractions_access"):
         return redirect("moonmining:extractions")
-    else:
-        return redirect("moonmining:moons")
+    return redirect("moonmining:moons")
 
 
 @login_required
@@ -143,7 +142,7 @@ def extractions_data(request, category):
         hours=MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE
     )
     extractions = (
-        Extraction.objects.visible_for_user(request.user)
+        Extraction.objects.visible_to_user(request.user)
         .annotate_volume()
         .selected_related_defaults()
         .select_related(
@@ -236,7 +235,7 @@ def extractions_data(request, category):
 def extraction_details(request, extraction_pk: int):
     try:
         extraction = (
-            Extraction.objects.visible_for_user(request.user)
+            Extraction.objects.visible_to_user(request.user)
             .annotate_volume()
             .select_related(
                 "refinery",
@@ -263,8 +262,7 @@ def extraction_details(request, extraction_pk: int):
         context["title"] = "Extraction"
         context["content_file"] = "moonmining/partials/extraction_details.html"
         return render(request, "moonmining/_generic_modal_page.html", context)
-    else:
-        return render(request, "moonmining/modals/extraction_details.html", context)
+    return render(request, "moonmining/modals/extraction_details.html", context)
 
 
 @login_required
@@ -278,7 +276,7 @@ def extraction_details(request, extraction_pk: int):
 def extraction_ledger(request, extraction_pk: int):
     try:
         extraction = (
-            Extraction.objects.all()
+            Extraction.objects.visible_to_user(request.user)
             .select_related(
                 "refinery",
                 "refinery__moon",
@@ -403,9 +401,11 @@ def moons_data(request, category):
             has_details_access = request.user.has_perm(
                 "moonmining.extractions_access"
             ) or request.user.has_perm("moonmining.view_all_moons")
-            extraction = refinery.extractions.filter(
-                status__in=[Extraction.Status.STARTED, Extraction.Status.READY]
-            ).first()
+            extraction = (
+                refinery.extractions.visible_to_user(request.user)
+                .filter(status__in=[Extraction.Status.STARTED, Extraction.Status.READY])
+                .first()
+            )
 
         region_name = (
             moon.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region.name

@@ -118,7 +118,7 @@ class TestExtractionManagerVisibleForUser(TestCase):
             scopes=Owner.esi_scopes(),
         )
         # when
-        result_qs = Extraction.objects.visible_for_user(user)
+        result_qs = Extraction.objects.visible_to_user(user)
         # then
         corporation_ids = set(
             result_qs.values_list(
@@ -141,7 +141,7 @@ class TestExtractionManagerVisibleForUser(TestCase):
             scopes=Owner.esi_scopes(),
         )
         # when
-        result_qs = Extraction.objects.visible_for_user(user)
+        result_qs = Extraction.objects.visible_to_user(user)
         # then
         corporation_ids = set(
             result_qs.values_list(
@@ -162,7 +162,7 @@ class TestExtractionManagerVisibleForUser(TestCase):
             scopes=Owner.esi_scopes(),
         )
         # when
-        result_qs = Extraction.objects.visible_for_user(user)
+        result_qs = Extraction.objects.visible_to_user(user)
         # then
         corporation_ids = set(
             result_qs.values_list(
@@ -179,7 +179,7 @@ class TestExtractionManagerVisibleForUser(TestCase):
             scopes=Owner.esi_scopes(),
         )
         # when
-        result_qs = Extraction.objects.visible_for_user(user)
+        result_qs = Extraction.objects.visible_to_user(user)
         # then
         corporation_ids = set(
             result_qs.values_list(
