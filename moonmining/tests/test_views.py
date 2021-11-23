@@ -391,14 +391,29 @@ class TestExtractionsData(TestCase):
             auto_fracture_at=dt.datetime(2019, 11, 20, 3, 1, 0, tzinfo=pytz.UTC),
             started_by_id=1001,
             started_at=now() - dt.timedelta(days=3),
-            status=Extraction.Status.STARTED,
+            status=Extraction.Status.COMPLETED,
         )
+        EveOreTypeExtras.objects.create(ore_type_id=45506, refined_price=10)
+        cls.user_1002, _ = create_user_from_evecharacter(1002)
 
     def test_should_show_extraction(self):
         # given
+        MiningLedgerRecord.objects.create(
+            refinery=self.refinery,
+            character_id=1001,
+            day=dt.date(2019, 11, 20),
+            ore_type_id=45506,
+            corporation_id=2001,
+            quantity=100,
+            user=self.user_1002,
+        )
         user, _ = create_user_from_evecharacter(
             1001,
-            permissions=["moonmining.basic_access", "moonmining.extractions_access"],
+            permissions=[
+                "moonmining.basic_access",
+                "moonmining.extractions_access",
+                "moonmining.view_moon_ledgers",
+            ],
             scopes=Owner.esi_scopes(),
         )
         self.client.force_login(user)
@@ -413,6 +428,7 @@ class TestExtractionsData(TestCase):
         obj = data[self.extraction.pk]
         self.assertIn("2019-Nov-20 00:01", obj["chunk_arrival_at"]["display"])
         self.assertEqual(obj["corporation_name"], "Wayne Technologies [WYN]")
+        self.assertIn("modalExtractionLedger", obj["details"])
 
     def test_should_not_show_extraction(self):
         # given
@@ -428,6 +444,55 @@ class TestExtractionsData(TestCase):
         )
         # then
         self.assertEqual(response.status_code, 302)
+
+    def test_should_not_show_ledger_button_wo_permission(self):
+        # given
+        MiningLedgerRecord.objects.create(
+            refinery=self.refinery,
+            character_id=1001,
+            day=dt.date(2019, 11, 20),
+            ore_type_id=45506,
+            corporation_id=2001,
+            quantity=100,
+            user=self.user_1002,
+        )
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=["moonmining.basic_access", "moonmining.extractions_access"],
+            scopes=Owner.esi_scopes(),
+        )
+        self.client.force_login(user)
+        # when
+        response = self.client.get(
+            f"/moonmining/extractions_data/{views.ExtractionsCategory.PAST}",
+        )
+        # then
+        self.assertEqual(response.status_code, 200)
+        data = json_response_to_dict(response)
+        obj = data[self.extraction.pk]
+        self.assertNotIn("modalExtractionLedger", obj["details"])
+
+    def test_should_not_show_ledger_button_when_no_data(self):
+        # given
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=[
+                "moonmining.basic_access",
+                "moonmining.extractions_access",
+                "moonmining.view_moon_ledgers",
+            ],
+            scopes=Owner.esi_scopes(),
+        )
+        self.client.force_login(user)
+        # when
+        response = self.client.get(
+            f"/moonmining/extractions_data/{views.ExtractionsCategory.PAST}",
+        )
+        # then
+        self.assertEqual(response.status_code, 200)
+        data = json_response_to_dict(response)
+        obj = data[self.extraction.pk]
+        self.assertNotIn("modalExtractionLedger", obj["details"])
 
 
 class TestReportsData(TestCase):
@@ -537,7 +602,6 @@ class TestExtractionLedgerData(TestCase):
             scopes=Owner.esi_scopes(),
         )
         EveOreTypeExtras.objects.create(ore_type_id=45506, refined_price=10)
-        EveOreTypeExtras.objects.create(ore_type_id=45494, refined_price=20)
         MiningLedgerRecord.objects.create(
             refinery=cls.refinery,
             character_id=1001,

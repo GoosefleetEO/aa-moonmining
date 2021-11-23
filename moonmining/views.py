@@ -174,7 +174,10 @@ def extractions_data(request, category):
             link_html(dotlan.solar_system_url(solar_system.name), moon_name),
             region.name,
         )
-        if extraction.status == Extraction.Status.COMPLETED:
+        if (
+            extraction.status == Extraction.Status.COMPLETED
+            and extraction.ledger.exists()
+        ):
             mined_value = extraction.ledger.aggregate(Sum(F("total_price")))[
                 "total_price__sum"
             ]

@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
-## [1.2.1] - tbd
+## [1.2.1] - 2021-11-23
 
 ### Added
 
@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 - Improved page performance for admin site / Refineries
+
+### Fixed
+
+- Mining ledger is shown even when the ledger is empty
 
 ## [1.2.0] - 2021-11-22
 
