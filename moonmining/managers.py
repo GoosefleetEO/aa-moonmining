@@ -10,6 +10,7 @@ from django.utils.timezone import now
 from eveuniverse.managers import EveTypeManager
 from eveuniverse.models import EveMoon
 
+from allianceauth.eveonline.models import EveCorporationInfo
 from allianceauth.notifications import notify
 from allianceauth.services.hooks import get_extension_logger
 from app_utils.logging import LoggerAddTag
@@ -283,15 +284,39 @@ class ExtractionQuerySet(models.QuerySet, UpdateCalculatedPropertiesMixin):
             status__in=[self.model.Status.COMPLETED, self.model.Status.CANCELED]
         ).filter(auto_fracture_at__lte=now()).update(status=self.model.Status.COMPLETED)
 
+    def visible_for_user(self, user: User) -> models.QuerySet:
+        """Filter extractions visible to given user."""
+        if not user.has_perm("moonmining.extractions_access"):
+            return self.none()
+        elif user.has_perm("moonmining.view_all_extractions"):
+            return self.all()
+        corporation_ids = set(
+            user.character_ownerships.values_list(
+                "character__corporation_id", flat=True
+            )
+        )
+        if user.has_perm("moonmining.view_alliance_extractions"):
+            corporations_qs = EveCorporationInfo.objects.select_related(
+                "alliance"
+            ).filter(corporation_id__in=corporation_ids, alliance__isnull=False)
+            alliances = {corporation.alliance for corporation in corporations_qs}
+            for alliance in alliances:
+                corporation_ids |= set(
+                    alliance.evecorporationinfo_set.values_list(
+                        "corporation_id", flat=True
+                    )
+                )
+        structures_query = self.filter(
+            refinery__owner__corporation__corporation_id__in=corporation_ids
+        )
+        return structures_query
 
-class ExtractionManager(models.Manager):
     def annotate_volume(self) -> models.QuerySet:
-        """Add volume of all products"""
+        """Add volume of all products."""
         return self.annotate(volume=Sum("products__volume"))
 
-    def get_queryset(self) -> models.QuerySet:
-        return ExtractionQuerySet(self.model, using=self._db)
 
+class ExtractionManagerBase(models.Manager):
     def update_from_calculated(self, calculated: CalculatedExtraction) -> bool:
         """Update an extraction object from related calculated extraction
         when there is new information.
@@ -382,6 +407,9 @@ class ExtractionManager(models.Manager):
             extraction.update_calculated_properties()
             updated = True
         return updated
+
+
+ExtractionManager = ExtractionManagerBase.from_queryset(ExtractionQuerySet)
 
 
 class RefineryManager(models.Manager):

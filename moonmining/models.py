@@ -465,7 +465,15 @@ class General(models.Model):
         default_permissions = ()
         permissions = (
             ("basic_access", "Can access the moonmining app"),
-            ("extractions_access", "Can access extractions and view owned moons"),
+            (
+                "extractions_access",
+                "Can access extractions and view owned moons from own corporation",
+            ),
+            (
+                "view_alliance_extractions",
+                "Can view extractions from all refineries belonging to the alliance.",
+            ),
+            ("view_all_extractions", "Can view all extractions."),
             ("reports_access", "Can access reports"),
             ("view_all_moons", "Can view all known moons"),
             ("upload_moon_scan", "Can upload moon scans"),

@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- New permission granting access to all extractions of an alliance
+- New permission granting access to any extraction
+
 ### Changed
+
+- BREAKING CHANGE: The extraction permission (`extractions_access`) now gives access to extractions from the user's own corporations only. Users need additional permission to see extractions from their alliance or any extraction.
 
 ### Fixed
 

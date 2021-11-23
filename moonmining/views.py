@@ -143,7 +143,8 @@ def extractions_data(request, category):
         hours=MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE
     )
     extractions = (
-        Extraction.objects.annotate_volume()
+        Extraction.objects.visible_for_user(request.user)
+        .annotate_volume()
         .selected_related_defaults()
         .select_related(
             "refinery__moon__eve_moon__eve_planet__eve_solar_system",

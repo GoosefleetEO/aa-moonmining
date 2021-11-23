@@ -499,6 +499,22 @@
             "position_x": -162960928882.0,
             "position_y": 10231015046.0,
             "position_z": -293173609174.0
+        },
+        {
+            "eve_planet_id": 40161707,
+            "id": 40161711,
+            "name": "Auga V - Moon 3",
+            "position_x": -162918822520.0,
+            "position_y": 10228371524.0,
+            "position_z": -292993791159.0
+        },
+        {
+            "eve_planet_id": 40161707,
+            "id": 40161712,
+            "name": "Auga V - Moon 4",
+            "position_x": -162801461723,
+            "position_y": 10210221003377,
+            "position_z": -293102798363
         }
     ],
     "EvePlanet": [

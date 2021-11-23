@@ -64,7 +64,7 @@ class TestUpdateTasks(NoSocketsTestCase):
     def test_should_update_all_mining_corporations(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
-        helpers.create_moon_40161708()
+        moon = helpers.create_fake_moon()
         corporation_2001 = helpers.create_owner_from_character_ownership(
             self.character_ownership
         )
@@ -107,7 +107,7 @@ class TestUpdateTasks(NoSocketsTestCase):
     def test_should_not_update_disabled_corporation(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
-        helpers.create_moon_40161708()
+        helpers.create_fake_moon()
         corporation_2001 = helpers.create_owner_from_character_ownership(
             self.character_ownership
         )
@@ -146,7 +146,7 @@ class TestUpdateTasks(NoSocketsTestCase):
         owner_2001 = helpers.create_owner_from_character_ownership(
             self.character_ownership
         )
-        moon_40161708 = helpers.create_moon_40161708()
+        moon_40161708 = helpers.create_fake_moon()
         refinery_1 = Refinery.objects.create(
             id=1000000000001,
             moon=moon_40161708,
@@ -180,7 +180,7 @@ class TestUpdateTasks(NoSocketsTestCase):
     def test_should_update_all_calculated_values(self, mock_update_prices):
         # given
         mock_update_prices.return_value = None
-        moon = helpers.create_moon_40161708()
+        moon = helpers.create_fake_moon()
         refinery = helpers.add_refinery(moon)
         tungsten = EveType.objects.get(id=16637)
         mercury = EveType.objects.get(id=16646)

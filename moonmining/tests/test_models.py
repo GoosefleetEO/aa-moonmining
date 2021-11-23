@@ -72,7 +72,7 @@ class TestMoonUpdateValue(NoSocketsTestCase):
     def setUpClass(cls):
         super().setUpClass()
         load_eveuniverse()
-        cls.moon = helpers.create_moon_40161708()
+        cls.moon = helpers.create_fake_moon()
 
     def test_should_calc_correct_value(self):
         # given
@@ -266,7 +266,7 @@ class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
-        cls.moon = helpers.create_moon_40161708()
+        cls.moon = helpers.create_fake_moon()
         _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
         cls.owner = Owner.objects.create(
             corporation=EveCorporationInfo.objects.get(corporation_id=2001),
@@ -362,7 +362,7 @@ class TestOwnerUpdateExtractions(NoSocketsTestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
-        cls.moon = helpers.create_moon_40161708()
+        cls.moon = helpers.create_fake_moon()
 
     def test_should_create_started_extraction_with_products(self, mock_esi):
         # given
@@ -412,7 +412,7 @@ class TestOwnerUpdateExtractionsFromEsi(NoSocketsTestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
-        cls.moon = helpers.create_moon_40161708()
+        cls.moon = helpers.create_fake_moon()
 
     def test_should_create_started_extraction(self, mock_esi):
         # given
@@ -516,7 +516,7 @@ class TestOwnerUpdateExtractionsFromNotifications(NoSocketsTestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
-        cls.moon = helpers.create_moon_40161708()
+        cls.moon = helpers.create_fake_moon()
 
     def test_should_create_canceled_extraction_with_products(self, mock_esi):
         # given
@@ -987,7 +987,7 @@ class TestExtractionIsJackpot(NoSocketsTestCase):
         super().setUpClass()
         load_eveuniverse()
         load_allianceauth()
-        moon = helpers.create_moon_40161708()
+        moon = helpers.create_fake_moon()
         owner = Owner.objects.create(
             corporation=EveCorporationInfo.objects.get(corporation_id=2001)
         )
@@ -1119,7 +1119,7 @@ class TestMoonProductsSorted(NoSocketsTestCase):
 
     def test_should_return_moon_products_in_order(self):
         # given
-        moon = helpers.create_moon_40161708()
+        moon = helpers.create_fake_moon()
         # when
         result = moon.products_sorted
         # then
@@ -1130,7 +1130,7 @@ class TestMoonProductsSorted(NoSocketsTestCase):
 
     def test_should_handle_products_without_price(self):
         # given
-        moon = helpers.create_moon_40161708()
+        moon = helpers.create_fake_moon()
         moon_product = moon.products.get(ore_type_id=45506)
         moon_product.ore_type.extras.refined_price = None
         moon_product.ore_type.extras.save()
@@ -1142,7 +1142,7 @@ class TestMoonProductsSorted(NoSocketsTestCase):
 
     def test_should_handle_products_without_amount(self):
         # given
-        moon = helpers.create_moon_40161708()
+        moon = helpers.create_fake_moon()
         moon_product = moon.products.get(ore_type_id=45506)
         moon_product.amount = 0
         moon_product.save()
@@ -1154,7 +1154,7 @@ class TestMoonProductsSorted(NoSocketsTestCase):
 
     def test_should_handle_products_without_volume(self):
         # given
-        moon = helpers.create_moon_40161708()
+        moon = helpers.create_fake_moon()
         moon_product = moon.products.get(ore_type_id=45506)
         volume_backup = moon_product.ore_type.volume
         moon_product.ore_type.volume = None

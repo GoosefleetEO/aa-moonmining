@@ -122,7 +122,7 @@ class TestMoonsData(TestCase):
         super().setUpClass()
         load_eveuniverse()
         load_allianceauth()
-        cls.moon = helpers.create_moon_40161708()
+        cls.moon = helpers.create_fake_moon()
         Moon.objects.create(eve_moon=EveMoon.objects.get(id=40131695))
         Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161709))
 
@@ -243,7 +243,7 @@ class TestMoonInfo(TestCase):
 
     def test_should_open_page(self):
         # given
-        moon = helpers.create_moon_40161708()
+        moon = helpers.create_fake_moon()
         helpers.add_refinery(moon)
         user, _ = create_user_from_evecharacter(
             1001,
@@ -291,7 +291,7 @@ class TestViewsAreWorking(TestCase):
                 "esi-corporations.read_structures.v1",
             ],
         )
-        cls.moon = helpers.create_moon_40161708()
+        cls.moon = helpers.create_fake_moon()
         cls.refinery = helpers.add_refinery(cls.moon)
 
     def test_should_redirect_to_extractions_page(self):
@@ -383,23 +383,41 @@ class TestExtractionsData(TestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
-        moon = helpers.create_moon_40161708()
-        cls.refinery = helpers.add_refinery(moon)
-        cls.extraction = Extraction.objects.create(
-            refinery=cls.refinery,
+        owner_2001 = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+        )
+        cls.refinery_2001 = helpers.add_refinery(
+            helpers.create_fake_moon(40161708), owner_2001
+        )
+        owner_2002 = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2002),
+        )
+        cls.refinery_2002 = helpers.add_refinery(
+            helpers.create_fake_moon(40131695), owner_2002
+        )
+        EveOreTypeExtras.objects.create(ore_type_id=45506, refined_price=10)
+        cls.user_1002, _ = create_user_from_evecharacter(1002)
+
+    def test_should_show_extraction_for_my_corporation(self):
+        # given
+        extraction_2001 = Extraction.objects.create(
+            refinery=self.refinery_2001,
             chunk_arrival_at=dt.datetime(2019, 11, 20, 0, 1, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2019, 11, 20, 3, 1, 0, tzinfo=pytz.UTC),
             started_by_id=1001,
             started_at=now() - dt.timedelta(days=3),
             status=Extraction.Status.COMPLETED,
         )
-        EveOreTypeExtras.objects.create(ore_type_id=45506, refined_price=10)
-        cls.user_1002, _ = create_user_from_evecharacter(1002)
-
-    def test_should_show_extraction(self):
-        # given
+        Extraction.objects.create(
+            refinery=self.refinery_2002,
+            chunk_arrival_at=dt.datetime(2019, 11, 21, 0, 1, 0, tzinfo=pytz.UTC),
+            auto_fracture_at=dt.datetime(2019, 11, 21, 3, 1, 0, tzinfo=pytz.UTC),
+            started_by_id=1002,
+            started_at=now() - dt.timedelta(days=5),
+            status=Extraction.Status.COMPLETED,
+        )
         MiningLedgerRecord.objects.create(
-            refinery=self.refinery,
+            refinery=self.refinery_2001,
             character_id=1001,
             day=dt.date(2019, 11, 20),
             ore_type_id=45506,
@@ -424,8 +442,59 @@ class TestExtractionsData(TestCase):
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
-        self.assertSetEqual(set(data.keys()), {self.extraction.pk})
-        obj = data[self.extraction.pk]
+        self.assertSetEqual(set(data.keys()), {extraction_2001.pk})
+        obj = data[extraction_2001.pk]
+        self.assertIn("2019-Nov-20 00:01", obj["chunk_arrival_at"]["display"])
+        self.assertEqual(obj["corporation_name"], "Wayne Technologies [WYN]")
+        self.assertIn("modalExtractionLedger", obj["details"])
+
+    def test_should_show_extractions_for_my_alliance(self):
+        # given
+        extraction_2001 = Extraction.objects.create(
+            refinery=self.refinery_2001,
+            chunk_arrival_at=dt.datetime(2019, 11, 20, 0, 1, 0, tzinfo=pytz.UTC),
+            auto_fracture_at=dt.datetime(2019, 11, 20, 3, 1, 0, tzinfo=pytz.UTC),
+            started_by_id=1001,
+            started_at=now() - dt.timedelta(days=3),
+            status=Extraction.Status.COMPLETED,
+        )
+        extraction_2002 = Extraction.objects.create(
+            refinery=self.refinery_2002,
+            chunk_arrival_at=dt.datetime(2019, 11, 21, 0, 1, 0, tzinfo=pytz.UTC),
+            auto_fracture_at=dt.datetime(2019, 11, 21, 3, 1, 0, tzinfo=pytz.UTC),
+            started_by_id=1002,
+            started_at=now() - dt.timedelta(days=5),
+            status=Extraction.Status.COMPLETED,
+        )
+        MiningLedgerRecord.objects.create(
+            refinery=self.refinery_2001,
+            character_id=1001,
+            day=dt.date(2019, 11, 20),
+            ore_type_id=45506,
+            corporation_id=2001,
+            quantity=100,
+            user=self.user_1002,
+        )
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=[
+                "moonmining.basic_access",
+                "moonmining.extractions_access",
+                "moonmining.view_moon_ledgers",
+                "moonmining.view_alliance_extractions",
+            ],
+            scopes=Owner.esi_scopes(),
+        )
+        self.client.force_login(user)
+        # when
+        response = self.client.get(
+            f"/moonmining/extractions_data/{views.ExtractionsCategory.PAST}",
+        )
+        # then
+        self.assertEqual(response.status_code, 200)
+        data = json_response_to_dict(response)
+        self.assertSetEqual(set(data.keys()), {extraction_2001.pk, extraction_2002.pk})
+        obj = data[extraction_2001.pk]
         self.assertIn("2019-Nov-20 00:01", obj["chunk_arrival_at"]["display"])
         self.assertEqual(obj["corporation_name"], "Wayne Technologies [WYN]")
         self.assertIn("modalExtractionLedger", obj["details"])
@@ -447,8 +516,16 @@ class TestExtractionsData(TestCase):
 
     def test_should_not_show_ledger_button_wo_permission(self):
         # given
+        extraction = Extraction.objects.create(
+            refinery=self.refinery_2001,
+            chunk_arrival_at=dt.datetime(2019, 11, 20, 0, 1, 0, tzinfo=pytz.UTC),
+            auto_fracture_at=dt.datetime(2019, 11, 20, 3, 1, 0, tzinfo=pytz.UTC),
+            started_by_id=1001,
+            started_at=now() - dt.timedelta(days=3),
+            status=Extraction.Status.COMPLETED,
+        )
         MiningLedgerRecord.objects.create(
-            refinery=self.refinery,
+            refinery=self.refinery_2001,
             character_id=1001,
             day=dt.date(2019, 11, 20),
             ore_type_id=45506,
@@ -469,11 +546,19 @@ class TestExtractionsData(TestCase):
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
-        obj = data[self.extraction.pk]
+        obj = data[extraction.pk]
         self.assertNotIn("modalExtractionLedger", obj["details"])
 
     def test_should_not_show_ledger_button_when_no_data(self):
         # given
+        extraction = Extraction.objects.create(
+            refinery=self.refinery_2001,
+            chunk_arrival_at=dt.datetime(2019, 11, 20, 0, 1, 0, tzinfo=pytz.UTC),
+            auto_fracture_at=dt.datetime(2019, 11, 20, 3, 1, 0, tzinfo=pytz.UTC),
+            started_by_id=1001,
+            started_at=now() - dt.timedelta(days=3),
+            status=Extraction.Status.COMPLETED,
+        )
         user, _ = create_user_from_evecharacter(
             1001,
             permissions=[
@@ -491,7 +576,7 @@ class TestExtractionsData(TestCase):
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
-        obj = data[self.extraction.pk]
+        obj = data[extraction.pk]
         self.assertNotIn("modalExtractionLedger", obj["details"])
 
 
@@ -502,7 +587,7 @@ class TestReportsData(TestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
-        cls.moon = helpers.create_moon_40161708()
+        cls.moon = helpers.create_fake_moon()
         cls.refinery = helpers.add_refinery(cls.moon)
         cls.user, _ = create_user_from_evecharacter(
             1001,
@@ -618,7 +703,7 @@ class TestExtractionLedgerData(TestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
-        moon = helpers.create_moon_40161708()
+        moon = helpers.create_fake_moon()
         cls.refinery = helpers.add_refinery(moon)
         cls.extraction = Extraction.objects.create(
             refinery=cls.refinery,

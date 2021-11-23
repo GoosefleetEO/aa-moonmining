@@ -18,9 +18,9 @@ from ..models import (
 )
 
 
-def create_moon_40161708() -> EveMoon:
-    Moon.objects.filter(pk=40161708).delete()
-    moon = Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161708))
+def create_fake_moon(moon_id=40161708) -> EveMoon:
+    Moon.objects.filter(pk=moon_id).delete()
+    moon = Moon.objects.create(eve_moon=EveMoon.objects.get(id=moon_id))
     MoonProduct.objects.create(
         moon=moon, ore_type=EveType.objects.get(id=45506), amount=0.19
     )
