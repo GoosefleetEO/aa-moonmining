@@ -1,7 +1,15 @@
 from django.contrib import admin
 
 from . import tasks
-from .models import Extraction, ExtractionProduct, Moon, Notification, Owner, Refinery
+from .models import (
+    Extraction,
+    ExtractionProduct,
+    MiningLedgerRecord,
+    Moon,
+    Notification,
+    Owner,
+    Refinery,
+)
 
 
 class ExtractionProductAdmin(admin.TabularInline):
@@ -10,7 +18,7 @@ class ExtractionProductAdmin(admin.TabularInline):
 
 @admin.register(Extraction)
 class ExtractionAdmin(admin.ModelAdmin):
-    list_display = ("chunk_arrival_at", "status", "_owner", "refinery")
+    list_display = ("chunk_arrival_at", "status", "_owner", "refinery", "_ledger")
     ordering = ("-chunk_arrival_at",)
     list_filter = ("chunk_arrival_at", "status", "refinery__owner", "refinery")
     search_fields = ("refinery__moon__eve_moon__name",)
@@ -34,6 +42,13 @@ class ExtractionAdmin(admin.ModelAdmin):
     def _owner(self, obj):
         return obj.refinery.owner
 
+    def _ledger(self, obj):
+        if obj.status != Extraction.Status.COMPLETED:
+            return None
+        return obj.ledger.exists()
+
+    _ledger.boolean = True
+
     def has_change_permission(self, request, obj=None):
         return False
 
@@ -41,23 +56,27 @@ class ExtractionAdmin(admin.ModelAdmin):
         return False
 
 
-# @admin.register(MiningLedgerRecord)
-# class MiningLedgerRecordAdmin(admin.ModelAdmin):
-#     list_display = ("refinery", "day", "user", "character", "ore_type", "quantity")
-#     ordering = ["refinery", "day", "user", "character", "ore_type"]
-#     list_filter = (
-#         "refinery",
-#         "day",
-#         "user",
-#         ("character", admin.RelatedOnlyFieldListFilter),
-#         "ore_type",
-#     )
+@admin.register(MiningLedgerRecord)
+class MiningLedgerRecordAdmin(admin.ModelAdmin):
+    list_display = ("refinery", "day", "user", "character", "ore_type", "quantity")
+    ordering = ["refinery", "day", "user", "character", "ore_type"]
+    list_filter = (
+        "refinery",
+        "day",
+        "user",
+        ("character", admin.RelatedOnlyFieldListFilter),
+        "ore_type",
+    )
 
-#     def has_add_permission(self, request):
-#         return False
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related("refinery", "character", "ore_type", "user")
 
-#     def has_change_permission(self, request, obj=None):
-#         return False
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Moon)
@@ -168,6 +187,12 @@ class RefineryAdmin(admin.ModelAdmin):
         ("owner__corporation", admin.RelatedOnlyFieldListFilter),
         "ledger_last_update_ok",
     )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related(
+            "moon", "moon__eve_moon", "eve_type", "owner", "owner__corporation"
+        )
 
     def has_change_permission(self, request, obj=None):
         return False

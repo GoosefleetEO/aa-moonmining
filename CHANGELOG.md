@@ -13,6 +13,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [1.2.1] - tbd
+
+### Added
+
+- Mining ledger records on admin site
+- Now shows if an extraction has a ledger on admin site
+
+### Changed
+
+- Improved page performance for admin site / Refineries
+
 ## [1.2.0] - 2021-11-22
 
 ### Added
