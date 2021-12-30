@@ -354,7 +354,7 @@ def moons(request):
 def moons_data(request, category):
     """returns moon list in JSON for DataTables AJAX"""
     data = list()
-    moon_query = Moon.objects.selected_related_defaults()
+    moon_query = Moon.objects.visible_to_user(request.user).selected_related_defaults()
     if (
         category == MoonsCategory.ALL
         and request.user.has_perm("moonmining.extractions_access")
@@ -445,7 +445,11 @@ def moons_data(request, category):
 @permission_required("moonmining.basic_access")
 def moon_details(request, moon_pk: int):
     try:
-        moon = Moon.objects.selected_related_defaults().get(pk=moon_pk)
+        moon = (
+            Moon.objects.visible_to_user(request.user)
+            .selected_related_defaults()
+            .get(pk=moon_pk)
+        )
     except Moon.DoesNotExist:
         return HttpResponseNotFound()
     if not request.user.has_perm("moonmining.extractions_access"):

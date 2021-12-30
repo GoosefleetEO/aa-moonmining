@@ -18,6 +18,111 @@ from .testdata.survey_data import fetch_survey_data
 MANAGERS_PATH = "moonmining.managers"
 
 
+class TestMoonManagerVisibleForUser(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        load_allianceauth()
+        helpers.generate_eve_entities_from_allianceauth()
+        owner_2001 = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+        )
+        cls.refinery_2001 = helpers.add_refinery(
+            helpers.create_fake_moon(40161708), owner_2001
+        )
+        owner_2002 = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2002),
+        )
+        cls.refinery_2002 = helpers.add_refinery(
+            helpers.create_fake_moon(40131695), owner_2002
+        )
+        owner_2101 = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2101),
+        )
+        cls.refinery_2101 = helpers.add_refinery(
+            helpers.create_fake_moon(40161711), owner_2101
+        )
+
+    def test_should_return_own_corporation_only(self):
+        # given
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=["moonmining.basic_access", "moonmining.extractions_access"],
+            scopes=Owner.esi_scopes(),
+        )
+        # when
+        result_qs = Moon.objects.visible_to_user(user)
+        # then
+        corporation_ids = set(
+            result_qs.values_list(
+                "refinery__owner__corporation__corporation_id", flat=True
+            )
+        )
+        self.assertSetEqual(corporation_ids, {2001})
+
+    # should_return_none
+
+    def test_should_return_own_alliance_onlyy(self):
+        # given
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=[
+                "moonmining.basic_access",
+                "moonmining.extractions_access",
+                "moonmining.view_alliance_extractions",
+            ],
+            scopes=Owner.esi_scopes(),
+        )
+        # when
+        result_qs = Moon.objects.visible_to_user(user)
+        # then
+        corporation_ids = set(
+            result_qs.values_list(
+                "refinery__owner__corporation__corporation_id", flat=True
+            )
+        )
+        self.assertSetEqual(corporation_ids, {2001, 2002})
+
+    def test_should_return_all(self):
+        # given
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=[
+                "moonmining.basic_access",
+                "moonmining.extractions_access",
+                "moonmining.view_all_extractions",
+            ],
+            scopes=Owner.esi_scopes(),
+        )
+        # when
+        result_qs = Moon.objects.visible_to_user(user)
+        # then
+        corporation_ids = set(
+            result_qs.values_list(
+                "refinery__owner__corporation__corporation_id", flat=True
+            )
+        )
+        self.assertSetEqual(corporation_ids, {2001, 2002, 2101})
+
+    def test_should_return_none(self):
+        # given
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=["moonmining.basic_access"],
+            scopes=Owner.esi_scopes(),
+        )
+        # when
+        result_qs = Moon.objects.visible_to_user(user)
+        # then
+        corporation_ids = set(
+            result_qs.values_list(
+                "refinery__owner__corporation__corporation_id", flat=True
+            )
+        )
+        self.assertSetEqual(corporation_ids, set())
+
+
 class TestExtractionManagerUpdateStatus(TestCase):
     @classmethod
     def setUpClass(cls):

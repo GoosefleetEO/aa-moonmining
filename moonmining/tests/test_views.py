@@ -122,9 +122,26 @@ class TestMoonsData(TestCase):
         super().setUpClass()
         load_eveuniverse()
         load_allianceauth()
-        cls.moon = helpers.create_fake_moon()
-        Moon.objects.create(eve_moon=EveMoon.objects.get(id=40131695))
-        Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161709))
+        helpers.generate_eve_entities_from_allianceauth()
+        owner_2001 = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
+        )
+        cls.refinery_2001 = helpers.add_refinery(
+            helpers.create_fake_moon(40161708), owner_2001
+        )
+        owner_2002 = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2002),
+        )
+        cls.refinery_2002 = helpers.add_refinery(
+            helpers.create_fake_moon(40131695), owner_2002
+        )
+        owner_2101 = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2101),
+        )
+        cls.refinery_2101 = helpers.add_refinery(
+            helpers.create_fake_moon(40161711), owner_2101
+        )
+        Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161712))
 
     def test_should_return_all_moons(self):
         # given
@@ -143,7 +160,7 @@ class TestMoonsData(TestCase):
         # then
         self.assertEqual(response.status_code, 200)
         data = json_response_to_dict(response)
-        self.assertSetEqual(set(data.keys()), {40131695, 40161708, 40161709})
+        self.assertSetEqual(set(data.keys()), {40161708, 40161712})
         obj = data[40161708]
         self.assertEqual(obj["moon_name"], "Auga V - 1")
 

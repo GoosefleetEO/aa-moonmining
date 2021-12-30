@@ -32,9 +32,11 @@ class CreateEveUniverseTestData(TestCase):
             ModelSpec(
                 "EveMoon",
                 ids=[
+                    40131695,  # Helgatild IX - Moon 12
                     40161708,  # Auga V - Moon 1
                     40161709,  # Auga V - Moon 2
-                    40131695,  # Helgatild IX - Moon 12
+                    40161711,  # Auga V - Moon 3
+                    40161712,  # Auga V - Moon 4
                 ],
             ),
         ]

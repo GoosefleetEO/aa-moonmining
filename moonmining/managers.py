@@ -1,6 +1,6 @@
 from collections import namedtuple
 from concurrent import futures
-from typing import Tuple
+from typing import Set, Tuple
 
 from django.contrib.auth.models import User
 from django.db import models, transaction
@@ -90,14 +90,46 @@ class UpdateCalculatedPropertiesMixin:
         obj.update_calculated_properties()
 
 
-class MoonQuerySet(models.QuerySet, UpdateCalculatedPropertiesMixin):
-    pass
+class VisibleToUserMixin:
+    def visible_to_user(self, user: User) -> models.QuerySet:
+        """Filter objects visible to given user."""
+        if not user.has_perm("moonmining.extractions_access"):
+            return self.none()
+        elif user.has_perm("moonmining.view_all_extractions"):
+            return self.all()
+        corporation_ids = self._users_corporation_ids(
+            user=user,
+            include_alliances=user.has_perm("moonmining.view_alliance_extractions"),
+        )
+        return self.filter(
+            refinery__owner__corporation__corporation_id__in=corporation_ids
+        )
+
+    @staticmethod
+    def _users_corporation_ids(user, include_alliances: False) -> Set[int]:
+        """Corporations belonging to any character of this user."""
+        corporation_ids = set(
+            user.character_ownerships.values_list(
+                "character__corporation_id", flat=True
+            )
+        )
+        if include_alliances:
+            corporations_qs = EveCorporationInfo.objects.select_related(
+                "alliance"
+            ).filter(corporation_id__in=corporation_ids, alliance__isnull=False)
+            alliances = {corporation.alliance for corporation in corporations_qs}
+            for alliance in alliances:
+                corporation_ids |= set(
+                    alliance.evecorporationinfo_set.values_list(
+                        "corporation_id", flat=True
+                    )
+                )
+        return corporation_ids
 
 
-class MoonManager(models.Manager):
-    def get_queryset(self) -> models.QuerySet:
-        return MoonQuerySet(self.model, using=self._db)
-
+class MoonQuerySet(
+    UpdateCalculatedPropertiesMixin, VisibleToUserMixin, models.QuerySet
+):
     def selected_related_defaults(self) -> models.QuerySet:
         return self.select_related(
             "eve_moon",
@@ -110,6 +142,8 @@ class MoonManager(models.Manager):
             "refinery__owner__corporation__alliance",
         )
 
+
+class MoonManagerBase(models.Manager):
     def update_moons_from_survey(self, scans: str, user: User = None) -> bool:
         """Update moons from survey input.
 
@@ -262,7 +296,12 @@ class MoonManager(models.Manager):
         return success
 
 
-class ExtractionQuerySet(models.QuerySet, UpdateCalculatedPropertiesMixin):
+MoonManager = MoonManagerBase.from_queryset(MoonQuerySet)
+
+
+class ExtractionQuerySet(
+    UpdateCalculatedPropertiesMixin, VisibleToUserMixin, models.QuerySet
+):
     def selected_related_defaults(self) -> models.QuerySet:
         return self.select_related(
             "refinery",
@@ -283,33 +322,6 @@ class ExtractionQuerySet(models.QuerySet, UpdateCalculatedPropertiesMixin):
         self.exclude(
             status__in=[self.model.Status.COMPLETED, self.model.Status.CANCELED]
         ).filter(auto_fracture_at__lte=now()).update(status=self.model.Status.COMPLETED)
-
-    def visible_to_user(self, user: User) -> models.QuerySet:
-        """Filter extractions visible to given user."""
-        if not user.has_perm("moonmining.extractions_access"):
-            return self.none()
-        elif user.has_perm("moonmining.view_all_extractions"):
-            return self.all()
-        corporation_ids = set(
-            user.character_ownerships.values_list(
-                "character__corporation_id", flat=True
-            )
-        )
-        if user.has_perm("moonmining.view_alliance_extractions"):
-            corporations_qs = EveCorporationInfo.objects.select_related(
-                "alliance"
-            ).filter(corporation_id__in=corporation_ids, alliance__isnull=False)
-            alliances = {corporation.alliance for corporation in corporations_qs}
-            for alliance in alliances:
-                corporation_ids |= set(
-                    alliance.evecorporationinfo_set.values_list(
-                        "corporation_id", flat=True
-                    )
-                )
-        structures_query = self.filter(
-            refinery__owner__corporation__corporation_id__in=corporation_ids
-        )
-        return structures_query
 
     def annotate_volume(self) -> models.QuerySet:
         """Add volume of all products."""
