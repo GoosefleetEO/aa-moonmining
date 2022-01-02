@@ -1164,23 +1164,24 @@ class Refinery(models.Model):
         )
         try:
             nearest_celestial = solar_system.nearest_celestial(
-                structure_info["position"]["x"],
-                structure_info["position"]["y"],
-                structure_info["position"]["z"],
+                x=structure_info["position"]["x"],
+                y=structure_info["position"]["y"],
+                z=structure_info["position"]["z"],
+                group_id=constants.EVE_GROUP_ID_MOON,
             )
         except OSError:
             logger.exception("%s: Failed to fetch nearest celestial ", self)
-        else:
-            if (
-                nearest_celestial
-                and nearest_celestial.eve_type.id == constants.EVE_TYPE_ID_MOON
-            ):
-                eve_moon = nearest_celestial.eve_object
-                moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
-                self.moon = moon
-                self.save()
-                return True
-        return False
+            return False
+        if (
+            not nearest_celestial
+            or nearest_celestial.eve_type.id != constants.EVE_TYPE_ID_MOON
+        ):
+            return False
+        eve_moon = nearest_celestial.eve_object
+        moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)
+        self.moon = moon
+        self.save()
+        return True
 
     def update_moon_from_eve_id(self, eve_moon_id: int):
         eve_moon, _ = EveMoon.objects.get_or_create_esi(id=eve_moon_id)

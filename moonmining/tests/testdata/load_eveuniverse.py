@@ -20,7 +20,7 @@ def load_eveuniverse():
     load_testdata_from_dict(eveuniverse_testdata)
 
 
-def nearest_celestial_stub(eve_solar_system, x, y, z):
+def nearest_celestial_stub(eve_solar_system, x, y, z, group_id=None):
     eve_type = EveType.objects.get(id=14)
     if (x, y, z) == (55028384780, 7310316270, -163686684205):
         return eve_solar_system.NearestCelestial(
@@ -34,5 +34,4 @@ def nearest_celestial_stub(eve_solar_system, x, y, z):
             eve_object=EveMoon.objects.get(id=40161709),  # Auga V - Moon 2
             distance=123,
         )
-    else:
-        return None
+    return None

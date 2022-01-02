@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [1.2.2] - 2021-12-30
+
+### Fixed
+
+- Can not detect moon belonging to refinery if another celestial is nearer
+
 ## [1.2.1] - 2021-11-23
 
 ### Added

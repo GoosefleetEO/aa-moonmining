@@ -43,7 +43,7 @@ setup(
         "django-bootstrap-form",
         "django-navhelper",
         "allianceauth-app-utils>=1.5",
-        "django-eveuniverse>=0.8",
+        "django-eveuniverse>=0.9",
         "dataclasses>='0.7';python_version<'3.7'",
     ],
 )

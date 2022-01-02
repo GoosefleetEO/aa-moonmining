@@ -10,7 +10,7 @@ from django_webtest import WebTest
 from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 
 from app_utils.esi import EsiStatus
-from app_utils.testing import create_user_from_evecharacter
+from app_utils.testing import NoSocketsTestCase, create_user_from_evecharacter
 
 from .. import tasks
 from ..models import EveOreType, Moon, Owner, Refinery
@@ -50,27 +50,27 @@ class TestUI(WebTest):
 
 @patch(TASKS_PATH + ".fetch_esi_status", lambda: EsiStatus(True, 100, 60))
 @patch(MODELS_PATH + ".EveSolarSystem.nearest_celestial", new=nearest_celestial_stub)
-@override_settings(CELERY_ALWAYS_EAGER=True)
-class TestUpdateTasks(TestCase):
+@override_settings(CELERY_ALWAYS_EAGER=True, CELERY_EAGER_PROPAGATES_EXCEPTIONS=True)
+class TestUpdateTasks(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         load_eveuniverse()
         load_allianceauth()
+        helpers.generate_eve_entities_from_allianceauth()
         _, cls.character_ownership = helpers.create_default_user_1001()
 
     @patch(MODELS_PATH + ".esi")
     def test_should_update_all_mining_corporations(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
-        moon = helpers.create_moon_40161708()
+        helpers.create_moon_40161708()
         corporation_2001 = helpers.create_owner_from_character_ownership(
             self.character_ownership
         )
         # when
         tasks.run_regular_updates.delay()
         # then
-        moon.refresh_from_db()
         self.assertSetEqual(Refinery.objects.ids(), {1000000000001, 1000000000002})
         refinery = Refinery.objects.get(id=1000000000001)
         self.assertEqual(refinery.extractions.count(), 1)
@@ -90,7 +90,10 @@ class TestUpdateTasks(TestCase):
             self.character_ownership
         )
         # when
-        tasks.run_regular_updates.delay()
+        try:
+            tasks.run_regular_updates.delay()
+        except OSError:
+            pass
         # then
         corporation_2001.refresh_from_db()
         self.assertAlmostEqual(
