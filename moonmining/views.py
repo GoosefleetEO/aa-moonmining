@@ -646,61 +646,89 @@ def report_user_mining_data(request):
         * Coalesce(F("mining_ledger__ore_type__extras__refined_price"), 0),
         output_field=FloatField(),
     )
+    today = now()
+    months_1 = today.replace(day=1) - dt.timedelta(days=1)
+    months_2 = months_1.replace(day=1) - dt.timedelta(days=1)
+    months_3 = months_2.replace(day=1) - dt.timedelta(days=1)
     users_mining_totals = (
         User.objects.filter(profile__main_character__isnull=False)
         .annotate(
             volume_month_0=Sum(
                 sum_volume,
-                filter=Q(mining_ledger__day__month=now().month),
+                filter=Q(
+                    mining_ledger__day__month=today.month,
+                    mining_ledger__day__year=today.year,
+                ),
                 distinct=True,
             )
         )
         .annotate(
             volume_month_1=Sum(
                 sum_volume,
-                filter=Q(mining_ledger__day__month=now().month - 1),
+                filter=Q(
+                    mining_ledger__day__month=months_1.month,
+                    mining_ledger__day__year=months_1.year,
+                ),
                 distinct=True,
             )
         )
         .annotate(
             volume_month_2=Sum(
                 sum_volume,
-                filter=Q(mining_ledger__day__month=now().month - 2),
+                filter=Q(
+                    mining_ledger__day__month=months_2.month,
+                    mining_ledger__day__year=months_2.year,
+                ),
                 distinct=True,
             )
         )
         .annotate(
             volume_month_3=Sum(
                 sum_volume,
-                filter=Q(mining_ledger__day__month=now().month - 3),
+                filter=Q(
+                    mining_ledger__day__month=months_3.month,
+                    mining_ledger__day__year=months_3.year,
+                ),
                 distinct=True,
             )
         )
         .annotate(
             price_month_0=Sum(
                 sum_price,
-                filter=Q(mining_ledger__day__month=now().month),
+                filter=Q(
+                    mining_ledger__day__month=today.month,
+                    mining_ledger__day__year=today.year,
+                ),
                 distinct=True,
             )
         )
         .annotate(
             price_month_1=Sum(
                 sum_price,
-                filter=Q(mining_ledger__day__month=now().month - 1),
+                filter=Q(
+                    mining_ledger__day__month=months_1.month,
+                    mining_ledger__day__year=months_1.year,
+                ),
                 distinct=True,
             )
         )
         .annotate(
             price_month_2=Sum(
                 sum_price,
-                filter=Q(mining_ledger__day__month=now().month - 2),
+                filter=Q(
+                    mining_ledger__day__month=months_2.month,
+                    mining_ledger__day__year=months_2.year,
+                ),
                 distinct=True,
             )
         )
         .annotate(
             price_month_3=Sum(
                 sum_price,
-                filter=Q(mining_ledger__day__month=now().month - 3),
+                filter=Q(
+                    mining_ledger__day__month=months_3.month,
+                    mining_ledger__day__year=months_3.year,
+                ),
                 distinct=True,
             )
         )

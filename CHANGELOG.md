@@ -13,13 +13,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
-## [1.2.2] - 2021-12-30
+## [1.2.2] - 2022-01-02
 
 ### Fixed
 
-- Can not detect moon belonging to refinery if another celestial is nearer
+- Does not show values for member mining of previous year (#11)
 
-## [1.2.1] - 2021-11-23
+## [1.2.1] - 2022-01-02
 
 ### Added
 

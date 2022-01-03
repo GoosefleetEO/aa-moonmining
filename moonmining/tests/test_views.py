@@ -527,12 +527,16 @@ class TestReportsData(TestCase):
 
     def test_should_return_user_mining_data(self):
         # given
+        today = dt.datetime(2021, 1, 15, 12, 0, tzinfo=pytz.UTC)
+        months_1 = dt.datetime(2020, 12, 15, 12, 0, tzinfo=pytz.UTC)
+        months_2 = dt.datetime(2020, 11, 15, 12, 0, tzinfo=pytz.UTC)
+        months_3 = dt.datetime(2020, 10, 15, 12, 0, tzinfo=pytz.UTC)
         EveOreTypeExtras.objects.create(ore_type_id=45506, refined_price=10)
         EveOreTypeExtras.objects.create(ore_type_id=45494, refined_price=20)
         MiningLedgerRecord.objects.create(
             refinery=self.refinery,
             character_id=1001,
-            day=dt.date(2021, 4, 18),
+            day=today.date() - dt.timedelta(days=1),
             ore_type_id=45506,
             corporation_id=2001,
             quantity=100,
@@ -541,24 +545,56 @@ class TestReportsData(TestCase):
         MiningLedgerRecord.objects.create(
             refinery=self.refinery,
             character_id=1001,
-            day=dt.date(2021, 4, 19),
+            day=today.date() - dt.timedelta(days=2),
             ore_type_id=45494,
             corporation_id=2001,
             quantity=200,
             user=self.user,
         )
+        MiningLedgerRecord.objects.create(
+            refinery=self.refinery,
+            character_id=1001,
+            day=months_1.date() - dt.timedelta(days=1),
+            ore_type_id=45494,
+            corporation_id=2001,
+            quantity=200,
+            user=self.user,
+        )
+        MiningLedgerRecord.objects.create(
+            refinery=self.refinery,
+            character_id=1001,
+            day=months_2.date() - dt.timedelta(days=1),
+            ore_type_id=45494,
+            corporation_id=2001,
+            quantity=500,
+            user=self.user,
+        )
+        MiningLedgerRecord.objects.create(
+            refinery=self.refinery,
+            character_id=1001,
+            day=months_3.date() - dt.timedelta(days=1),
+            ore_type_id=45494,
+            corporation_id=2001,
+            quantity=600,
+            user=self.user,
+        )
         self.client.force_login(self.user)
         # when
         with patch(MODULE_PATH + ".now") as mock_now:
-            mock_now.return_value = dt.datetime(2021, 4, 18, 18, 15, 0, tzinfo=pytz.UTC)
+            mock_now.return_value = today
             response = self.client.get("/moonmining/report_user_mining_data")
         # then
         self.assertEqual(response.status_code, 200)
-        # TODO: Test values
         data = json_response_to_dict(response)
         row = data[self.user.id]
-        self.assertEqual(row["volume_month_0"], 3000)
+        self.assertEqual(row["volume_month_0"], 100 * 10 + 200 * 10)
         self.assertEqual(row["price_month_0"], 10 * 100 + 20 * 200)
+        self.assertEqual(row["volume_month_1"], 200 * 10)
+        self.assertEqual(row["price_month_1"], 20 * 200)
+        self.assertEqual(row["volume_month_2"], 500 * 10)
+        self.assertEqual(row["price_month_2"], 20 * 500)
+        self.assertEqual(row["volume_month_3"], 600 * 10)
+        self.assertEqual(row["price_month_3"], 20 * 600)
 
     def test_should_return_user_uploads_data(self):
         # given
