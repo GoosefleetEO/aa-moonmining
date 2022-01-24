@@ -171,8 +171,9 @@ Name  | Description
 -- | --
 `moonmining.basic_access` | This is access permission, users without this permission will be unable to access the plugin.
 `moonmining.upload_moon_scan` | This permission allows users to upload moon scan data.
-`moonmining.extractions_access` | User can access extractions and view owned moons
-`moonmining.view_all_moons` | User can view all moons in the database
+`moonmining.extractions_access` | User can access extractions and view owned moons.
+`moonmining.reports_access` | User can access reports.
+`moonmining.view_all_moons` | User can view all moons in the database.
 `moonmining.add_refinery_owner` | This permission is allows users to add their tokens to be pulled from when checking for new extraction events.
 `moonmining.view_moon_ledgers` | Users with this permission can view the mining ledgers from past extractions from moons they have access to.
 
