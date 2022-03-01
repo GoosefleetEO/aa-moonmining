@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [1.3.0] - 2022-03-01
+
+### Changed
+
+- Drop support for Python 3.6
+- Drop support for Django 3.1
+- Establish compatibility with Django 4.0
+
 ## [1.2.2] - 2022-01-02
 
 ### Fixed
