@@ -25,29 +25,24 @@ class ExtractionAdmin(admin.ModelAdmin):
     inlines = [ExtractionProductAdmin]
     actions = ["update_calculated_properties"]
 
+    @admin.display(description="Update calculated properties for selected extrations.")
     def update_calculated_properties(self, request, queryset):
         num = 0
         for obj in queryset:
             tasks.update_extraction_calculated_properties.delay(extraction_pk=obj.pk)
             num += 1
-
         self.message_user(
             request, f"Started updating calculated properties for {num} extractions."
         )
 
-    update_calculated_properties.short_description = (
-        "Update calculated properties for selected extrations."
-    )
-
     def _owner(self, obj):
         return obj.refinery.owner
 
+    @admin.display(boolean=True)
     def _ledger(self, obj):
         if obj.status != Extraction.Status.COMPLETED:
             return None
         return obj.ledger.exists()
-
-    _ledger.boolean = True
 
     def has_change_permission(self, request, obj=None):
         return False
@@ -85,19 +80,15 @@ class MoonAdmin(admin.ModelAdmin):
 
     actions = ["update_calculated_properties"]
 
+    @admin.display(description="Update calculated properties for selected moons.")
     def update_calculated_properties(self, request, queryset):
         num = 0
         for obj in queryset:
             tasks.update_moon_calculated_properties.delay(moon_pk=obj.pk)
             num += 1
-
         self.message_user(
             request, f"Started updating calculated properties for {num} moons."
         )
-
-    update_calculated_properties.short_description = (
-        "Update calculated properties for selected moons."
-    )
 
     def has_change_permission(self, request, obj=None):
         return False
@@ -145,18 +136,16 @@ class OwnerAdmin(admin.ModelAdmin):
     )
     actions = ["update_owner"]
 
+    @admin.display(ordering="corporation__alliance__alliance_name")
     def _alliance(self, obj):
         return obj.corporation.alliance
 
-    _alliance.admin_order_field = "corporation__alliance__alliance_name"
-
+    @admin.display(description="Update selected owners from ESI")
     def update_owner(self, request, queryset):
         for obj in queryset:
             tasks.update_owner.delay(obj.pk)
             text = f"Started updating owner: {obj}. "
             self.message_user(request, text)
-
-    update_owner.short_description = "Update selected owners from ESI"
 
     def has_add_permission(self, request):
         return False
@@ -202,12 +191,9 @@ class RefineryAdmin(admin.ModelAdmin):
 
     actions = ["update_mining_ledger"]
 
+    @admin.display(description="Update mining ledger for selected refineries from ESI")
     def update_mining_ledger(self, request, queryset):
         for obj in queryset:
             tasks.update_mining_ledger_for_refinery.delay(obj.id)
             text = f"Started updating mining ledger: {obj}. "
             self.message_user(request, text)
-
-    update_mining_ledger.short_description = (
-        "Update mining ledger for selected refineries from ESI"
-    )

@@ -41,6 +41,6 @@ setup(
         "django-bootstrap-form",
         "django-navhelper",
         "allianceauth-app-utils>=1.11",
-        "django-eveuniverse>=0.13",
+        "django-eveuniverse>=0.14",
     ],
 )
