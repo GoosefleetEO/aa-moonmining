@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [1.3.1] - 2022-03-02
+
+### Fixed
+
+- Tests having sessions fail with Django 4
+
 ## [1.3.0] - 2022-03-01
 
 ### Changed

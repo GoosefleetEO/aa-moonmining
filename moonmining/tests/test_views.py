@@ -56,7 +56,7 @@ class TestOwner(TestCase):
         request = self.factory.get(reverse("moonmining:add_owner"))
         request.user = self.user
         request.token = token
-        middleware = SessionMiddleware()
+        middleware = SessionMiddleware(Mock())
         middleware.process_request(request)
         orig_view = views.add_owner.__wrapped__.__wrapped__.__wrapped__
         # when
@@ -83,7 +83,7 @@ class TestOwner(TestCase):
         request = self.factory.get(reverse("moonmining:add_owner"))
         request.user = self.user
         request.token = token
-        middleware = SessionMiddleware()
+        middleware = SessionMiddleware(Mock())
         middleware.process_request(request)
         orig_view = views.add_owner.__wrapped__.__wrapped__.__wrapped__
         # when
@@ -107,7 +107,7 @@ class TestOwner(TestCase):
         request = self.factory.get(reverse("moonmining:add_owner"))
         request.user = self.user
         request.token = token
-        middleware = SessionMiddleware()
+        middleware = SessionMiddleware(Mock())
         middleware.process_request(request)
         orig_view = views.add_owner.__wrapped__.__wrapped__.__wrapped__
         # when
