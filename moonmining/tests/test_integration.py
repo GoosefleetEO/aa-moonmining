@@ -64,7 +64,7 @@ class TestUpdateTasks(NoSocketsTestCase):
     def test_should_update_all_mining_corporations(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
-        moon = helpers.create_fake_moon()
+        helpers.create_fake_moon()
         corporation_2001 = helpers.create_owner_from_character_ownership(
             self.character_ownership
         )

@@ -1163,6 +1163,9 @@ class Refinery(models.Model):
     def __str__(self):
         return self.name
 
+    def __repr__(self) -> str:
+        return f"Refinery(id={self.id}, moon={repr(self.moon)})"
+
     def update_moon_from_structure_info(self, structure_info: dict) -> bool:
         """Find moon based on location in space and update the object.
         Returns True when successful, else false

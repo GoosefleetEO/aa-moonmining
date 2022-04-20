@@ -190,9 +190,9 @@ class TestMoonsData(TestCase):
         )
         self.client.force_login(user)
         moon = Moon.objects.get(pk=40131695)
-        refinery = helpers.add_refinery(moon)
+        owner = moon.refinery.owner
         Refinery.objects.create(
-            id=99, name="Empty refinery", owner=refinery.owner, eve_type_id=35835
+            id=99, name="Empty refinery", owner=owner, eve_type_id=35835
         )
         # when
         response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.OURS}")
