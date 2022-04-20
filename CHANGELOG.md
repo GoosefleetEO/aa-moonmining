@@ -7,15 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.4.0] - 2022-04-20
+
 ### Added
 
 - Add drop-down filters for constellation to extractions (#12)
 - Add drop-down filters for rarity to extractions (#12)
 - Add drop-down filters for constellation to moons (#12)
-
-### Changed
-
-### Fixed
 
 ## [1.3.1] - 2022-03-02
 
