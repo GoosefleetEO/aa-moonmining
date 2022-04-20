@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from ..core import CalculatedExtractionProduct
+from ..core import CalculatedExtraction, CalculatedExtractionProduct
 
 
 class TestCalculatedExtractionProduct(TestCase):
@@ -17,3 +17,15 @@ class TestCalculatedExtractionProduct(TestCase):
                 CalculatedExtractionProduct(ore_type_id=2, volume=200),
             ],
         )
+
+
+class TestCalculatedExtraction(TestCase):
+    def test_should_calculate_total_volume(self):
+        # given
+        extraction = CalculatedExtraction(
+            refinery_id=1, status=CalculatedExtraction.Status.STARTED
+        )
+        ores = {"45506": 10000, "46676": 20000}
+        extraction.products = CalculatedExtractionProduct.create_list_from_dict(ores)
+        # when/then
+        self.assertEqual(extraction.total_volume(), 30000)

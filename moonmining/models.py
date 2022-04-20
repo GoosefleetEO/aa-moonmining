@@ -8,7 +8,7 @@ import yaml
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import F, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils.functional import cached_property, classproperty
@@ -627,6 +627,29 @@ class Moon(models.Model):
         self.rarity_class = self.calc_rarity_class()
         self.save()
 
+    def overwrite_products(self, moon_products: List["MoonProduct"]) -> None:
+        """Overwrites products for this moon."""
+        with transaction.atomic():
+            self.products.all().delete()
+            MoonProduct.objects.bulk_create(moon_products, batch_size=500)
+        self.update_calculated_properties()
+
+    def overwrite_products_from_calculated_extraction(
+        self, extraction: CalculatedExtraction
+    ):
+        total_volume = extraction.total_volume()
+        moon_products = [
+            MoonProduct(
+                moon=self,
+                amount=product.volume / total_volume,
+                ore_type=EveOreType.objects.get_or_create_esi(id=product.ore_type_id)[
+                    0
+                ],
+            )
+            for product in extraction.products
+        ]
+        self.overwrite_products(moon_products)
+
 
 class MoonProduct(models.Model):
     """A product of a moon, i.e. a specifc ore."""
@@ -946,6 +969,10 @@ class Owner(models.Model):
 
     def update_extractions_from_esi(self):
         """Creates new extractions from ESI for current owner."""
+        extractions_by_refinery = self._fetch_extractions_from_esi()
+        self._update_or_create_extractions(extractions_by_refinery)
+
+    def _fetch_extractions_from_esi(self):
         logger.info("%s: Fetching extractions from ESI...", self)
         extractions = (
             esi.client.Industry.get_corporation_corporation_id_mining_extractions(
@@ -957,6 +984,9 @@ class Owner(models.Model):
         extractions_by_refinery = defaultdict(list)
         for row in extractions:
             extractions_by_refinery[row["structure_id"]].append(row)
+        return extractions_by_refinery
+
+    def _update_or_create_extractions(self, extractions_by_refinery: dict) -> None:
         new_extractions_count = 0
         for refinery_id, refinery_extractions in extractions_by_refinery.items():
             try:
@@ -1009,6 +1039,9 @@ class Owner(models.Model):
                         products=CalculatedExtractionProduct.create_list_from_dict(
                             notif.details["oreVolumeByType"]
                         ),
+                    )
+                    refinery.moon.overwrite_products_from_calculated_extraction(
+                        extraction
                     )
 
                 elif extraction:

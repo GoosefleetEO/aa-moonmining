@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+### Added
+
+- Automatically updates moon products when a new extraction is started. Thus already owned moons no longer need to be scanned in order to get it's ore composition for the value calculation.
+
 ### Changed
 
 - Now used the "average price" for ores instead of an estimated price based on refinement. This means that the prices shown in the app are now exactly the same as the prices shown on the Eve client, e.g. when starting a new extraction.

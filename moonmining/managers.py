@@ -202,12 +202,7 @@ class MoonManager(models.Manager):
                             moon=moon, amount=product_data[1], ore_type=ore_type
                         )
                     )
-
-                with transaction.atomic():
-                    moon.products.all().delete()
-                    MoonProduct.objects.bulk_create(moon_products, batch_size=500)
-
-                moon.update_calculated_properties()
+                moon.overwrite_products(moon_products)
                 logger.info("Added moon survey for %s", moon.name)
 
             except Exception as ex:
