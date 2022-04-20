@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- Add drop-down filters for constellation to extractions (#12)
+- Add drop-down filters for rarity to extractions (#12)
+- Add drop-down filters for constellation to moons (#12)
+
 ### Changed
 
 ### Fixed

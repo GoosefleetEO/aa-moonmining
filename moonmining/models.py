@@ -584,6 +584,10 @@ class Moon(models.Model):
             return type(self).objects.none()
 
     @property
+    def rarity_class_str(self) -> str:
+        return OreRarityClass(self.rarity_class).label
+
+    @property
     def rarity_tag_html(self) -> str:
         return OreRarityClass(self.rarity_class).bootstrap_tag_html
 
