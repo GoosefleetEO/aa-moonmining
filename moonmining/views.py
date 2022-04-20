@@ -409,9 +409,8 @@ def moons_data(request, category):
                 status__in=[Extraction.Status.STARTED, Extraction.Status.READY]
             ).first()
 
-        region_name = (
-            moon.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region.name
-        )
+        constellation = moon.eve_moon.eve_planet.eve_solar_system.eve_constellation
+        region = constellation.eve_region
         if has_details_access:
             details_html = (
                 extraction_details_button_html(extraction) + " " if extraction else ""
@@ -424,7 +423,8 @@ def moons_data(request, category):
             "moon_name": moon.name,
             "corporation": {"display": corporation_html, "sort": corporation_name},
             "solar_system_link": solar_system_link,
-            "region_name": region_name,
+            "region_name": region.name,
+            "constellation_name": constellation.name,
             "value": moon.value,
             "rarity_class": {
                 "display": moon.rarity_tag_html,

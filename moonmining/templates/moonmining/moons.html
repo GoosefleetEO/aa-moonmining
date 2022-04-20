@@ -91,13 +91,14 @@
                     { data: 'alliance_name' },
                     { data: 'rarity_class_label' },
                     { data: 'has_extraction_str' },
+                    { data: 'constellation_name' },
                 ],
                 lengthMenu: DEFAULT_LENGTH_MENU,
                 pageLength: DEFAULT_PAGE_LENGTH,
                 order: [ [0, "asc"] ],
                 columnDefs: [
                     { "orderable": false, "targets": [ 6 ] },
-                    { "visible": false, "targets": [ 7, 8, 9, 10, 11, 12 ] },
+                    { "visible": false, "targets": [ 7, 8, 9, 10, 11, 12, 13 ] },
                 ],
                 filterDropDown: {
                     columns: [
@@ -111,6 +112,10 @@
                         },
                         {
                             idx: 3
+                        },
+                        {
+                            idx: 13,
+                            title: "Constellation"
                         },
                         {
                             idx: 7,
