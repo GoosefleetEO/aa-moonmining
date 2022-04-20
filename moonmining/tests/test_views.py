@@ -8,7 +8,7 @@ from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils.timezone import now
 from esi.models import Token
-from eveuniverse.models import EveMoon
+from eveuniverse.models import EveMarketPrice, EveMoon
 
 from allianceauth.eveonline.models import EveCorporationInfo
 from app_utils.testing import (
@@ -18,14 +18,7 @@ from app_utils.testing import (
 )
 
 from .. import views
-from ..models import (
-    EveOreTypeExtras,
-    Extraction,
-    MiningLedgerRecord,
-    Moon,
-    Owner,
-    Refinery,
-)
+from ..models import Extraction, MiningLedgerRecord, Moon, Owner, Refinery
 from . import helpers
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
@@ -393,7 +386,7 @@ class TestExtractionsData(TestCase):
             started_at=now() - dt.timedelta(days=3),
             status=Extraction.Status.COMPLETED,
         )
-        EveOreTypeExtras.objects.create(ore_type_id=45506, refined_price=10)
+        EveMarketPrice.objects.create(eve_type_id=45506, average_price=10)
         cls.user_1002, _ = create_user_from_evecharacter(1002)
 
     def test_should_show_extraction(self):
@@ -531,8 +524,8 @@ class TestReportsData(TestCase):
         months_1 = dt.datetime(2020, 12, 15, 12, 0, tzinfo=pytz.UTC)
         months_2 = dt.datetime(2020, 11, 15, 12, 0, tzinfo=pytz.UTC)
         months_3 = dt.datetime(2020, 10, 15, 12, 0, tzinfo=pytz.UTC)
-        EveOreTypeExtras.objects.create(ore_type_id=45506, refined_price=10)
-        EveOreTypeExtras.objects.create(ore_type_id=45494, refined_price=20)
+        EveMarketPrice.objects.create(eve_type_id=45506, average_price=10)
+        EveMarketPrice.objects.create(eve_type_id=45494, average_price=20)
         MiningLedgerRecord.objects.create(
             refinery=self.refinery,
             character_id=1001,
@@ -637,7 +630,7 @@ class TestExtractionLedgerData(TestCase):
             ],
             scopes=Owner.esi_scopes(),
         )
-        EveOreTypeExtras.objects.create(ore_type_id=45506, refined_price=10)
+        EveMarketPrice.objects.create(eve_type_id=45506, average_price=10)
         MiningLedgerRecord.objects.create(
             refinery=cls.refinery,
             character_id=1001,

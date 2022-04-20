@@ -80,13 +80,9 @@ class TestMoonUpdateValue(NoSocketsTestCase):
         # when
         result = self.moon.calc_value()
         # then
-        self.assertEqual(result, 180498825.5)
+        self.assertEqual(result, 84622187.5)
 
-    def test_should_return_None_if_prices_are_missing(self):
-        # given
-        EveMarketPrice.objects.create(
-            eve_type=EveType.objects.get(id=45506), average_price=1, adjusted_price=2
-        )
+    def test_should_return_zero_if_prices_are_missing(self):
         # when
         result = self.moon.calc_value()
         # then
@@ -1115,6 +1111,8 @@ class TestMoonProductsSorted(NoSocketsTestCase):
     def setUpClass(cls):
         super().setUpClass()
         load_eveuniverse()
+
+    def setUp(self) -> None:
         helpers.generate_market_prices()
 
     def test_should_return_moon_products_in_order(self):
@@ -1124,7 +1122,7 @@ class TestMoonProductsSorted(NoSocketsTestCase):
         result = moon.products_sorted
         # then
         moon_product = result.get(ore_type_id=45506)
-        self.assertEqual(moon_product.total_price, 1296800127.64395)
+        self.assertEqual(moon_product.total_price, 1201363646.4)
         ore_type_ids = list(result.values_list("ore_type_id", flat=True))
         self.assertListEqual([45506, 46689, 46676, 46678], ore_type_ids)
 
@@ -1132,8 +1130,9 @@ class TestMoonProductsSorted(NoSocketsTestCase):
         # given
         moon = helpers.create_moon_40161708()
         moon_product = moon.products.get(ore_type_id=45506)
-        moon_product.ore_type.extras.refined_price = None
-        moon_product.ore_type.extras.save()
+        EveMarketPrice.objects.filter(
+            eve_type_id=moon_product.ore_type_id
+        ).average_price = None
         # when
         result = moon.products_sorted
         # then

@@ -17,7 +17,7 @@
                 <p>
                     <a href="{{ product.ore_type.profile_url }}" target="_blank">{{ product.ore_type.name }}</a>
                     &nbsp;{{ product.ore_type.rarity_class.bootstrap_tag_html }}
-                    &nbsp;{{ product.ore_type.extras.refined_price|formatisk|default:"?" }}
+                    &nbsp;{{ product.ore_type.market_price.average_price|formatisk|default:"?" }}
                 </p>
                 <div class="progress" style="height: 20px; width: 100%">
                     <div

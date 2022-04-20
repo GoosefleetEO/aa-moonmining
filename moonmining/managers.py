@@ -62,8 +62,8 @@ class MiningLedgerRecordManager(models.Manager):
         return (
             super()
             .get_queryset()
-            .select_related("ore_type", "ore_type__extras")
-            .annotate(unit_price=F("ore_type__extras__refined_price"))
+            .select_related("ore_type", "ore_type__market_price")
+            .annotate(unit_price=F("ore_type__market_price__average_price"))
             .annotate(total_price=Sum(sum_price, distinct=True))
             .annotate(total_volume=Sum(sum_volume, distinct=True))
         )

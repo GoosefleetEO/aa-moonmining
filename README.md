@@ -186,7 +186,7 @@ Note that all settings are optional and the app will use the documented default 
 Name | Description | Default
 -- | -- | --
 `MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE`| Number of hours an extractions that has passed its ready time is still shown on the upcoming extractions tab. | `12`
-`MOONMINING_REPROCESSING_YIELD`| Reprocessing yield used for calculating all values | `0.82`
+`MOONMINING_REPROCESSING_YIELD`| Reprocessing yield used for calculating all values (currently not used) | `0.82`
 `MOONMINING_VOLUME_PER_MONTH`| Total ore volume per month used for calculating moon values. | `14557923`
 
 ## Management Commands
