@@ -147,6 +147,7 @@ def extractions_data(request, category):
         .selected_related_defaults()
         .select_related(
             "refinery__moon__eve_moon__eve_planet__eve_solar_system",
+            "refinery__moon__eve_moon__eve_planet__eve_solar_system__eve_constellation",
             "refinery__moon__eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
         )
     )
@@ -165,10 +166,12 @@ def extractions_data(request, category):
         corporation_html = extraction.refinery.owner.name_html
         corporation_name = extraction.refinery.owner.name
         alliance_name = extraction.refinery.owner.alliance_name
-        moon_name = str(extraction.refinery.moon)
+        moon = extraction.refinery.moon
+        moon_name = str(moon)
         refinery_name = str(extraction.refinery.name)
-        solar_system = extraction.refinery.moon.eve_moon.eve_planet.eve_solar_system
-        region = solar_system.eve_constellation.eve_region
+        solar_system = moon.eve_moon.eve_planet.eve_solar_system
+        constellation = region = solar_system.eve_constellation
+        region = constellation.eve_region
         location = format_html(
             "{}<br><i>{}</i>",
             link_html(dotlan.solar_system_url(solar_system.name), moon_name),
@@ -221,6 +224,8 @@ def extractions_data(request, category):
                 "alliance_name": alliance_name,
                 "moon_name": moon_name,
                 "region_name": region.name,
+                "constellation_name": constellation.name,
+                "rarity_class": moon.rarity_class_str,
                 "is_jackpot_str": yesno_str(extraction.is_jackpot),
                 "is_ready": extraction.chunk_arrival_at <= now(),
                 "status": extraction.status,
@@ -348,7 +353,6 @@ def moons(request):
     return render(request, "moonmining/moons.html", context)
 
 
-# @cache_page(60 * 5) TODO: Remove for release
 @login_required()
 @permission_required("moonmining.basic_access")
 def moons_data(request, category):

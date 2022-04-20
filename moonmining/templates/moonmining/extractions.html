@@ -77,12 +77,14 @@
                     { data: 'status_str' },
                     { data: 'moon_name' },
                     { data: 'region_name' },
+                    { data: 'constellation_name' },
+                    { data: 'rarity_class' },
                 ],
                 lengthMenu: DEFAULT_LENGTH_MENU,
                 pageLength: DEFAULT_PAGE_LENGTH,
                 columnDefs: [
                     { "orderable": false, "targets": [ 8 ] },
-                    { "visible": false, "targets": [ 9, 10, 11, 12, 13 ] },
+                    { "visible": false, "targets": [ 9, 10, 11, 12, 13, 14, 15 ] },
                 ],
                 filterDropDown: {
                     columns: [
@@ -97,6 +99,14 @@
                         {
                             idx: 13,
                             title: "Region"
+                        },
+                        {
+                            idx: 14,
+                            title: "Constellation"
+                        },
+                        {
+                            idx: 15,
+                            title: "Rarity"
                         },
                         {
                             idx: 12,
