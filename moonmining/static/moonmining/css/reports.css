@@ -161,3 +161,14 @@
 #table_user_uploaded tfoot th:nth-child(4) {
 	text-align: right;
 }
+
+
+/* user mining */
+
+#table_ore_prices thead th:nth-child(2) {
+	text-align: right;
+}
+
+#table_ore_prices tbody td:nth-child(2) {
+	text-align: right;
+}

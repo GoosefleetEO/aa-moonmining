@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+### Added
+
+- Report showing current ore prices
+
 ## [1.5.0] - 2022-04-21
 
 ### Added

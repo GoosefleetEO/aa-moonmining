@@ -72,8 +72,8 @@ class OreRarityClass(models.IntegerChoices):
     """Rarity class of an ore"""
 
     NONE = 0, ""
-    R4 = 4, "R4"
-    R8 = 8, "R8"
+    R4 = 4, "R 4"
+    R8 = 8, "R 8"
     R16 = 16, "R16"
     R32 = 32, "R32"
     R64 = 64, "R64"

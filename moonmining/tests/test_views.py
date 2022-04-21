@@ -604,6 +604,21 @@ class TestReportsData(TestCase):
         ]
         self.assertEqual(user_data[0]["num_moons"], 2)
 
+    def test_should_return_ore_prices(self):
+        # given
+        helpers.generate_market_prices()
+        self.client.force_login(self.user)
+        # when
+        response = self.client.get("/moonmining/report_ore_prices_data")
+        # then
+        self.assertEqual(response.status_code, 200)
+        data = json_response_to_dict(response)
+        ore = data[45506]
+        self.assertEqual(ore["name"], "Cinnabar")
+        self.assertEqual(ore["price"], 2400.0)
+        self.assertEqual(ore["group"], "Rare Moon Asteroids")
+        self.assertEqual(ore["rarity_str"], "R32")
+
 
 class TestExtractionLedgerData(TestCase):
     @classmethod

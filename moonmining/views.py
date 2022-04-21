@@ -43,7 +43,7 @@ from .app_settings import (
 )
 from .forms import MoonScanForm
 from .helpers import HttpResponseUnauthorized
-from .models import Extraction, Moon, OreRarityClass, Owner, Refinery
+from .models import EveOreType, Extraction, Moon, OreRarityClass, Owner, Refinery
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
@@ -117,8 +117,7 @@ def default_if_false(value, default):
 def index(request):
     if request.user.has_perm("moonmining.extractions_access"):
         return redirect("moonmining:extractions")
-    else:
-        return redirect("moonmining:moons")
+    return redirect("moonmining:moons")
 
 
 @login_required
@@ -789,6 +788,39 @@ def report_user_uploaded_data(request) -> JsonResponse:
             row["corporation"] = "?"
         if row["state"] is None:
             row["state"] = "?"
+    return JsonResponse(data, safe=False)
+
+
+@login_required()
+@permission_required(["moonmining.basic_access", "moonmining.reports_access"])
+def report_ore_prices_data(request) -> JsonResponse:
+    moon_ore_group_ids = [
+        constants.EVE_GROUP_ID_UNCOMMON_MOON_ASTEROIDS,
+        constants.EVE_GROUP_ID_UBIQUITOUS_MOON_ASTEROIDS,
+        constants.EVE_GROUP_ID_EXCEPTIONAL_MOON_ASTEROIDS,
+        constants.EVE_GROUP_ID_COMMON_MOON_ASTEROIDS,
+        constants.EVE_GROUP_ID_RARE_MOON_ASTEROIDS,
+    ]
+    qs = EveOreType.objects.filter(
+        eve_group_id__in=moon_ore_group_ids,
+        published=True,
+        extras__isnull=False,
+        extras__current_price__isnull=False,
+    ).select_related("eve_group", "extras")
+    data = [
+        {
+            "id": obj.id,
+            "name": obj.name,
+            "price": obj.extras.current_price,
+            "group": obj.eve_group.name,
+            "rarity_html": {
+                "display": obj.rarity_class.bootstrap_tag_html,
+                "sort": obj.rarity_class.label,
+            },
+            "rarity_str": obj.rarity_class.label,
+        }
+        for obj in qs
+    ]
     return JsonResponse(data, safe=False)
 
 

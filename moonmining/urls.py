@@ -43,6 +43,11 @@ urlpatterns = [
         views.report_user_uploaded_data,
         name="report_user_uploaded_data",
     ),
+    path(
+        "report_ore_prices_data",
+        views.report_ore_prices_data,
+        name="report_ore_prices_data",
+    ),
     path("modal_loader_body", views.modal_loader_body, name="modal_loader_body"),
     path("tests", views.tests, name="tests"),
 ]
