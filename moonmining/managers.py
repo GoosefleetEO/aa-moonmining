@@ -14,7 +14,8 @@ from allianceauth.notifications import notify
 from allianceauth.services.hooks import get_extension_logger
 from app_utils.logging import LoggerAddTag
 
-from . import __title__, constants
+from . import __title__
+from .constants import EveCategoryId
 from .core import CalculatedExtraction
 from .helpers import eveentity_get_or_create_esi_safe
 
@@ -35,7 +36,7 @@ class EveOreTypeManger(EveTypeManager):
             .get_queryset()
             .select_related("eve_group")
             .filter(published=True)
-            .filter(eve_group__eve_category_id=constants.EVE_CATEGORY_ID_ASTEROID)
+            .filter(eve_group__eve_category_id=EveCategoryId.ASTEROID)
         )
 
     def update_current_prices(self):

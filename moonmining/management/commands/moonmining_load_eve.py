@@ -5,7 +5,8 @@ from eveuniverse.tasks import update_or_create_eve_object
 from allianceauth.services.hooks import get_extension_logger
 from app_utils.logging import LoggerAddTag
 
-from ... import __title__, constants
+from ... import __title__
+from ...constants import EveCategoryId
 from ...models import EveOreType
 from . import get_input
 
@@ -28,7 +29,7 @@ class Command(BaseCommand):
             self.stdout.write("Tasks for loading ore types have been started.")
             update_or_create_eve_object.delay(
                 model_name="EveCategory",
-                id=constants.EVE_CATEGORY_ID_ASTEROID,
+                id=EveCategoryId.ASTEROID.value,
                 include_children=True,
                 enabled_sections=[
                     EveType.Section.DOGMAS,

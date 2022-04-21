@@ -3,7 +3,7 @@ from typing import Optional
 
 from django import template
 
-from .. import constants
+from ..constants import DATETIME_FORMAT
 
 register = template.Library()
 
@@ -37,6 +37,6 @@ def formatisk(value, magnitude: str = None) -> Optional[str]:
 @register.filter
 def datetime(value: dt.datetime) -> Optional[str]:
     try:
-        return value.strftime(constants.DATETIME_FORMAT)
+        return value.strftime(DATETIME_FORMAT)
     except AttributeError:
         return None

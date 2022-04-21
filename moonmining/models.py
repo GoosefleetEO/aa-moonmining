@@ -28,8 +28,9 @@ from app_utils.views import (
     bootstrap_label_html,
 )
 
-from . import __title__, constants
+from . import __title__
 from .app_settings import MOONMINING_REPROCESSING_YIELD, MOONMINING_VOLUME_PER_MONTH
+from .constants import EveDogmaAttributeId, EveGroupId, EveTypeId, IconSize
 from .core import CalculatedExtraction, CalculatedExtractionProduct
 from .managers import (
     EveOreTypeManger,
@@ -98,11 +99,11 @@ class OreRarityClass(models.IntegerChoices):
     def from_eve_group_id(cls, eve_group_id: int) -> "OreRarityClass":
         """Create object from eve group ID"""
         map_group_2_rarity = {
-            constants.EVE_GROUP_ID_UBIQUITOUS_MOON_ASTEROIDS: cls.R4,
-            constants.EVE_GROUP_ID_COMMON_MOON_ASTEROIDS: cls.R8,
-            constants.EVE_GROUP_ID_UNCOMMON_MOON_ASTEROIDS: cls.R16,
-            constants.EVE_GROUP_ID_RARE_MOON_ASTEROIDS: cls.R32,
-            constants.EVE_GROUP_ID_EXCEPTIONAL_MOON_ASTEROIDS: cls.R64,
+            EveGroupId.UBIQUITOUS_MOON_ASTEROIDS: cls.R4,
+            EveGroupId.COMMON_MOON_ASTEROIDS: cls.R8,
+            EveGroupId.UNCOMMON_MOON_ASTEROIDS: cls.R16,
+            EveGroupId.RARE_MOON_ASTEROIDS: cls.R32,
+            EveGroupId.EXCEPTIONAL_MOON_ASTEROIDS: cls.R64,
         }
         try:
             return map_group_2_rarity[eve_group_id]
@@ -146,7 +147,7 @@ class OreQualityClass(models.TextChoices):
         }
         try:
             dogma_attribute = eve_type.dogma_attributes.get(
-                eve_dogma_attribute_id=constants.DOGMA_ATTRIBUTE_ID_ORE_QUALITY
+                eve_dogma_attribute_id=EveDogmaAttributeId.ORE_QUALITY
             )
         except ObjectDoesNotExist:
             return cls.UNDEFINED
@@ -782,9 +783,9 @@ class Owner(models.Model):
     @property
     def name_html(self):
         return bootstrap_icon_plus_name_html(
-            self.corporation.logo_url(size=constants.IconSize.SMALL),
+            self.corporation.logo_url(size=IconSize.SMALL),
             self.name,
-            size=constants.IconSize.SMALL,
+            size=IconSize.SMALL,
         )
 
     def fetch_token(self) -> Token:
@@ -851,7 +852,7 @@ class Owner(models.Model):
                 else set()
             )
             if (
-                eve_type.eve_group_id == constants.EVE_GROUP_ID_REFINERY
+                eve_type.eve_group_id == EveGroupId.REFINERY
                 and self.ESI_SERVICE_NAME_MOON_DRILLING in service_names
             ):
                 refineries[structure_info["structure_id"]] = structure_info
@@ -1194,15 +1195,12 @@ class Refinery(models.Model):
                 x=structure_info["position"]["x"],
                 y=structure_info["position"]["y"],
                 z=structure_info["position"]["z"],
-                group_id=constants.EVE_GROUP_ID_MOON,
+                group_id=EveGroupId.MOON,
             )
         except OSError:
             logger.exception("%s: Failed to fetch nearest celestial ", self)
             return False
-        if (
-            not nearest_celestial
-            or nearest_celestial.eve_type.id != constants.EVE_TYPE_ID_MOON
-        ):
+        if not nearest_celestial or nearest_celestial.eve_type.id != EveTypeId.MOON:
             return False
         eve_moon = nearest_celestial.eve_object
         moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)

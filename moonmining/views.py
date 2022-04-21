@@ -34,13 +34,14 @@ from app_utils.logging import LoggerAddTag
 from app_utils.messages import messages_plus
 from app_utils.views import fontawesome_modal_button_html, link_html, yesno_str
 
-from . import __title__, constants, helpers, tasks
+from . import __title__, helpers, tasks
 from .app_settings import (
     MOONMINING_ADMIN_NOTIFICATIONS_ENABLED,
     MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE,
     MOONMINING_REPROCESSING_YIELD,
     MOONMINING_VOLUME_PER_MONTH,
 )
+from .constants import DATE_FORMAT, DATETIME_FORMAT, EveGroupId
 from .forms import MoonScanForm
 from .helpers import HttpResponseUnauthorized
 from .models import EveOreType, Extraction, Moon, OreRarityClass, Owner, Refinery
@@ -197,9 +198,7 @@ def extractions_data(request, category):
             {
                 "id": extraction.pk,
                 "chunk_arrival_at": {
-                    "display": extraction.chunk_arrival_at.strftime(
-                        constants.DATETIME_FORMAT
-                    ),
+                    "display": extraction.chunk_arrival_at.strftime(DATETIME_FORMAT),
                     "sort": extraction.chunk_arrival_at,
                 },
                 "refinery": {
@@ -257,7 +256,7 @@ def extraction_details(request, extraction_pk: int):
     context = {
         "page_title": (
             f"{extraction.refinery.moon} "
-            f"| {extraction.chunk_arrival_at.strftime(constants.DATE_FORMAT)}"
+            f"| {extraction.chunk_arrival_at.strftime(DATE_FORMAT)}"
         ),
         "extraction": extraction,
     }
@@ -325,7 +324,7 @@ def extraction_ledger(request, extraction_pk: int):
     context = {
         "page_title": (
             f"{extraction.refinery.moon} "
-            f"| {extraction.chunk_arrival_at.strftime(constants.DATE_FORMAT)}"
+            f"| {extraction.chunk_arrival_at.strftime(DATE_FORMAT)}"
         ),
         "extraction": extraction,
         "total_value": total_value,
@@ -795,11 +794,11 @@ def report_user_uploaded_data(request) -> JsonResponse:
 @permission_required(["moonmining.basic_access", "moonmining.reports_access"])
 def report_ore_prices_data(request) -> JsonResponse:
     moon_ore_group_ids = [
-        constants.EVE_GROUP_ID_UNCOMMON_MOON_ASTEROIDS,
-        constants.EVE_GROUP_ID_UBIQUITOUS_MOON_ASTEROIDS,
-        constants.EVE_GROUP_ID_EXCEPTIONAL_MOON_ASTEROIDS,
-        constants.EVE_GROUP_ID_COMMON_MOON_ASTEROIDS,
-        constants.EVE_GROUP_ID_RARE_MOON_ASTEROIDS,
+        EveGroupId.UNCOMMON_MOON_ASTEROIDS,
+        EveGroupId.UBIQUITOUS_MOON_ASTEROIDS,
+        EveGroupId.EXCEPTIONAL_MOON_ASTEROIDS,
+        EveGroupId.COMMON_MOON_ASTEROIDS,
+        EveGroupId.RARE_MOON_ASTEROIDS,
     ]
     qs = EveOreType.objects.filter(
         eve_group_id__in=moon_ore_group_ids,
