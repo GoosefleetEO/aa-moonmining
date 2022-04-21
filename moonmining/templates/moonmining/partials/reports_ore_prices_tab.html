@@ -15,3 +15,9 @@
         </table>
     </div>
 </div>
+<p class="text-muted">Ore prices shown on this report are used for all calculations in this app.</p>
+{% if use_reprocess_pricing %}
+    <p class="text-muted">Ore prices are calculated as sum of it's reprocessed materials with a yield of {{ reprocessing_yield }}%.</p>
+{% else %}
+    <p class="text-muted">The Eve client prices (average prices) are used for ore prices.</p>
+{% endif %}

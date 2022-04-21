@@ -232,6 +232,11 @@ class EveOreType(EveType):
 class EveOreTypeExtras(models.Model):
     """Extra fields for an EveOreType, e.g. for pricing calculations."""
 
+    class PricingMethod(models.TextChoices):
+        UNKNOWN = "UN", "Unknown"
+        EVE_CLIENT = "EC", "Eve client"
+        REPROCESSED_MATERIALS = "RP", "Reprocessed materials"
+
     ore_type = models.OneToOneField(
         EveOreType, on_delete=models.CASCADE, related_name="extras"
     )
@@ -239,6 +244,9 @@ class EveOreTypeExtras(models.Model):
         default=None,
         null=True,
         help_text="price used all price calculations with this type",
+    )
+    pricing_method = models.CharField(
+        max_length=2, choices=PricingMethod.choices, default=PricingMethod.UNKNOWN
     )
 
     def __str__(self) -> str:

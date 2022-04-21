@@ -6,8 +6,14 @@ MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE = clean_setting(
     "MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE", 12
 )
 
-# Reprocessing yield used for calculating all values
-MOONMINING_REPROCESSING_YIELD = clean_setting("MOONMINING_REPROCESSING_YIELD", 0.82)
+# Reprocessing yield used for calculating reprocess prices
+MOONMINING_REPROCESSING_YIELD = clean_setting("MOONMINING_REPROCESSING_YIELD", 0.85)
+
+# Whether to calculate prices from reprocessed materials or not.
+# Will use direct ore prices when switched off
+MOONMINING_USE_REPROCESS_PRICING = clean_setting(
+    "MOONMINING_USE_REPROCESS_PRICING", False
+)
 
 # Total ore volume per month (30.4 days) used for calculating moon values.
 MOONMINING_VOLUME_PER_MONTH = clean_setting("MOONMINING_VOLUME_PER_MONTH", 26345694)

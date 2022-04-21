@@ -2,6 +2,8 @@ from django.contrib import admin
 
 from . import tasks
 from .models import (
+    EveOreType,
+    EveOreTypeExtras,
     Extraction,
     ExtractionProduct,
     MiningLedgerRecord,
@@ -11,6 +13,44 @@ from .models import (
     Owner,
     Refinery,
 )
+
+
+class EveOreTypeExtrasInline(admin.StackedInline):
+    model = EveOreTypeExtras
+
+
+@admin.register(EveOreType)
+class EveOreTypeAdmin(admin.ModelAdmin):
+    list_display = ("name", "_current_price", "_group", "_pricing_method")
+    ordering = ("name",)
+    list_filter = (
+        "extras__pricing_method",
+        ("eve_group", admin.RelatedOnlyFieldListFilter),
+    )
+    search_fields = ("name",)
+    inlines = [EveOreTypeExtrasInline]
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related("extras", "eve_group")
+
+    @admin.display(ordering="extras__current_price")
+    def _current_price(self, obj):
+        return f"{obj.extras.current_price:,.2f}"
+
+    @admin.display(ordering="eve_group__name")
+    def _group(self, obj):
+        return str(obj.eve_group)
+
+    @admin.display(ordering="extras__pricing_method")
+    def _pricing_method(self, obj):
+        return obj.extras.get_pricing_method_display()
+
+    def has_add_permission(self, *args, **kwargs) -> bool:
+        return False
+
+    def has_change_permission(self, *args, **kwargs) -> bool:
+        return False
 
 
 class ExtractionProductAdmin(admin.TabularInline):

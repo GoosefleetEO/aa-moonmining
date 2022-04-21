@@ -15,6 +15,10 @@ from allianceauth.services.hooks import get_extension_logger
 from app_utils.logging import LoggerAddTag
 
 from . import __title__
+from .app_settings import (
+    MOONMINING_REPROCESSING_YIELD,
+    MOONMINING_USE_REPROCESS_PRICING,
+)
 from .constants import EveCategoryId
 from .core import CalculatedExtraction
 from .helpers import eveentity_get_or_create_esi_safe
@@ -39,19 +43,28 @@ class EveOreTypeManger(EveTypeManager):
             .filter(eve_group__eve_category_id=EveCategoryId.ASTEROID)
         )
 
-    def update_current_prices(self):
-        """Update current prices for all EveOreTypes."""
+    def update_current_prices(self, use_process_pricing: bool = None):
+        """Update current prices for all ores."""
         from .models import EveOreTypeExtras
 
+        if use_process_pricing is None:
+            use_process_pricing = MOONMINING_USE_REPROCESS_PRICING
+
         for obj in self.filter(published=True).select_related("market_price"):
-            try:
-                price = obj.market_price.average_price
-            except ObjectDoesNotExist:
-                price = None
+            if use_process_pricing:
+                price = obj.calc_refined_value_per_unit(MOONMINING_REPROCESSING_YIELD)
+                pricing_method = EveOreTypeExtras.PricingMethod.REPROCESSED_MATERIALS
+            else:
+                try:
+                    price = obj.market_price.average_price
+                    pricing_method = EveOreTypeExtras.PricingMethod.EVE_CLIENT
+                except ObjectDoesNotExist:
+                    price = None
+                    pricing_method = EveOreTypeExtras.PricingMethod.UNKNOWN
             EveOreTypeExtras.objects.update_or_create(
-                ore_type=obj, defaults={"current_price": price}
+                ore_type=obj,
+                defaults={"current_price": price, "pricing_method": pricing_method},
             )
-            # defaults={"current_price": obj.calc_refined_value_per_unit},
 
 
 class MiningLedgerRecordManager(models.Manager):

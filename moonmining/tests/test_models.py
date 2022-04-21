@@ -301,7 +301,7 @@ class TestMoonProductsSorted(NoSocketsTestCase):
         load_eveuniverse()
 
     def setUp(self) -> None:
-        helpers.generate_market_prices()
+        helpers.generate_market_prices(use_process_pricing=False)
 
     def test_should_return_moon_products_in_order(self):
         # given

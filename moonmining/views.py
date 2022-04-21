@@ -39,6 +39,7 @@ from .app_settings import (
     MOONMINING_ADMIN_NOTIFICATIONS_ENABLED,
     MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE,
     MOONMINING_REPROCESSING_YIELD,
+    MOONMINING_USE_REPROCESS_PRICING,
     MOONMINING_VOLUME_PER_MONTH,
 )
 from .constants import DATE_FORMAT, DATETIME_FORMAT, EveGroupId
@@ -555,6 +556,7 @@ def reports(request):
             ledger_last_updated = None
     context = {
         "page_title": "Reports",
+        "use_reprocess_pricing": MOONMINING_USE_REPROCESS_PRICING,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
         "month_minus_3": month_minus_3.strftime(month_format),

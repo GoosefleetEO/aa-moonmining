@@ -116,7 +116,7 @@ def generate_eve_entities_from_allianceauth():
             )
 
 
-def generate_market_prices():
+def generate_market_prices(use_process_pricing=False):
     tungsten = EveType.objects.get(id=16637)
     EveMarketPrice.objects.create(eve_type=tungsten, average_price=7000)
     mercury = EveType.objects.get(id=16646)
@@ -137,4 +137,4 @@ def generate_market_prices():
     EveMarketPrice.objects.create(eve_type_id=46676, average_price=609.0)
     EveMarketPrice.objects.create(eve_type_id=46678, average_price=310.9)
     EveMarketPrice.objects.create(eve_type_id=46689, average_price=7.7)
-    EveOreType.objects.update_current_prices()
+    EveOreType.objects.update_current_prices(use_process_pricing=use_process_pricing)
