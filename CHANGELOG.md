@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.6.0] - tbd
+
 ### Added
 
 - Report showing current ore prices
+- Ability to use calculated refined pricing instead of normal ore prices (#16)
 
 ## [1.5.0] - 2022-04-21
 
