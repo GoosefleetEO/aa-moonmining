@@ -370,10 +370,23 @@ class TestMoonOverwriteProducts(NoSocketsTestCase):
         ores = {"45506": 10000, "46676": 20000}
         extraction.products = CalculatedExtractionProduct.create_list_from_dict(ores)
         # when
-        moon.overwrite_products_from_calculated_extraction(extraction)
+        result = moon.update_products_from_calculated_extraction(extraction)
         # then
+        self.assertTrue(result)
         self.assertEqual(moon.products.get(ore_type_id=45506).amount, 1 / 3)
         self.assertEqual(moon.products.get(ore_type_id=46676).amount, 2 / 3)
+
+    def test_should_not_overwrite_from_calculated_extraction_without_products(self):
+        # given
+        moon = helpers.create_moon_40161708()
+        extraction = CalculatedExtraction(
+            refinery_id=1, status=CalculatedExtraction.Status.STARTED
+        )
+        # when
+        result = moon.update_products_from_calculated_extraction(extraction)
+        # then
+        self.assertFalse(result)
+        self.assertTrue(moon.products.exists())
 
 
 class TestOwner(NoSocketsTestCase):

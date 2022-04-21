@@ -202,7 +202,7 @@ class MoonManager(models.Manager):
                             moon=moon, amount=product_data[1], ore_type=ore_type
                         )
                     )
-                moon.overwrite_products(moon_products)
+                moon.update_products(moon_products)
                 logger.info("Added moon survey for %s", moon.name)
 
             except Exception as ex:

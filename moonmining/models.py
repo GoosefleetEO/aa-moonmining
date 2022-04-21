@@ -625,28 +625,31 @@ class Moon(models.Model):
         self.rarity_class = self.calc_rarity_class()
         self.save()
 
-    def overwrite_products(self, moon_products: List["MoonProduct"]) -> None:
-        """Overwrites products for this moon."""
+    def update_products(self, moon_products: List["MoonProduct"]) -> None:
+        """Update products of this moon."""
         with transaction.atomic():
             self.products.all().delete()
             MoonProduct.objects.bulk_create(moon_products, batch_size=500)
         self.update_calculated_properties()
 
-    def overwrite_products_from_calculated_extraction(
+    def update_products_from_calculated_extraction(
         self, extraction: CalculatedExtraction
-    ):
-        total_volume = extraction.total_volume()
-        moon_products = [
-            MoonProduct(
-                moon=self,
-                amount=product.volume / total_volume,
-                ore_type=EveOreType.objects.get_or_create_esi(id=product.ore_type_id)[
-                    0
-                ],
-            )
-            for product in extraction.products
-        ]
-        self.overwrite_products(moon_products)
+    ) -> bool:
+        if extraction.products:
+            total_volume = extraction.total_volume()
+            moon_products = [
+                MoonProduct(
+                    moon=self,
+                    amount=product.volume / total_volume,
+                    ore_type=EveOreType.objects.get_or_create_esi(
+                        id=product.ore_type_id
+                    )[0],
+                )
+                for product in extraction.products
+            ]
+            self.update_products(moon_products)
+            return True
+        return False
 
 
 class MoonProduct(models.Model):
@@ -1038,9 +1041,12 @@ class Owner(models.Model):
                             notif.details["oreVolumeByType"]
                         ),
                     )
-                    refinery.moon.overwrite_products_from_calculated_extraction(
+                    if refinery.moon.update_products_from_calculated_extraction(
                         extraction
-                    )
+                    ):
+                        logger.info(
+                            "%s: Products updated from extraction", refinery.moon
+                        )
 
                 elif extraction:
                     if extraction.status == CalculatedExtraction.Status.STARTED:
