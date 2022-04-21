@@ -656,6 +656,7 @@ def report_user_mining_data(request):
     months_3 = months_2.replace(day=1) - dt.timedelta(days=1)
     users_mining_totals = (
         User.objects.filter(profile__main_character__isnull=False)
+        .select_related("profile__main_character", "profile__state")
         .annotate(
             volume_month_0=Sum(
                 sum_volume,
