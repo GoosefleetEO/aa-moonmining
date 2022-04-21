@@ -312,7 +312,7 @@ class TestMoonProductsSorted(NoSocketsTestCase):
         moon_product = result.get(ore_type_id=45506)
         self.assertEqual(moon_product.total_price, 1201363646.4)
         ore_type_ids = list(result.values_list("ore_type_id", flat=True))
-        self.assertListEqual([45506, 46689, 46676, 46678], ore_type_ids)
+        self.assertListEqual([45506, 46676, 46678, 46689], ore_type_ids)
 
     def test_should_handle_products_without_price(self):
         # given
@@ -325,7 +325,7 @@ class TestMoonProductsSorted(NoSocketsTestCase):
         result = moon.products_sorted()
         # then
         ore_type_ids = list(result.values_list("ore_type_id", flat=True))
-        self.assertListEqual([45506, 46689, 46676, 46678], ore_type_ids)
+        self.assertListEqual([45506, 46676, 46678, 46689], ore_type_ids)
 
     def test_should_handle_products_without_amount(self):
         # given
@@ -337,7 +337,7 @@ class TestMoonProductsSorted(NoSocketsTestCase):
         result = moon.products_sorted()
         # then
         ore_type_ids = list(result.values_list("ore_type_id", flat=True))
-        self.assertListEqual([45506, 46689, 46676, 46678], ore_type_ids)
+        self.assertListEqual([45506, 46676, 46678, 46689], ore_type_ids)
 
     def test_should_handle_products_without_volume(self):
         # given
@@ -352,7 +352,7 @@ class TestMoonProductsSorted(NoSocketsTestCase):
         moon_product.ore_type.volume = volume_backup
         moon_product.ore_type.save()
         ore_type_ids = list(result.values_list("ore_type_id", flat=True))
-        self.assertListEqual([45506, 46689, 46676, 46678], ore_type_ids)
+        self.assertListEqual([45506, 46676, 46678, 46689], ore_type_ids)
 
 
 class TestMoonOverwriteProducts(NoSocketsTestCase):

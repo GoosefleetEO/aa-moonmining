@@ -612,7 +612,7 @@ def report_owned_value_data(request):
                 {
                     "corporation": corporation,
                     "moon": {"display": moon_link_html(moon), "sort": counter},
-                    "region": moon.region.name,
+                    "region": moon.region().name,
                     "rarity_class": moon.rarity_tag_html,
                     "value": moon.value,
                     "rank": rank,

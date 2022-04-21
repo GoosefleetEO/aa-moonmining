@@ -448,11 +448,6 @@ class ExtractionProduct(models.Model):
     def __str__(self) -> str:
         return f"{self.extraction} - {self.ore_type}"
 
-    # @cached_property
-    # def value(self) -> float:
-    #     """returns calculated value estimate in ISK"""
-    #     return self.ore_type.price_by_volume(self.volume)
-
 
 class General(models.Model):
     """Meta model for global app permissions"""
@@ -558,7 +553,6 @@ class Moon(models.Model):
     def name(self) -> str:
         return self.eve_moon.name.replace("Moon ", "")
 
-    @cached_property
     def region(self) -> str:
         return self.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region
 
@@ -671,11 +665,6 @@ class MoonProduct(models.Model):
                 fields=["moon", "ore_type"], name="functional_pk_moonproduct"
             )
         ]
-
-    # @cached_property
-    # def value(self) -> float:
-    #     """returns calculated value estimate in ISK"""
-    #     return self.ore_type.price_by_volume(MOONMINING_VOLUME_PER_MONTH * self.amount)
 
     @property
     def amount_percent(self) -> float:

@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from django.core.management import CommandError, call_command
+from django.test import override_settings
 from eveuniverse.models import EveMarketPrice, EveType
 
 from app_utils.testing import NoSocketsTestCase
@@ -16,6 +17,7 @@ PACKAGE_PATH = "moonmining.management.commands"
 
 
 @patch(MODELS_PATH + ".esi")
+@override_settings(CELERY_ALWAYS_EAGER=True, CELERY_EAGER_PROPAGATES_EXCEPTIONS=True)
 class TestImportMoons(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
