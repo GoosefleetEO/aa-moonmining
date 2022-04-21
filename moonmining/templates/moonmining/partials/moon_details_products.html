@@ -1,4 +1,5 @@
 {% load i18n %}
+{% load humanize %}
 {% load moonmining %}
 
 {% if product_rows|length_is:"0" %}
@@ -17,7 +18,8 @@
                 <p>
                     <a href="{{ product.ore_type.profile_url }}" target="_blank">{{ product.ore_type.name }}</a>
                     &nbsp;{{ product.ore_type.rarity_class.bootstrap_tag_html }}
-                    &nbsp;{{ product.ore_type.market_price.average_price|formatisk|default:"?" }}
+                    &nbsp;{{ product.ore_type.market_price.average_price|floatformat:"0"|intcomma|default:"?" }}
+                    <small class="text-muted">ISK per unit</small>
                 </p>
                 <div class="progress" style="height: 20px; width: 100%">
                     <div

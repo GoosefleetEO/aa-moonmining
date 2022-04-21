@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 - Now used the "average price" for ores instead of an estimated price based on refinement. This means that the prices shown in the app are now exactly the same as the prices shown on the Eve client, e.g. when starting a new extraction.
+- Now showing full unit prices in ISK, to improve comparibility between ore types
 
 ### Fixed
 

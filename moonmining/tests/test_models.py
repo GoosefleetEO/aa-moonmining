@@ -307,7 +307,7 @@ class TestMoonProductsSorted(NoSocketsTestCase):
         # given
         moon = helpers.create_moon_40161708()
         # when
-        result = moon.products_sorted
+        result = moon.products_sorted()
         # then
         moon_product = result.get(ore_type_id=45506)
         self.assertEqual(moon_product.total_price, 1201363646.4)
@@ -322,7 +322,7 @@ class TestMoonProductsSorted(NoSocketsTestCase):
             eve_type_id=moon_product.ore_type_id
         ).average_price = None
         # when
-        result = moon.products_sorted
+        result = moon.products_sorted()
         # then
         ore_type_ids = list(result.values_list("ore_type_id", flat=True))
         self.assertListEqual([45506, 46689, 46676, 46678], ore_type_ids)
@@ -334,7 +334,7 @@ class TestMoonProductsSorted(NoSocketsTestCase):
         moon_product.amount = 0
         moon_product.save()
         # when
-        result = moon.products_sorted
+        result = moon.products_sorted()
         # then
         ore_type_ids = list(result.values_list("ore_type_id", flat=True))
         self.assertListEqual([45506, 46689, 46676, 46678], ore_type_ids)
@@ -347,7 +347,7 @@ class TestMoonProductsSorted(NoSocketsTestCase):
         moon_product.ore_type.volume = None
         moon_product.ore_type.save()
         # when
-        result = moon.products_sorted
+        result = moon.products_sorted()
         # then
         moon_product.ore_type.volume = volume_backup
         moon_product.ore_type.save()

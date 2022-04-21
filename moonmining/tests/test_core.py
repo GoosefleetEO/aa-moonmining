@@ -29,3 +29,11 @@ class TestCalculatedExtraction(TestCase):
         extraction.products = CalculatedExtractionProduct.create_list_from_dict(ores)
         # when/then
         self.assertEqual(extraction.total_volume(), 30000)
+
+    def test_should_calculate_total_volume_without_products(self):
+        # given
+        extraction = CalculatedExtraction(
+            refinery_id=1, status=CalculatedExtraction.Status.STARTED
+        )
+        # when/then
+        self.assertEqual(extraction.total_volume(), 0)

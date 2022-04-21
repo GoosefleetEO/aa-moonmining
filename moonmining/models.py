@@ -365,7 +365,6 @@ class Extraction(models.Model):
         """Return current status as enum type."""
         return self.Status(self.status)
 
-    @cached_property
     def products_sorted(self):
         """Return current products as sorted iterable."""
         try:
@@ -374,7 +373,7 @@ class Extraction(models.Model):
                     "ore_type", "ore_type__eve_group", "ore_type__market_price"
                 )
                 .annotate(total_price=self._total_price_db_func())
-                .order_by("-ore_type__eve_group_id")
+                .order_by("ore_type__name")
             )
         except (ObjectDoesNotExist, AttributeError):
             return type(self).objects.none()
@@ -567,7 +566,6 @@ class Moon(models.Model):
     def is_owned(self) -> bool:
         return hasattr(self, "refinery")
 
-    @cached_property
     def products_sorted(self) -> models.QuerySet:
         """Return current products as sorted iterable."""
         try:
@@ -576,7 +574,7 @@ class Moon(models.Model):
                     "ore_type", "ore_type__eve_group", "ore_type__market_price"
                 )
                 .annotate(total_price=self._total_price_db_func())
-                .order_by("-ore_type__eve_group_id")
+                .order_by("ore_type__name")
             )
         except (ObjectDoesNotExist, AttributeError):
             return type(self).objects.none()
