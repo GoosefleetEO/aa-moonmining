@@ -18,7 +18,7 @@ from app_utils.testing import (
 )
 
 from .. import views
-from ..models import Extraction, MiningLedgerRecord, Moon, Owner, Refinery
+from ..models import EveOreType, Extraction, MiningLedgerRecord, Moon, Owner, Refinery
 from . import helpers
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
@@ -526,6 +526,7 @@ class TestReportsData(TestCase):
         months_3 = dt.datetime(2020, 10, 15, 12, 0, tzinfo=pytz.UTC)
         EveMarketPrice.objects.create(eve_type_id=45506, average_price=10)
         EveMarketPrice.objects.create(eve_type_id=45494, average_price=20)
+        EveOreType.objects.update_current_prices()
         MiningLedgerRecord.objects.create(
             refinery=self.refinery,
             character_id=1001,

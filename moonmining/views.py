@@ -647,7 +647,7 @@ def report_user_mining_data(request):
     )
     sum_price = ExpressionWrapper(
         F("mining_ledger__quantity")
-        * Coalesce(F("mining_ledger__ore_type__market_price__average_price"), 0),
+        * Coalesce(F("mining_ledger__ore_type__extras__current_price"), 0),
         output_field=FloatField(),
     )
     today = now()

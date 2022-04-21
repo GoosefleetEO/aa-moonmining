@@ -2,6 +2,7 @@ from collections import namedtuple
 from typing import Tuple
 
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models, transaction
 from django.db.models import ExpressionWrapper, F, FloatField, IntegerField, Sum
 from django.db.models.functions import Coalesce
@@ -37,15 +38,19 @@ class EveOreTypeManger(EveTypeManager):
             .filter(eve_group__eve_category_id=constants.EVE_CATEGORY_ID_ASTEROID)
         )
 
-    def update_refined_prices(self):
-        """Update refined prices for all EveOreTypes"""
+    def update_current_prices(self):
+        """Update current prices for all EveOreTypes."""
         from .models import EveOreTypeExtras
 
-        for obj in self.all():
+        for obj in self.filter(published=True).select_related("market_price"):
+            try:
+                price = obj.market_price.average_price
+            except ObjectDoesNotExist:
+                price = None
             EveOreTypeExtras.objects.update_or_create(
-                ore_type=obj,
-                defaults={"refined_price": obj.calc_refined_value_per_unit},
+                ore_type=obj, defaults={"current_price": price}
             )
+            # defaults={"current_price": obj.calc_refined_value_per_unit},
 
 
 class MiningLedgerRecordManager(models.Manager):
@@ -61,8 +66,8 @@ class MiningLedgerRecordManager(models.Manager):
         return (
             super()
             .get_queryset()
-            .select_related("ore_type", "ore_type__market_price")
-            .annotate(unit_price=F("ore_type__market_price__average_price"))
+            .select_related("ore_type", "ore_type__extras")
+            .annotate(unit_price=F("ore_type__extras__current_price"))
             .annotate(total_price=Sum(sum_price, distinct=True))
             .annotate(total_volume=Sum(sum_volume, distinct=True))
         )

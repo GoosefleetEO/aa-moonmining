@@ -188,7 +188,7 @@ class EveOreType(EveType):
     @cached_property
     def price(self) -> float:
         """Return calculated price estimate in ISK per unit."""
-        result = self.market_price.average_price
+        result = self.extras.current_price
         return result if result is not None else 0.0
 
     def price_by_volume(self, volume: int) -> float:
@@ -228,17 +228,16 @@ class EveOreType(EveType):
         return enabled_sections
 
 
-# This model is currently not used
 class EveOreTypeExtras(models.Model):
-    """Extra fields for an EveOreType."""
+    """Extra fields for an EveOreType, e.g. for pricing calculations."""
 
     ore_type = models.OneToOneField(
         EveOreType, on_delete=models.CASCADE, related_name="extras"
     )
-    refined_price = models.FloatField(
+    current_price = models.FloatField(
         default=None,
         null=True,
-        help_text="price calculated as sum of prices for refined materials",
+        help_text="price used all price calculations with this type",
     )
 
     def __str__(self) -> str:
@@ -370,7 +369,7 @@ class Extraction(models.Model):
         try:
             return (
                 self.products.select_related(
-                    "ore_type", "ore_type__eve_group", "ore_type__market_price"
+                    "ore_type", "ore_type__eve_group", "ore_type__extras"
                 )
                 .annotate(total_price=self._total_price_db_func())
                 .order_by("ore_type__name")
@@ -391,7 +390,7 @@ class Extraction(models.Model):
         """Calculate value estimate."""
         try:
             return self.products.select_related(
-                "ore_type", "ore_type__market_price"
+                "ore_type", "ore_type__extras"
             ).aggregate(total_price=self._total_price_db_func())["total_price"]
         except (ObjectDoesNotExist, KeyError, AttributeError):
             return None
@@ -399,7 +398,7 @@ class Extraction(models.Model):
     @staticmethod
     def _total_price_db_func():
         return Sum(
-            Coalesce(F("ore_type__market_price__average_price"), 0.0)
+            Coalesce(F("ore_type__extras__current_price"), 0.0)
             * F("volume")
             / F("ore_type__volume"),
             output_field=models.FloatField(),
@@ -565,7 +564,7 @@ class Moon(models.Model):
         try:
             return (
                 self.products.select_related(
-                    "ore_type", "ore_type__eve_group", "ore_type__market_price"
+                    "ore_type", "ore_type__eve_group", "ore_type__extras"
                 )
                 .annotate(total_price=self._total_price_db_func())
                 .order_by("ore_type__name")
@@ -597,16 +596,16 @@ class Moon(models.Model):
     def calc_value(self) -> Optional[float]:
         """Calculate value estimate."""
         try:
-            return self.products.select_related(
-                "ore_type", "ore_type__market_price"
-            ).aggregate(total_value=self._total_price_db_func())["total_value"]
+            return self.products.aggregate(total_value=self._total_price_db_func())[
+                "total_value"
+            ]
         except (ObjectDoesNotExist, KeyError, AttributeError):
             return None
 
     @staticmethod
     def _total_price_db_func():
         return Sum(
-            Coalesce(F("ore_type__market_price__average_price"), 0.0)
+            Coalesce(F("ore_type__extras__current_price"), 0.0)
             * F("amount")
             * Value(float(MOONMINING_VOLUME_PER_MONTH))
             / F("ore_type__volume"),

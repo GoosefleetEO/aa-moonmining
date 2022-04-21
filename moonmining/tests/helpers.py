@@ -7,7 +7,15 @@ from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 from app_utils.testing import create_user_from_evecharacter
 
 from ..app_settings import MOONMINING_VOLUME_PER_MONTH
-from ..models import Extraction, ExtractionProduct, Moon, MoonProduct, Owner, Refinery
+from ..models import (
+    EveOreType,
+    Extraction,
+    ExtractionProduct,
+    Moon,
+    MoonProduct,
+    Owner,
+    Refinery,
+)
 
 
 def create_moon_40161708() -> EveMoon:
@@ -129,4 +137,4 @@ def generate_market_prices():
     EveMarketPrice.objects.create(eve_type_id=46676, average_price=609.0)
     EveMarketPrice.objects.create(eve_type_id=46678, average_price=310.9)
     EveMarketPrice.objects.create(eve_type_id=46689, average_price=7.7)
-    # EveOreType.objects.update_refined_prices()
+    EveOreType.objects.update_current_prices()
