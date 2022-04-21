@@ -6,6 +6,7 @@ from .models import (
     ExtractionProduct,
     MiningLedgerRecord,
     Moon,
+    MoonProduct,
     Notification,
     Owner,
     Refinery,
@@ -74,11 +75,24 @@ class MiningLedgerRecordAdmin(admin.ModelAdmin):
         return False
 
 
+class MoonProductAdminInline(admin.TabularInline):
+    model = MoonProduct
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(Moon)
 class MoonAdmin(admin.ModelAdmin):
     list_display = ("eve_moon",)
-
     actions = ["update_calculated_properties"]
+    inlines = (MoonProductAdminInline,)
 
     @admin.display(description="Update calculated properties for selected moons.")
     def update_calculated_properties(self, request, queryset):

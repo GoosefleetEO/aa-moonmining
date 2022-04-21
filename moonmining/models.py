@@ -8,7 +8,7 @@ import yaml
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import F, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils.functional import cached_property, classproperty
@@ -188,7 +188,8 @@ class EveOreType(EveType):
     @cached_property
     def price(self) -> float:
         """Return calculated price estimate in ISK per unit."""
-        return self.extras.refined_price
+        result = self.market_price.average_price
+        return result if result is not None else 0.0
 
     def price_by_volume(self, volume: int) -> float:
         """Return calculated price estimate in ISK for volume in m3."""
@@ -216,10 +217,6 @@ class EveOreType(EveType):
                 value += price * type_material.quantity * r_units * reprocessing_yield
         return value / units
 
-        # EveOreType.objects.annotate(extras=Sum(
-        # F("materials__quantity") * Value(0.81)
-        # * F("materials__material_eve_type__market_price__average_price") / Value(100), output_field=FloatField()))
-
     @classmethod
     def _enabled_sections_union(cls, enabled_sections: Iterable[str]) -> set:
         """Return enabled sections with TYPE_MATERIALS and DOGMAS always enabled."""
@@ -231,6 +228,7 @@ class EveOreType(EveType):
         return enabled_sections
 
 
+# This model is currently not used
 class EveOreTypeExtras(models.Model):
     """Extra fields for an EveOreType."""
 
@@ -367,16 +365,15 @@ class Extraction(models.Model):
         """Return current status as enum type."""
         return self.Status(self.status)
 
-    @cached_property
     def products_sorted(self):
         """Return current products as sorted iterable."""
         try:
             return (
                 self.products.select_related(
-                    "ore_type", "ore_type__eve_group", "ore_type__extras"
+                    "ore_type", "ore_type__eve_group", "ore_type__market_price"
                 )
                 .annotate(total_price=self._total_price_db_func())
-                .order_by("-ore_type__eve_group_id")
+                .order_by("ore_type__name")
             )
         except (ObjectDoesNotExist, AttributeError):
             return type(self).objects.none()
@@ -394,7 +391,7 @@ class Extraction(models.Model):
         """Calculate value estimate."""
         try:
             return self.products.select_related(
-                "ore_type", "ore_type__extras"
+                "ore_type", "ore_type__market_price"
             ).aggregate(total_price=self._total_price_db_func())["total_price"]
         except (ObjectDoesNotExist, KeyError, AttributeError):
             return None
@@ -402,7 +399,7 @@ class Extraction(models.Model):
     @staticmethod
     def _total_price_db_func():
         return Sum(
-            Coalesce(F("ore_type__extras__refined_price"), 0.0)
+            Coalesce(F("ore_type__market_price__average_price"), 0.0)
             * F("volume")
             / F("ore_type__volume"),
             output_field=models.FloatField(),
@@ -450,11 +447,6 @@ class ExtractionProduct(models.Model):
 
     def __str__(self) -> str:
         return f"{self.extraction} - {self.ore_type}"
-
-    # @cached_property
-    # def value(self) -> float:
-    #     """returns calculated value estimate in ISK"""
-    #     return self.ore_type.price_by_volume(self.volume)
 
 
 class General(models.Model):
@@ -561,7 +553,6 @@ class Moon(models.Model):
     def name(self) -> str:
         return self.eve_moon.name.replace("Moon ", "")
 
-    @cached_property
     def region(self) -> str:
         return self.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region
 
@@ -569,16 +560,15 @@ class Moon(models.Model):
     def is_owned(self) -> bool:
         return hasattr(self, "refinery")
 
-    @cached_property
     def products_sorted(self) -> models.QuerySet:
         """Return current products as sorted iterable."""
         try:
             return (
                 self.products.select_related(
-                    "ore_type", "ore_type__eve_group", "ore_type__extras"
+                    "ore_type", "ore_type__eve_group", "ore_type__market_price"
                 )
                 .annotate(total_price=self._total_price_db_func())
-                .order_by("-ore_type__eve_group_id")
+                .order_by("ore_type__name")
             )
         except (ObjectDoesNotExist, AttributeError):
             return type(self).objects.none()
@@ -608,7 +598,7 @@ class Moon(models.Model):
         """Calculate value estimate."""
         try:
             return self.products.select_related(
-                "ore_type", "ore_type__extras"
+                "ore_type", "ore_type__market_price"
             ).aggregate(total_value=self._total_price_db_func())["total_value"]
         except (ObjectDoesNotExist, KeyError, AttributeError):
             return None
@@ -616,7 +606,7 @@ class Moon(models.Model):
     @staticmethod
     def _total_price_db_func():
         return Sum(
-            Coalesce(F("ore_type__extras__refined_price"), 0.0)
+            Coalesce(F("ore_type__market_price__average_price"), 0.0)
             * F("amount")
             * Value(float(MOONMINING_VOLUME_PER_MONTH))
             / F("ore_type__volume"),
@@ -628,6 +618,32 @@ class Moon(models.Model):
         self.value = self.calc_value()
         self.rarity_class = self.calc_rarity_class()
         self.save()
+
+    def update_products(self, moon_products: List["MoonProduct"]) -> None:
+        """Update products of this moon."""
+        with transaction.atomic():
+            self.products.all().delete()
+            MoonProduct.objects.bulk_create(moon_products, batch_size=500)
+        self.update_calculated_properties()
+
+    def update_products_from_calculated_extraction(
+        self, extraction: CalculatedExtraction
+    ) -> bool:
+        if extraction.products:
+            total_volume = extraction.total_volume()
+            moon_products = [
+                MoonProduct(
+                    moon=self,
+                    amount=product.volume / total_volume,
+                    ore_type=EveOreType.objects.get_or_create_esi(
+                        id=product.ore_type_id
+                    )[0],
+                )
+                for product in extraction.products
+            ]
+            self.update_products(moon_products)
+            return True
+        return False
 
 
 class MoonProduct(models.Model):
@@ -649,11 +665,6 @@ class MoonProduct(models.Model):
                 fields=["moon", "ore_type"], name="functional_pk_moonproduct"
             )
         ]
-
-    # @cached_property
-    # def value(self) -> float:
-    #     """returns calculated value estimate in ISK"""
-    #     return self.ore_type.price_by_volume(MOONMINING_VOLUME_PER_MONTH * self.amount)
 
     @property
     def amount_percent(self) -> float:
@@ -948,6 +959,10 @@ class Owner(models.Model):
 
     def update_extractions_from_esi(self):
         """Creates new extractions from ESI for current owner."""
+        extractions_by_refinery = self._fetch_extractions_from_esi()
+        self._update_or_create_extractions(extractions_by_refinery)
+
+    def _fetch_extractions_from_esi(self):
         logger.info("%s: Fetching extractions from ESI...", self)
         extractions = (
             esi.client.Industry.get_corporation_corporation_id_mining_extractions(
@@ -959,6 +974,9 @@ class Owner(models.Model):
         extractions_by_refinery = defaultdict(list)
         for row in extractions:
             extractions_by_refinery[row["structure_id"]].append(row)
+        return extractions_by_refinery
+
+    def _update_or_create_extractions(self, extractions_by_refinery: dict) -> None:
         new_extractions_count = 0
         for refinery_id, refinery_extractions in extractions_by_refinery.items():
             try:
@@ -1012,6 +1030,12 @@ class Owner(models.Model):
                             notif.details["oreVolumeByType"]
                         ),
                     )
+                    if refinery.moon.update_products_from_calculated_extraction(
+                        extraction
+                    ):
+                        logger.info(
+                            "%s: Products updated from extraction", refinery.moon
+                        )
 
                 elif extraction:
                     if extraction.status == CalculatedExtraction.Status.STARTED:

@@ -1,5 +1,4 @@
 from collections import namedtuple
-from concurrent import futures
 from typing import Tuple
 
 from django.contrib.auth.models import User
@@ -62,41 +61,14 @@ class MiningLedgerRecordManager(models.Manager):
         return (
             super()
             .get_queryset()
-            .select_related("ore_type", "ore_type__extras")
-            .annotate(unit_price=F("ore_type__extras__refined_price"))
+            .select_related("ore_type", "ore_type__market_price")
+            .annotate(unit_price=F("ore_type__market_price__average_price"))
             .annotate(total_price=Sum(sum_price, distinct=True))
             .annotate(total_volume=Sum(sum_volume, distinct=True))
         )
 
 
-class UpdateCalculatedPropertiesMixin:
-    """Mixin for updating all calculated properties of a query set"""
-
-    def update_calculated_properties(self):
-        logger.info(
-            "Updating calculated properties for %d %ss ...",
-            len(self),
-            self.model.__name__.lower(),
-        )
-        with futures.ThreadPoolExecutor(max_workers=MAX_THREAD_WORKERS) as executor:
-            executor.map(self._thread_update_obj, list(self))
-        logger.info("Completed calculating properties.")
-
-    def _thread_update_obj(self, obj):
-        logger.info(
-            "Updating calculated properties for %s %d...", self.model.__name__, obj.pk
-        )
-        obj.update_calculated_properties()
-
-
-class MoonQuerySet(models.QuerySet, UpdateCalculatedPropertiesMixin):
-    pass
-
-
-class MoonManager(models.Manager):
-    def get_queryset(self) -> models.QuerySet:
-        return MoonQuerySet(self.model, using=self._db)
-
+class MoonQuerySet(models.QuerySet):
     def selected_related_defaults(self) -> models.QuerySet:
         return self.select_related(
             "eve_moon",
@@ -109,6 +81,8 @@ class MoonManager(models.Manager):
             "refinery__owner__corporation__alliance",
         )
 
+
+class MoonManagerBase(models.Manager):
     def update_moons_from_survey(self, scans: str, user: User = None) -> bool:
         """Update moons from survey input.
 
@@ -202,12 +176,7 @@ class MoonManager(models.Manager):
                             moon=moon, amount=product_data[1], ore_type=ore_type
                         )
                     )
-
-                with transaction.atomic():
-                    moon.products.all().delete()
-                    MoonProduct.objects.bulk_create(moon_products, batch_size=500)
-
-                moon.update_calculated_properties()
+                moon.update_products(moon_products)
                 logger.info("Added moon survey for %s", moon.name)
 
             except Exception as ex:
@@ -261,7 +230,10 @@ class MoonManager(models.Manager):
         return success
 
 
-class ExtractionQuerySet(models.QuerySet, UpdateCalculatedPropertiesMixin):
+MoonManager = MoonManagerBase.from_queryset(MoonQuerySet)
+
+
+class ExtractionQuerySet(models.QuerySet):
     def selected_related_defaults(self) -> models.QuerySet:
         return self.select_related(
             "refinery",
@@ -283,15 +255,12 @@ class ExtractionQuerySet(models.QuerySet, UpdateCalculatedPropertiesMixin):
             status__in=[self.model.Status.COMPLETED, self.model.Status.CANCELED]
         ).filter(auto_fracture_at__lte=now()).update(status=self.model.Status.COMPLETED)
 
-
-class ExtractionManager(models.Manager):
     def annotate_volume(self) -> models.QuerySet:
         """Add volume of all products"""
         return self.annotate(volume=Sum("products__volume"))
 
-    def get_queryset(self) -> models.QuerySet:
-        return ExtractionQuerySet(self.model, using=self._db)
 
+class ExtractionManagerBase(models.Manager):
     def update_from_calculated(self, calculated: CalculatedExtraction) -> bool:
         """Update an extraction object from related calculated extraction
         when there is new information.
@@ -382,6 +351,9 @@ class ExtractionManager(models.Manager):
             extraction.update_calculated_properties()
             updated = True
         return updated
+
+
+ExtractionManager = ExtractionManagerBase.from_queryset(ExtractionQuerySet)
 
 
 class RefineryManager(models.Manager):

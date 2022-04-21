@@ -25,7 +25,7 @@
                             </a>
                         </td>
                         <td>{{ product.ore_type.rarity_class.bootstrap_tag_html }}</td>
-                        <td>{{ product.ore_type.price|formatisk|default:"?" }}</td>
+                        <td>{{ product.ore_type.price|floatformat:"0"|intcomma|default:"?" }}</td>
                         <td>{{ product.volume|floatformat:"0"|intcomma }}</td>
                         <td>{{ product.total_price|formatisk:"b"|default:""}}</td>
                     </tr>

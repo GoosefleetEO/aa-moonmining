@@ -13,7 +13,7 @@ from app_utils.logging import LoggerAddTag
 
 from moonmining.models import EveOreType, Moon, MoonProduct
 
-from ... import __title__
+from ... import __title__, tasks
 
 MAX_RETRIES = 3
 BULK_BATCH_SIZE = 500
@@ -78,7 +78,11 @@ class Command(BaseCommand):
         )
         self.import_moons(moons, options["force_update"])
         self.update_moons(moons)
-        self.stdout.write(self.style.SUCCESS("Done."))
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Import completed. Recalculation of imported moons started."
+            )
+        )
 
     def read_moons(self, input_file) -> tuple:
         self.stdout.write(f"Importing moons from: {input_file} ...")
@@ -203,7 +207,9 @@ class Command(BaseCommand):
 
     def update_moons(self, moons):
         moons_to_update_qs = Moon.objects.filter(pk__in=moons.keys())
+        for moon in moons_to_update_qs:
+            tasks.update_moon_calculated_properties.delay(moon.pk)
         self.stdout.write(
-            f"Updating calculated properties for {moons_to_update_qs.count():,} moons..."
+            f"Updating calculated properties for {moons_to_update_qs.count():,} "
+            "moons started..."
         )
-        moons_to_update_qs.update_calculated_properties()

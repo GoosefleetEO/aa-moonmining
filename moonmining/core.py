@@ -36,6 +36,14 @@ class CalculatedExtraction:
         if self.auto_fracture_at:
             self.auto_fracture_at = helpers.round_seconds(self.auto_fracture_at)
 
+    def total_volume(self) -> float:
+        if not self.products:
+            return 0
+        total = 0.0
+        for product in self.products:
+            total += product.volume
+        return total
+
 
 @dataclass
 class CalculatedExtractionProduct:

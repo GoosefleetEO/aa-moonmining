@@ -612,7 +612,7 @@ def report_owned_value_data(request):
                 {
                     "corporation": corporation,
                     "moon": {"display": moon_link_html(moon), "sort": counter},
-                    "region": moon.region.name,
+                    "region": moon.region().name,
                     "rarity_class": moon.rarity_tag_html,
                     "value": moon.value,
                     "rank": rank,
@@ -647,7 +647,7 @@ def report_user_mining_data(request):
     )
     sum_price = ExpressionWrapper(
         F("mining_ledger__quantity")
-        * Coalesce(F("mining_ledger__ore_type__extras__refined_price"), 0),
+        * Coalesce(F("mining_ledger__ore_type__market_price__average_price"), 0),
         output_field=FloatField(),
     )
     today = now()
@@ -656,6 +656,7 @@ def report_user_mining_data(request):
     months_3 = months_2.replace(day=1) - dt.timedelta(days=1)
     users_mining_totals = (
         User.objects.filter(profile__main_character__isnull=False)
+        .select_related("profile__main_character", "profile__state")
         .annotate(
             volume_month_0=Sum(
                 sum_volume,

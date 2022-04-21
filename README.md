@@ -186,7 +186,7 @@ Note that all settings are optional and the app will use the documented default 
 Name | Description | Default
 -- | -- | --
 `MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE`| Number of hours an extractions that has passed its ready time is still shown on the upcoming extractions tab. | `12`
-`MOONMINING_REPROCESSING_YIELD`| Reprocessing yield used for calculating all values | `0.82`
+`MOONMINING_REPROCESSING_YIELD`| Reprocessing yield used for calculating all values (currently not used) | `0.82`
 `MOONMINING_VOLUME_PER_MONTH`| Total ore volume per month used for calculating moon values. | `14557923`
 
 ## Management Commands
@@ -207,13 +207,12 @@ Name | Description
 ### Extractions
 
 - Q: Why does the tool not show values and ores for all my extractions?
-- A: Unfortunately, the Eve Online API does only provide basic information for extractions. Additional information like the list of ores are retrieved by trying to match moon mining notifications to extractions. However, that process it not 100% reliable. For example the API returns the latest notifications only, so  notifications for extractions that have been setup weeks ago might no longer be available.
+- A: Unfortunately, the Eve Online API does only provide basic information for extractions. Additional information like the list of ores are retrieved by trying to match moon mining notifications to extractions. However, that process it not 100% reliable. For example the API returns the latest notifications only, so notifications for extractions that have been setup weeks ago might no longer be available.
 
 ### Prices
 
 - Q: How are the prices and values of ores calculated?
-- A: The price of an ore is calculated as the sum of prices for it's refined minerals. Since most people are refining their ores before selling them this approach is a better measure of the real value of ores then the direct price.
-The prices themselves are the average item prices across new Eden (not Jita prices), which are the same prices that the in-game client is using to show estimates.
+- A: All ore prices are **average prices** (not Jita prices), which are the current average price of an item accross all of New Eden and the same that the in-game client is showing, e.g. for price estimates when scheduling an extraction.
 
 ## History
 

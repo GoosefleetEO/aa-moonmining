@@ -1,19 +1,7 @@
 # flake8: noqa
-"""scripts generates large amount of moons for load testing
+"""scripts generates moons for load testing
 
 This script can be executed directly from shell.
-
-SQLs:
-
-SELECT itemID as moon_id
-FROM eve_sde.mapDenormalize
-WHERE typeID = 14 and regionID IN (10000069);
-
-SELECT typeID
-from eve_sde.invTypes
-join eve_sde.invGroups on eve_sde.invTypes.groupID = eve_sde.invGroups.groupID
-where categoryID = 25 and eve_sde.invTypes.published is TRUE and eve_sde.invGroups.published IS TRUE
-and eve_sde.invTypes.portionSize = 100 and mass = 4000 and volume = 10
 """
 
 import os

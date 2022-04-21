@@ -10,6 +10,7 @@ from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 from allianceauth.eveonline.models import EveCorporationInfo
 from app_utils.testing import NoSocketsTestCase
 
+from ..core import CalculatedExtraction, CalculatedExtractionProduct
 from ..models import (
     EveOreType,
     Extraction,
@@ -65,6 +66,135 @@ class TestEveOreTypeProfileUrl(NoSocketsTestCase):
         self.assertEqual(result, "https://www.kalkoken.org/apps/eveitems/?typeId=45506")
 
 
+class TestExtractionIsJackpot(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        load_allianceauth()
+        moon = helpers.create_moon_40161708()
+        owner = Owner.objects.create(
+            corporation=EveCorporationInfo.objects.get(corporation_id=2001)
+        )
+        cls.refinery = Refinery.objects.create(
+            id=40161708, moon=moon, owner=owner, eve_type_id=35835
+        )
+        cls.ore_quality_regular = EveOreType.objects.get(id=45490)
+        cls.ore_quality_improved = EveOreType.objects.get(id=46280)
+        cls.ore_quality_excellent = EveOreType.objects.get(id=46281)
+        cls.ore_quality_excellent_2 = EveOreType.objects.get(id=46283)
+
+    def test_should_be_jackpot(self):
+        # given
+        extraction = Extraction.objects.create(
+            refinery=self.refinery,
+            chunk_arrival_at=now() + dt.timedelta(days=3),
+            auto_fracture_at=now() + dt.timedelta(days=4),
+            started_at=now() - dt.timedelta(days=3),
+            status=Extraction.Status.STARTED,
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            ore_type=self.ore_quality_excellent,
+            volume=1000000 * 0.1,
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            ore_type=self.ore_quality_excellent_2,
+            volume=1000000 * 0.1,
+        )
+        # when
+        result = extraction.calc_is_jackpot()
+        # then
+        self.assertTrue(result)
+
+    def test_should_not_be_jackpot_1(self):
+        # given
+        extraction = Extraction.objects.create(
+            refinery=self.refinery,
+            chunk_arrival_at=now() + dt.timedelta(days=3),
+            auto_fracture_at=now() + dt.timedelta(days=4),
+            started_at=now() - dt.timedelta(days=3),
+            status=Extraction.Status.STARTED,
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            ore_type=self.ore_quality_excellent,
+            volume=1000000 * 0.1,
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            ore_type=self.ore_quality_improved,
+            volume=1000000 * 0.1,
+        )
+        # when
+        result = extraction.calc_is_jackpot()
+        # then
+        self.assertFalse(result)
+
+    def test_should_not_be_jackpot_2(self):
+        # given
+        extraction = Extraction.objects.create(
+            refinery=self.refinery,
+            chunk_arrival_at=now() + dt.timedelta(days=3),
+            auto_fracture_at=now() + dt.timedelta(days=4),
+            started_at=now() - dt.timedelta(days=3),
+            status=Extraction.Status.STARTED,
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            ore_type=self.ore_quality_improved,
+            volume=1000000 * 0.1,
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            ore_type=self.ore_quality_excellent,
+            volume=1000000 * 0.1,
+        )
+        # when
+        result = extraction.calc_is_jackpot()
+        # then
+        self.assertFalse(result)
+
+    def test_should_not_be_jackpot_3(self):
+        # given
+        extraction = Extraction.objects.create(
+            refinery=self.refinery,
+            chunk_arrival_at=now() + dt.timedelta(days=3),
+            auto_fracture_at=now() + dt.timedelta(days=4),
+            started_at=now() - dt.timedelta(days=3),
+            status=Extraction.Status.STARTED,
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            ore_type=self.ore_quality_regular,
+            volume=1000000 * 0.1,
+        )
+        ExtractionProduct.objects.create(
+            extraction=extraction,
+            ore_type=self.ore_quality_improved,
+            volume=1000000 * 0.1,
+        )
+        # when
+        result = extraction.calc_is_jackpot()
+        # then
+        self.assertFalse(result)
+
+    def test_should_not_be_jackpot_4(self):
+        # given
+        extraction = Extraction.objects.create(
+            refinery=self.refinery,
+            chunk_arrival_at=now() + dt.timedelta(days=3),
+            auto_fracture_at=now() + dt.timedelta(days=4),
+            started_at=now() - dt.timedelta(days=3),
+            status=Extraction.Status.STARTED,
+        )
+        # when
+        result = extraction.calc_is_jackpot()
+        # then
+        self.assertFalse(result)
+
+
 @patch(MODELS_PATH + ".MOONMINING_VOLUME_PER_MONTH", 1000000)
 @patch(MODELS_PATH + ".MOONMINING_REPROCESSING_YIELD", 0.7)
 class TestMoonUpdateValue(NoSocketsTestCase):
@@ -80,17 +210,183 @@ class TestMoonUpdateValue(NoSocketsTestCase):
         # when
         result = self.moon.calc_value()
         # then
-        self.assertEqual(result, 180498825.5)
+        self.assertEqual(result, 84622187.5)
 
-    def test_should_return_None_if_prices_are_missing(self):
-        # given
-        EveMarketPrice.objects.create(
-            eve_type=EveType.objects.get(id=45506), average_price=1, adjusted_price=2
-        )
+    def test_should_return_zero_if_prices_are_missing(self):
         # when
         result = self.moon.calc_value()
         # then
         self.assertEqual(result, 0)
+
+
+class TestMoonCalcRarityClass(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        cls.ore_type_r0 = EveOreType.objects.get(id=46676)
+        cls.ore_type_r4 = EveOreType.objects.get(id=45492)
+        cls.ore_type_r8 = EveOreType.objects.get(id=45497)
+        cls.ore_type_r16 = EveOreType.objects.get(id=46296)
+        cls.ore_type_r32 = EveOreType.objects.get(id=45506)
+        cls.ore_type_r64 = EveOreType.objects.get(id=46316)
+
+    def test_should_return_R4(self):
+        # given
+        moon = Moon.objects.create(eve_moon_id=40161708)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r0, amount=0.23)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r4, amount=0.19)
+        # when
+        result = moon.calc_rarity_class()
+        # then
+        self.assertEqual(result, OreRarityClass.R4)
+
+    def test_should_return_R8(self):
+        # given
+        moon = Moon.objects.create(eve_moon_id=40161708)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r8, amount=0.25)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r0, amount=0.23)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r4, amount=0.19)
+        # when
+        result = moon.calc_rarity_class()
+        # then
+        self.assertEqual(result, OreRarityClass.R8)
+
+    def test_should_return_R16(self):
+        # given
+        moon = Moon.objects.create(eve_moon_id=40161708)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r4, amount=0.19)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r16, amount=0.23)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r8, amount=0.25)
+        # when
+        result = moon.calc_rarity_class()
+        # then
+        self.assertEqual(result, OreRarityClass.R16)
+
+    def test_should_return_R32(self):
+        # given
+        moon = Moon.objects.create(eve_moon_id=40161708)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r16, amount=0.23)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r32, amount=0.19)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r8, amount=0.25)
+        # when
+        result = moon.calc_rarity_class()
+        # then
+        self.assertEqual(result, OreRarityClass.R32)
+
+    def test_should_return_R64(self):
+        # given
+        moon = Moon.objects.create(eve_moon_id=40161708)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r16, amount=0.23)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r32, amount=0.19)
+        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r64, amount=0.25)
+        # when
+        result = moon.calc_rarity_class()
+        # then
+        self.assertEqual(result, OreRarityClass.R64)
+
+    def test_should_handle_moon_without_products(self):
+        # given
+        moon = Moon.objects.create(eve_moon_id=40161708)
+        # when
+        result = moon.calc_rarity_class()
+        # then
+        self.assertEqual(result, OreRarityClass.NONE)
+
+
+class TestMoonProductsSorted(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+
+    def setUp(self) -> None:
+        helpers.generate_market_prices()
+
+    def test_should_return_moon_products_in_order(self):
+        # given
+        moon = helpers.create_moon_40161708()
+        # when
+        result = moon.products_sorted()
+        # then
+        moon_product = result.get(ore_type_id=45506)
+        self.assertEqual(moon_product.total_price, 1201363646.4)
+        ore_type_ids = list(result.values_list("ore_type_id", flat=True))
+        self.assertListEqual([45506, 46676, 46678, 46689], ore_type_ids)
+
+    def test_should_handle_products_without_price(self):
+        # given
+        moon = helpers.create_moon_40161708()
+        moon_product = moon.products.get(ore_type_id=45506)
+        EveMarketPrice.objects.filter(
+            eve_type_id=moon_product.ore_type_id
+        ).average_price = None
+        # when
+        result = moon.products_sorted()
+        # then
+        ore_type_ids = list(result.values_list("ore_type_id", flat=True))
+        self.assertListEqual([45506, 46676, 46678, 46689], ore_type_ids)
+
+    def test_should_handle_products_without_amount(self):
+        # given
+        moon = helpers.create_moon_40161708()
+        moon_product = moon.products.get(ore_type_id=45506)
+        moon_product.amount = 0
+        moon_product.save()
+        # when
+        result = moon.products_sorted()
+        # then
+        ore_type_ids = list(result.values_list("ore_type_id", flat=True))
+        self.assertListEqual([45506, 46676, 46678, 46689], ore_type_ids)
+
+    def test_should_handle_products_without_volume(self):
+        # given
+        moon = helpers.create_moon_40161708()
+        moon_product = moon.products.get(ore_type_id=45506)
+        volume_backup = moon_product.ore_type.volume
+        moon_product.ore_type.volume = None
+        moon_product.ore_type.save()
+        # when
+        result = moon.products_sorted()
+        # then
+        moon_product.ore_type.volume = volume_backup
+        moon_product.ore_type.save()
+        ore_type_ids = list(result.values_list("ore_type_id", flat=True))
+        self.assertListEqual([45506, 46676, 46678, 46689], ore_type_ids)
+
+
+class TestMoonOverwriteProducts(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+
+    def test_should_overwrite_from_calculated_extraction(self):
+        # given
+        moon = helpers.create_moon_40161708()
+        extraction = CalculatedExtraction(
+            refinery_id=1, status=CalculatedExtraction.Status.STARTED
+        )
+        ores = {"45506": 10000, "46676": 20000}
+        extraction.products = CalculatedExtractionProduct.create_list_from_dict(ores)
+        # when
+        result = moon.update_products_from_calculated_extraction(extraction)
+        # then
+        self.assertTrue(result)
+        self.assertEqual(moon.products.get(ore_type_id=45506).amount, 1 / 3)
+        self.assertEqual(moon.products.get(ore_type_id=46676).amount, 2 / 3)
+
+    def test_should_not_overwrite_from_calculated_extraction_without_products(self):
+        # given
+        moon = helpers.create_moon_40161708()
+        extraction = CalculatedExtraction(
+            refinery_id=1, status=CalculatedExtraction.Status.STARTED
+        )
+        # when
+        result = moon.update_products_from_calculated_extraction(extraction)
+        # then
+        self.assertFalse(result)
+        self.assertTrue(moon.products.exists())
 
 
 class TestOwner(NoSocketsTestCase):
@@ -886,81 +1182,6 @@ class TestOwnerFetchNotifications(NoSocketsTestCase):
         self.assertEqual(obj.details["structureID"], 1000000000001)
 
 
-class TestMoonCalcRarityClass(NoSocketsTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        load_eveuniverse()
-        cls.ore_type_r0 = EveOreType.objects.get(id=46676)
-        cls.ore_type_r4 = EveOreType.objects.get(id=45492)
-        cls.ore_type_r8 = EveOreType.objects.get(id=45497)
-        cls.ore_type_r16 = EveOreType.objects.get(id=46296)
-        cls.ore_type_r32 = EveOreType.objects.get(id=45506)
-        cls.ore_type_r64 = EveOreType.objects.get(id=46316)
-
-    def test_should_return_R4(self):
-        # given
-        moon = Moon.objects.create(eve_moon_id=40161708)
-        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r0, amount=0.23)
-        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r4, amount=0.19)
-        # when
-        result = moon.calc_rarity_class()
-        # then
-        self.assertEqual(result, OreRarityClass.R4)
-
-    def test_should_return_R8(self):
-        # given
-        moon = Moon.objects.create(eve_moon_id=40161708)
-        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r8, amount=0.25)
-        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r0, amount=0.23)
-        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r4, amount=0.19)
-        # when
-        result = moon.calc_rarity_class()
-        # then
-        self.assertEqual(result, OreRarityClass.R8)
-
-    def test_should_return_R16(self):
-        # given
-        moon = Moon.objects.create(eve_moon_id=40161708)
-        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r4, amount=0.19)
-        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r16, amount=0.23)
-        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r8, amount=0.25)
-        # when
-        result = moon.calc_rarity_class()
-        # then
-        self.assertEqual(result, OreRarityClass.R16)
-
-    def test_should_return_R32(self):
-        # given
-        moon = Moon.objects.create(eve_moon_id=40161708)
-        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r16, amount=0.23)
-        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r32, amount=0.19)
-        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r8, amount=0.25)
-        # when
-        result = moon.calc_rarity_class()
-        # then
-        self.assertEqual(result, OreRarityClass.R32)
-
-    def test_should_return_R64(self):
-        # given
-        moon = Moon.objects.create(eve_moon_id=40161708)
-        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r16, amount=0.23)
-        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r32, amount=0.19)
-        MoonProduct.objects.create(moon=moon, ore_type=self.ore_type_r64, amount=0.25)
-        # when
-        result = moon.calc_rarity_class()
-        # then
-        self.assertEqual(result, OreRarityClass.R64)
-
-    def test_should_handle_moon_without_products(self):
-        # given
-        moon = Moon.objects.create(eve_moon_id=40161708)
-        # when
-        result = moon.calc_rarity_class()
-        # then
-        self.assertEqual(result, OreRarityClass.NONE)
-
-
 class TestOreQualityClass(NoSocketsTestCase):
     @classmethod
     def setUpClass(cls):
@@ -979,190 +1200,3 @@ class TestOreQualityClass(NoSocketsTestCase):
 
     def test_should_return_correct_tag(self):
         self.assertIn("+100%", OreQualityClass.EXCELLENT.bootstrap_tag_html)
-
-
-class TestExtractionIsJackpot(NoSocketsTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        load_eveuniverse()
-        load_allianceauth()
-        moon = helpers.create_moon_40161708()
-        owner = Owner.objects.create(
-            corporation=EveCorporationInfo.objects.get(corporation_id=2001)
-        )
-        cls.refinery = Refinery.objects.create(
-            id=40161708, moon=moon, owner=owner, eve_type_id=35835
-        )
-        cls.ore_quality_regular = EveOreType.objects.get(id=45490)
-        cls.ore_quality_improved = EveOreType.objects.get(id=46280)
-        cls.ore_quality_excellent = EveOreType.objects.get(id=46281)
-        cls.ore_quality_excellent_2 = EveOreType.objects.get(id=46283)
-
-    def test_should_be_jackpot(self):
-        # given
-        extraction = Extraction.objects.create(
-            refinery=self.refinery,
-            chunk_arrival_at=now() + dt.timedelta(days=3),
-            auto_fracture_at=now() + dt.timedelta(days=4),
-            started_at=now() - dt.timedelta(days=3),
-            status=Extraction.Status.STARTED,
-        )
-        ExtractionProduct.objects.create(
-            extraction=extraction,
-            ore_type=self.ore_quality_excellent,
-            volume=1000000 * 0.1,
-        )
-        ExtractionProduct.objects.create(
-            extraction=extraction,
-            ore_type=self.ore_quality_excellent_2,
-            volume=1000000 * 0.1,
-        )
-        # when
-        result = extraction.calc_is_jackpot()
-        # then
-        self.assertTrue(result)
-
-    def test_should_not_be_jackpot_1(self):
-        # given
-        extraction = Extraction.objects.create(
-            refinery=self.refinery,
-            chunk_arrival_at=now() + dt.timedelta(days=3),
-            auto_fracture_at=now() + dt.timedelta(days=4),
-            started_at=now() - dt.timedelta(days=3),
-            status=Extraction.Status.STARTED,
-        )
-        ExtractionProduct.objects.create(
-            extraction=extraction,
-            ore_type=self.ore_quality_excellent,
-            volume=1000000 * 0.1,
-        )
-        ExtractionProduct.objects.create(
-            extraction=extraction,
-            ore_type=self.ore_quality_improved,
-            volume=1000000 * 0.1,
-        )
-        # when
-        result = extraction.calc_is_jackpot()
-        # then
-        self.assertFalse(result)
-
-    def test_should_not_be_jackpot_2(self):
-        # given
-        extraction = Extraction.objects.create(
-            refinery=self.refinery,
-            chunk_arrival_at=now() + dt.timedelta(days=3),
-            auto_fracture_at=now() + dt.timedelta(days=4),
-            started_at=now() - dt.timedelta(days=3),
-            status=Extraction.Status.STARTED,
-        )
-        ExtractionProduct.objects.create(
-            extraction=extraction,
-            ore_type=self.ore_quality_improved,
-            volume=1000000 * 0.1,
-        )
-        ExtractionProduct.objects.create(
-            extraction=extraction,
-            ore_type=self.ore_quality_excellent,
-            volume=1000000 * 0.1,
-        )
-        # when
-        result = extraction.calc_is_jackpot()
-        # then
-        self.assertFalse(result)
-
-    def test_should_not_be_jackpot_3(self):
-        # given
-        extraction = Extraction.objects.create(
-            refinery=self.refinery,
-            chunk_arrival_at=now() + dt.timedelta(days=3),
-            auto_fracture_at=now() + dt.timedelta(days=4),
-            started_at=now() - dt.timedelta(days=3),
-            status=Extraction.Status.STARTED,
-        )
-        ExtractionProduct.objects.create(
-            extraction=extraction,
-            ore_type=self.ore_quality_regular,
-            volume=1000000 * 0.1,
-        )
-        ExtractionProduct.objects.create(
-            extraction=extraction,
-            ore_type=self.ore_quality_improved,
-            volume=1000000 * 0.1,
-        )
-        # when
-        result = extraction.calc_is_jackpot()
-        # then
-        self.assertFalse(result)
-
-    def test_should_not_be_jackpot_4(self):
-        # given
-        extraction = Extraction.objects.create(
-            refinery=self.refinery,
-            chunk_arrival_at=now() + dt.timedelta(days=3),
-            auto_fracture_at=now() + dt.timedelta(days=4),
-            started_at=now() - dt.timedelta(days=3),
-            status=Extraction.Status.STARTED,
-        )
-        # when
-        result = extraction.calc_is_jackpot()
-        # then
-        self.assertFalse(result)
-
-
-class TestMoonProductsSorted(NoSocketsTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        load_eveuniverse()
-        helpers.generate_market_prices()
-
-    def test_should_return_moon_products_in_order(self):
-        # given
-        moon = helpers.create_moon_40161708()
-        # when
-        result = moon.products_sorted
-        # then
-        moon_product = result.get(ore_type_id=45506)
-        self.assertEqual(moon_product.total_price, 1296800127.64395)
-        ore_type_ids = list(result.values_list("ore_type_id", flat=True))
-        self.assertListEqual([45506, 46689, 46676, 46678], ore_type_ids)
-
-    def test_should_handle_products_without_price(self):
-        # given
-        moon = helpers.create_moon_40161708()
-        moon_product = moon.products.get(ore_type_id=45506)
-        moon_product.ore_type.extras.refined_price = None
-        moon_product.ore_type.extras.save()
-        # when
-        result = moon.products_sorted
-        # then
-        ore_type_ids = list(result.values_list("ore_type_id", flat=True))
-        self.assertListEqual([45506, 46689, 46676, 46678], ore_type_ids)
-
-    def test_should_handle_products_without_amount(self):
-        # given
-        moon = helpers.create_moon_40161708()
-        moon_product = moon.products.get(ore_type_id=45506)
-        moon_product.amount = 0
-        moon_product.save()
-        # when
-        result = moon.products_sorted
-        # then
-        ore_type_ids = list(result.values_list("ore_type_id", flat=True))
-        self.assertListEqual([45506, 46689, 46676, 46678], ore_type_ids)
-
-    def test_should_handle_products_without_volume(self):
-        # given
-        moon = helpers.create_moon_40161708()
-        moon_product = moon.products.get(ore_type_id=45506)
-        volume_backup = moon_product.ore_type.volume
-        moon_product.ore_type.volume = None
-        moon_product.ore_type.save()
-        # when
-        result = moon.products_sorted
-        # then
-        moon_product.ore_type.volume = volume_backup
-        moon_product.ore_type.save()
-        ore_type_ids = list(result.values_list("ore_type_id", flat=True))
-        self.assertListEqual([45506, 46689, 46676, 46678], ore_type_ids)
