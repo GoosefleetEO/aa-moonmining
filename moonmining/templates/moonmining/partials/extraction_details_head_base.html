@@ -6,8 +6,8 @@
     <dt>Refinery:</dt>
     <dd>{{ extraction.refinery.name }}</dd>
 
-    <dt>Labels:</dt>
-    <dd>{{ extraction.refinery.moon.labels_html }}</dd>
+    <dt>Company:</dt>
+    <dd>{{ extraction.refinery.owner.name }}</dd>
 
     <dt>Moon:</dt>
     <dd>{{ extraction.refinery.moon }}</dd>
@@ -17,6 +17,6 @@
         {% include "moonmining/partials/location.html" with eve_solar_system=extraction.refinery.moon.eve_moon.eve_planet.eve_solar_system %}
     </dd>
 
-    <dt>Company:</dt>
-    <dd>{{ extraction.refinery.owner.name }}</dd>
+    <dt>Labels:</dt>
+    <dd>{{ extraction.refinery.moon.labels_html }}</dd>
 </dl>

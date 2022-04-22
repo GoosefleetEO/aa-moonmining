@@ -270,7 +270,7 @@ class Extraction(models.Model):
                 self.STARTED: BootstrapStyle.SUCCESS,
                 self.CANCELED: BootstrapStyle.DANGER,
                 self.READY: BootstrapStyle.WARNING,
-                self.COMPLETED: BootstrapStyle.DEFAULT,
+                self.COMPLETED: BootstrapStyle.PRIMARY,
                 self.UNDEFINED: "",
             }
             try:
