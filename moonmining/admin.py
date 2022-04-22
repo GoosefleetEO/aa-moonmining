@@ -156,11 +156,19 @@ class MoonProductAdminInline(admin.TabularInline):
 
 @admin.register(Moon)
 class MoonAdmin(admin.ModelAdmin):
-    list_display = ("eve_moon", "_constellation", "_region", "label", "_refinery")
+    list_display = (
+        "eve_moon",
+        "_constellation",
+        "_region",
+        "label",
+        "_refinery",
+        "_owner",
+    )
     list_filter = (
         "rarity_class",
         MoonHasRefineryFilter,
         "label",
+        ("refinery__owner", admin.RelatedOnlyFieldListFilter),
         (
             "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
             admin.RelatedOnlyFieldListFilter,
@@ -193,6 +201,9 @@ class MoonAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         return qs.select_related(
             "refinery",
+            "refinery__owner",
+            "refinery__owner__corporation",
+            "refinery__owner__corporation__alliance",
             "eve_moon",
             "eve_moon__eve_planet__eve_solar_system",
             "eve_moon__eve_planet__eve_solar_system__eve_constellation",
@@ -216,8 +227,13 @@ class MoonAdmin(admin.ModelAdmin):
     def _region(self, obj) -> str:
         return obj.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region
 
+    @admin.display(ordering="refinery__name")
     def _refinery(self, obj) -> str:
         return obj.refinery.name
+
+    @admin.display(ordering="refinery__owner__name")
+    def _owner(self, obj) -> str:
+        return obj.refinery.owner.name
 
     @admin.display(description="Update calculated properties for selected moons.")
     def update_calculated_properties(self, request, queryset):
