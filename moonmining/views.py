@@ -203,7 +203,7 @@ def extractions_data(request, category):
                     "sort": extraction.chunk_arrival_at,
                 },
                 "refinery": {
-                    "display": refinery_name,
+                    "display": extraction.refinery.name_html(),
                     "sort": refinery_name,
                 },
                 "location": {
@@ -417,10 +417,10 @@ def moons_data(request, category):
             details_html += moon_details_button_html(moon)
         else:
             details_html = ""
-        tags = [moon.rarity_tag_html]
-        if moon.label:
-            tags.append(moon.label.tag_html)
-        tags_html = " ".join(tags)
+        if has_refinery:
+            refinery_html = refinery.name_html()
+        else:
+            refinery_html = format_html("?<br>{}", moon.labels_html())
         moon_data = {
             "id": moon.pk,
             "moon_name": moon.name,
@@ -429,7 +429,7 @@ def moons_data(request, category):
             "region_name": region.name,
             "constellation_name": constellation.name,
             "value": moon.value,
-            "tags": tags_html,
+            "refinery": refinery_html,
             "details": details_html,
             "has_refinery_str": yesno_str(has_refinery),
             "has_extraction_str": yesno_str(extraction is not None),

@@ -65,18 +65,18 @@
                 },
                 columns: [
                     { data: 'moon_name' },
+                    { data: 'solar_system_link' },
+                    { data: 'region_name' },
+                    {
+                        data: 'value',
+                        render: $.fn.dataTable.render.formatisk()
+                    },
+                    { data: 'refinery'},
                     { data: 'corporation',
                         render: {
                             _: 'display',
                             sort: 'sort'
                         }
-                    },
-                    { data: 'solar_system_link' },
-                    { data: 'region_name' },
-                    { data: 'tags'},
-                    {
-                        data: 'value',
-                        render: $.fn.dataTable.render.formatisk()
                     },
                     { data: 'details' },
 
@@ -109,7 +109,7 @@
                             maxWidth: "10em"
                         },
                         {
-                            idx: 3,
+                            idx: 2,
                             maxWidth: "10em"
                         },
                         {

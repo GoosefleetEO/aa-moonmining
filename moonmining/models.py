@@ -12,6 +12,7 @@ from django.db import models, transaction
 from django.db.models import F, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils.functional import cached_property, classproperty
+from django.utils.html import format_html
 from django.utils.timezone import now
 from esi.models import Token
 from eveuniverse.models import EveEntity, EveMoon, EveSolarSystem, EveType
@@ -616,6 +617,13 @@ class Moon(models.Model):
     @property
     def rarity_tag_html(self) -> str:
         return OreRarityClass(self.rarity_class).bootstrap_tag_html
+
+    def labels_html(self) -> str:
+        """Generate HTML with all labels."""
+        tags = [self.rarity_tag_html]
+        if self.label:
+            tags.append(self.label.tag_html)
+        return format_html(" ".join(tags))
 
     def products_sorted(self) -> models.QuerySet:
         """Return current products as sorted iterable."""
@@ -1231,6 +1239,9 @@ class Refinery(models.Model):
 
     def __str__(self):
         return self.name
+
+    def name_html(self) -> str:
+        return format_html("{}<br>{}", self.name, self.moon.labels_html())
 
     def update_moon_from_structure_info(self, structure_info: dict) -> bool:
         """Find moon based on location in space and update the object.

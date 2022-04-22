@@ -98,6 +98,7 @@ class MoonQuerySet(models.QuerySet):
             "refinery__owner",
             "refinery__owner__corporation",
             "refinery__owner__corporation__alliance",
+            "label",
         )
 
 
@@ -261,6 +262,7 @@ class ExtractionQuerySet(models.QuerySet):
             "refinery__owner",
             "refinery__owner__corporation",
             "refinery__owner__corporation__alliance",
+            "refinery__moon__label",
         )
 
     def update_status(self):
