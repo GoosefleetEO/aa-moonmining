@@ -421,11 +421,15 @@ def moons_data(request, category):
             refinery_html = refinery.name_html()
         else:
             refinery_html = format_html("?<br>{}", moon.labels_html())
+        location_html = format_html(
+            "{}<br><em>{}</em>", constellation.name, region.name
+        )
         moon_data = {
             "id": moon.pk,
             "moon_name": moon.name,
             "corporation": {"display": corporation_html, "sort": corporation_name},
             "solar_system_link": solar_system_link,
+            "location_html": location_html,
             "region_name": region.name,
             "constellation_name": constellation.name,
             "value": moon.value,

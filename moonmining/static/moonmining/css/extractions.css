@@ -21,6 +21,10 @@
 	text-align: right;
 }
 
+.table-extractions tbody td:nth-child(1) {
+	white-space: nowrap;
+}
+
 .table-extractions tbody td:nth-child(2) {
 	white-space: nowrap;
 }

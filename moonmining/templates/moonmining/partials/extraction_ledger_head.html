@@ -3,61 +3,28 @@
 {% load moonmining %}
 
 <div class="row">
-    <div class="col-md-2">
-        <p><strong>Refinery:</strong></p>
-    </div>
-    <div class="col-md-10">
-        <p>{{ extraction.refinery.name }}</p>
-    </div>
-</div>
 
-<div class="row">
-    <div class="col-md-2">
-        <p><strong>Moon:</strong></p>
+    <div class="col-md-6">
+        {% include 'moonmining/partials/extraction_details_head_base.html' %}
     </div>
-    <div class="col-md-10">
-        <p>{{ extraction.refinery.moon }}</p>
-    </div>
-</div>
 
-<div class="row">
-    <div class="col-md-2">
-        <p><strong>Location:</strong></p>
-    </div>
-    <div class="col-md-10">
-        {% include "moonmining/partials/location.html" with eve_solar_system=extraction.refinery.moon.eve_moon.eve_planet.eve_solar_system %}
-    </div>
-</div>
+    <div class="col-md-6">
+        <dl class="dl-horizontal">
+            <dt>Chunk arrival:</dt>
+            <dd>
+                {% if extraction.status == extraction.Status.CANCELED %}<s>{% endif %}
+                <span title="{{ extraction.chunk_arrival_at|naturaltime }}">
+                    {{ extraction.chunk_arrival_at|datetime }}
+                </span>
+                {% if extraction.status == extraction.Status.CANCELED %}</s>{% endif %}
+            </dd>
 
-<div class="row">
-    <div class="col-md-2">
-        <p><strong>Chunk arrival:</strong></p>
-    </div>
-    <div class="col-md-10">
-        <p>
-            {% if extraction.status == extraction.Status.CANCELED %}<s>{% endif %}
-            <span title="{{ extraction.chunk_arrival_at|naturaltime }}">
-                {{ extraction.chunk_arrival_at|datetime }}
-            </span>
-            {% if extraction.status == extraction.Status.CANCELED %}</s>{% endif %}
-        </p>
-    </div>
-</div>
+            <dt>Total mined volume:</dt>
+            <dd>{{ total_volume|intword }} m3</dd>
 
-<div class="row">
-    <div class="col-md-2">
-        <p><strong>Total mined volume:</strong></p>
+            <dt>Total mined value:</dt>
+            <dd>{{ total_value|intword }} ISK</dd>
+        </dl>
     </div>
-    <div class="col-md-10">
-        <p>{{ total_volume|intword }} m3</p>
-    </div>
-</div>
 
-<div class="row">
-    <div class="col-md-2">
-        <p><strong>Total mined value:</strong></p>
-    </div>
-    <div class="col-md-10">
-        <p>{{ total_value|intword }} ISK</p>
-    </div>
 </div>

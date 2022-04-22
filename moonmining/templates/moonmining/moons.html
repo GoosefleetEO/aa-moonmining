@@ -66,7 +66,7 @@
                 columns: [
                     { data: 'moon_name' },
                     { data: 'solar_system_link' },
-                    { data: 'region_name' },
+                    { data: 'location_html' },
                     {
                         data: 'value',
                         render: $.fn.dataTable.render.formatisk()
@@ -88,13 +88,14 @@
                     { data: 'has_extraction_str' },
                     { data: 'constellation_name' },
                     { data: 'label_name' },
+                    { data: 'region_name' },
                 ],
                 lengthMenu: DEFAULT_LENGTH_MENU,
                 pageLength: DEFAULT_PAGE_LENGTH,
                 order: [ [0, "asc"] ],
                 columnDefs: [
                     { "orderable": false, "targets": [ 6 ] },
-                    { "visible": false, "targets": [ 7, 8, 9, 10, 11, 12, 13, 14 ] },
+                    { "visible": false, "targets": [ 7, 8, 9, 10, 11, 12, 13, 14, 15 ] },
                 ],
                 filterDropDown: {
                     columns: [
@@ -109,7 +110,8 @@
                             maxWidth: "10em"
                         },
                         {
-                            idx: 2,
+                            idx: 15,
+                            title: "Region",
                             maxWidth: "10em"
                         },
                         {

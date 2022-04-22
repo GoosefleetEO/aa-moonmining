@@ -2,98 +2,50 @@
 {% load humanize %}
 {% load moonmining %}
 
-
 <div class="row">
-    <div class="col-md-2">
-        <p><strong>Refinery:</strong></p>
+    <div class="col-md-6">
+        {% include 'moonmining/partials/extraction_details_head_base.html' %}
     </div>
-    <div class="col-md-10">
-        <p>{{ extraction.refinery.name }}</p>
-    </div>
-</div>
 
-<div class="row">
-    <div class="col-md-2">
-        <p><strong>Moon:</strong></p>
-    </div>
-    <div class="col-md-10">
-        <p>{{ extraction.refinery.moon }}</p>
-    </div>
-</div>
+    <div class="col-md-6">
+        <dl class="dl-horizontal">
+            <dt>Status:</dt>
+            <dd>{{ extraction.status_enum.bootstrap_tag_html }}</dd>
 
-<div class="row">
-    <div class="col-md-2">
-        <p><strong>Location:</strong></p>
-    </div>
-    <div class="col-md-10">
-        {% include "moonmining/partials/location.html" with eve_solar_system=extraction.refinery.moon.eve_moon.eve_planet.eve_solar_system %}
-    </div>
-</div>
+            <dt>Started:</dt>
+            <dd>
+                <span title="{{ extraction.started_at|naturaltime }}">
+                    {{ extraction.started_at|datetime }}
+                </span>
+                    by {{ extraction.started_by|default:"?" }}
+            </dd>
 
-<div class="row">
-    <div class="col-md-2">
-        <p><strong>Status:</strong></p>
-    </div>
-    <div class="col-md-10">
-        <p>{{ extraction.status_enum.bootstrap_tag_html }}</p>
-    </div>
-</div>
+            {% if extraction.status == extraction.Status.CANCELED %}
+                <dt>Canceled:</dt>
+                <dd>
+                    <span title="{{ extraction.canceled_at|naturaltime|default:'?' }}">
+                        {{ extraction.canceled_at|datetime|default:"?" }}
+                    </span> by {{ extraction.canceled_by|default:"?" }}
+                </dd>
+            {% endif %}
 
-<div class="row">
-    <div class="col-md-2">
-        <p><strong>Started:</strong></p>
-    </div>
-    <div class="col-md-10">
-        <p>
-            <span title="{{ extraction.started_at|naturaltime }}">
-                {{ extraction.started_at|datetime }}
-            </span>
-             by {{ extraction.started_by|default:"?" }}
-        </p>
-    </div>
-</div>
+            <dt>Chunk arrival:</dt>
+            <dd>
+                {% if extraction.status == extraction.Status.CANCELED %}<s>{% endif %}
+                <span title="{{ extraction.chunk_arrival_at|naturaltime }}">
+                    {{ extraction.chunk_arrival_at|datetime }}
+                </span>
+                {% if extraction.status == extraction.Status.CANCELED %}</s>{% endif %}
+            </dd>
 
-{% if extraction.status == extraction.Status.CANCELED %}
-    <div class="row">
-        <div class="col-md-2">
-            <p><strong>Canceled:</strong></p>
-        </div>
-        <div class="col-md-10">
-            <p>
-                <span title="{{ extraction.canceled_at|naturaltime|default:'?' }}">
-                    {{ extraction.canceled_at|datetime|default:"?" }}
-                </span> by {{ extraction.canceled_by|default:"?" }}
-            </p>
-        </div>
-    </div>
-{% endif %}
-
-<div class="row">
-    <div class="col-md-2">
-        <p><strong>Chunk arrival:</strong></p>
-    </div>
-    <div class="col-md-10">
-        <p>
-            {% if extraction.status == extraction.Status.CANCELED %}<s>{% endif %}
-            <span title="{{ extraction.chunk_arrival_at|naturaltime }}">
-                {{ extraction.chunk_arrival_at|datetime }}
-            </span>
-            {% if extraction.status == extraction.Status.CANCELED %}</s>{% endif %}
-        </p>
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-md-2">
-        <p><strong>Auto Fracture:</strong></p>
-    </div>
-    <div class="col-md-10">
-        <p>
-            {% if extraction.status == extraction.Status.CANCELED %}<s>{% endif %}
-            <span title="{{ extraction.auto_fracture_at|naturaltime }}">
-                {{ extraction.auto_fracture_at|datetime }}
-            </span>
-            {% if extraction.status == extraction.Status.CANCELED %}</s>{% endif %}
-        </p>
+            <dt>Auto Fracture:</dt>
+            <dd>
+                {% if extraction.status == extraction.Status.CANCELED %}<s>{% endif %}
+                <span title="{{ extraction.auto_fracture_at|naturaltime }}">
+                    {{ extraction.auto_fracture_at|datetime }}
+                </span>
+                {% if extraction.status == extraction.Status.CANCELED %}</s>{% endif %}
+            </dd>
+        </dl>
     </div>
 </div>

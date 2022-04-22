@@ -1,24 +1,42 @@
+/* dl styling */
+.dl-horizontal dt {
+	text-align: left;
+	width: 10em;
+}
+
+.dl-horizontal dd {
+	margin-left: 10em;
+	margin-bottom: 0.5em;
+}
+
 #table_extraction_details thead th:nth-child(4) {
 	text-align: right;
 }
+
 #table_extraction_details thead th:nth-child(5) {
 	text-align: right;
 }
+
 #table_extraction_details thead th:nth-child(6) {
 	text-align: right;
 }
+
 #table_extraction_details tbody td:nth-child(4) {
 	text-align: right;
 }
+
 #table_extraction_details tbody td:nth-child(5) {
 	text-align: right;
 }
+
 #table_extraction_details tbody td:nth-child(6) {
 	text-align: right;
 }
+
 #table_extraction_details tfoot th:nth-child(5) {
 	text-align: right;
 }
+
 #table_extraction_details tfoot th:nth-child(6) {
 	text-align: right;
 }
