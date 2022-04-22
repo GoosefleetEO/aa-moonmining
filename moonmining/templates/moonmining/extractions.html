@@ -51,12 +51,7 @@
                         render: { _: 'display', sort: 'sort'}
                     },
                     {
-                        data: 'corporation',
-                        render: { _: 'display', sort: 'sort'}
-                    },
-                    {
-                        data: 'status_tag',
-                        render: { _: 'display', sort: 'sort'}
+                        data: 'labels'
                     },
                     {
                         data: 'volume',
@@ -83,37 +78,37 @@
                 lengthMenu: DEFAULT_LENGTH_MENU,
                 pageLength: DEFAULT_PAGE_LENGTH,
                 columnDefs: [
-                    { "orderable": false, "targets": [ 8 ] },
-                    { "visible": false, "targets": [ 9, 10, 11, 12, 13, 14, 15 ] },
+                    { "orderable": false, "targets": [ 7 ] },
+                    { "visible": false, "targets": [ 8, 9, 10, 11, 12, 13, 14 ] },
                 ],
                 filterDropDown: {
                     columns: [
                         {
-                            idx: 10,
+                            idx: 9,
                             title: "Alliance"
                         },
                         {
-                            idx: 9,
+                            idx: 8,
                             title: "Corporation"
                         },
                         {
-                            idx: 13,
+                            idx: 12,
                             title: "Region"
                         },
                         {
-                            idx: 14,
+                            idx: 13,
                             title: "Constellation"
                         },
                         {
-                            idx: 15,
+                            idx: 14,
                             title: "Rarity"
                         },
                         {
-                            idx: 12,
+                            idx: 11,
                             title: "Moon"
                         },
                         {
-                            idx: 11,
+                            idx: 10,
                             title: "Status"
                         }
                     ],
@@ -123,9 +118,9 @@
                 footerCallback: function (row, data, start, end, display) {
                     var api = this.api(), data;
 
-                    dataTableFooterSumColumn(api, 5);
+                    dataTableFooterSumColumn(api, 4);
+                    dataTableFooterSumColumn(api, 5, 'isk');
                     dataTableFooterSumColumn(api, 6, 'isk');
-                    dataTableFooterSumColumn(api, 7, 'isk');
                 }
             };
 

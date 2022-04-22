@@ -1241,7 +1241,7 @@ class Refinery(models.Model):
         return self.name
 
     def name_html(self) -> str:
-        return format_html("{}<br>{}", self.name, self.moon.labels_html())
+        return format_html("{}<br>{}", self.name, self.owner.name)
 
     def update_moon_from_structure_info(self, structure_info: dict) -> bool:
         """Find moon based on location in space and update the object.

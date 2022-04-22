@@ -67,16 +67,16 @@
                     { data: 'moon_name' },
                     { data: 'solar_system_link' },
                     { data: 'location_html' },
-                    {
-                        data: 'value',
-                        render: $.fn.dataTable.render.formatisk()
-                    },
-                    { data: 'refinery'},
-                    { data: 'corporation',
+                    { data: 'refinery',
                         render: {
                             _: 'display',
                             sort: 'sort'
                         }
+                    },
+                    { data: 'labels'},
+                    {
+                        data: 'value',
+                        render: $.fn.dataTable.render.formatisk()
                     },
                     { data: 'details' },
 
@@ -94,7 +94,7 @@
                 pageLength: DEFAULT_PAGE_LENGTH,
                 order: [ [0, "asc"] ],
                 columnDefs: [
-                    { "orderable": false, "targets": [ 6 ] },
+                    { "orderable": false, "targets": [ 4, 6 ] },
                     { "visible": false, "targets": [ 7, 8, 9, 10, 11, 12, 13, 14, 15 ] },
                 ],
                 filterDropDown: {
@@ -136,13 +136,13 @@
                         },
                         {
                             idx: 8,
-                            title: "Our moon",
+                            title: "Refinery?",
                             maxWidth: "10em"
                         },
                         {
                             idx: 12,
-                            title: "Active Extraction?",
-                            maxWidth: "12em"
+                            title: "Extraction?",
+                            maxWidth: "10em"
                         }
                     ],
                     bootstrap: true,

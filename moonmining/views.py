@@ -164,7 +164,6 @@ def extractions_data(request, category):
         extractions = Extraction.objects.none()
     can_see_ledger = request.user.has_perm("moonmining.view_moon_ledgers")
     for extraction in extractions:
-        corporation_html = extraction.refinery.owner.name_html
         corporation_name = extraction.refinery.owner.name
         alliance_name = extraction.refinery.owner.alliance_name
         moon = extraction.refinery.moon
@@ -195,11 +194,16 @@ def extractions_data(request, category):
             mined_value = None
         actions_html += extraction_details_button_html(extraction)
         actions_html += "&nbsp;" + moon_details_button_html(extraction.refinery.moon)
+        status_html = format_html(
+            "{}<br>{}",
+            extraction.chunk_arrival_at.strftime(DATETIME_FORMAT),
+            extraction.status_enum.bootstrap_tag_html,
+        )
         data.append(
             {
                 "id": extraction.pk,
                 "chunk_arrival_at": {
-                    "display": extraction.chunk_arrival_at.strftime(DATETIME_FORMAT),
+                    "display": status_html,
                     "sort": extraction.chunk_arrival_at,
                 },
                 "refinery": {
@@ -210,11 +214,7 @@ def extractions_data(request, category):
                     "display": location,
                     "sort": moon_name,
                 },
-                "status_tag": {
-                    "display": extraction.status_enum.bootstrap_tag_html,
-                    "sort": Extraction.Status(extraction.status).label,
-                },
-                "corporation": {"display": corporation_html, "sort": corporation_name},
+                "labels": moon.labels_html(),
                 "volume": extraction.volume,
                 "value": extraction.value if extraction.value else None,
                 "mined_value": mined_value,
@@ -393,12 +393,15 @@ def moons_data(request, category):
             refinery = moon.refinery
         except ObjectDoesNotExist:
             has_refinery = False
-            corporation_html = corporation_name = alliance_name = ""
+            refinery_html = "?"
+            refinery_name = ""
+            corporation_name = alliance_name = ""
             has_details_access = request.user.has_perm("moonmining.view_all_moons")
             extraction = None
         else:
             has_refinery = True
-            corporation_html = refinery.owner.name_html
+            refinery_html = refinery.name_html()
+            refinery_name = refinery.name
             corporation_name = refinery.owner.name
             alliance_name = refinery.owner.alliance_name
             has_details_access = request.user.has_perm(
@@ -417,23 +420,19 @@ def moons_data(request, category):
             details_html += moon_details_button_html(moon)
         else:
             details_html = ""
-        if has_refinery:
-            refinery_html = refinery.name_html()
-        else:
-            refinery_html = format_html("?<br>{}", moon.labels_html())
         location_html = format_html(
             "{}<br><em>{}</em>", constellation.name, region.name
         )
         moon_data = {
             "id": moon.pk,
             "moon_name": moon.name,
-            "corporation": {"display": corporation_html, "sort": corporation_name},
+            "refinery": {"display": refinery_html, "sort": refinery_name},
+            "labels": moon.labels_html(),
             "solar_system_link": solar_system_link,
             "location_html": location_html,
             "region_name": region.name,
             "constellation_name": constellation.name,
             "value": moon.value,
-            "refinery": refinery_html,
             "details": details_html,
             "has_refinery_str": yesno_str(has_refinery),
             "has_extraction_str": yesno_str(extraction is not None),
