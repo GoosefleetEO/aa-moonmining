@@ -417,6 +417,10 @@ def moons_data(request, category):
             details_html += moon_details_button_html(moon)
         else:
             details_html = ""
+        tags = [moon.rarity_tag_html]
+        if moon.label:
+            tags.append(moon.label.tag_html)
+        tags_html = " ".join(tags)
         moon_data = {
             "id": moon.pk,
             "moon_name": moon.name,
@@ -425,10 +429,7 @@ def moons_data(request, category):
             "region_name": region.name,
             "constellation_name": constellation.name,
             "value": moon.value,
-            "rarity_class": {
-                "display": moon.rarity_tag_html,
-                "sort": moon.rarity_class,
-            },
+            "tags": tags_html,
             "details": details_html,
             "has_refinery_str": yesno_str(has_refinery),
             "has_extraction_str": yesno_str(extraction is not None),
@@ -437,6 +438,7 @@ def moons_data(request, category):
             "alliance_name": alliance_name,
             "rarity_class_label": OreRarityClass(moon.rarity_class).label,
             "has_refinery": has_refinery,
+            "label_name": moon.label.name if moon.label else "",
         }
         data.append(moon_data)
     return JsonResponse(data, safe=False)

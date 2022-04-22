@@ -6,6 +6,7 @@ from .models import (
     EveOreTypeExtras,
     Extraction,
     ExtractionProduct,
+    Label,
     MiningLedgerRecord,
     Moon,
     MoonProduct,
@@ -92,6 +93,12 @@ class ExtractionAdmin(admin.ModelAdmin):
         return False
 
 
+@admin.register(Label)
+class LabelAdmin(admin.ModelAdmin):
+    list_display = ("name", "style")
+    fields = ("name", "description", "style")
+
+
 @admin.register(MiningLedgerRecord)
 class MiningLedgerRecordAdmin(admin.ModelAdmin):
     list_display = ("refinery", "day", "user", "character", "ore_type", "quantity")
@@ -115,6 +122,25 @@ class MiningLedgerRecordAdmin(admin.ModelAdmin):
         return False
 
 
+class MoonHasRefineryFilter(admin.SimpleListFilter):
+    title = "has refinery"
+    parameter_name = "has_refinery"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "Yes"),
+            ("no", "No"),
+        )
+
+    def queryset(self, request, queryset):
+        """Return the filtered queryset"""
+        if self.value() == "yes":
+            return queryset.filter(refinery__isnull=False)
+        elif self.value() == "no":
+            return queryset.filter(refinery__isnull=True)
+        return queryset
+
+
 class MoonProductAdminInline(admin.TabularInline):
     model = MoonProduct
 
@@ -130,9 +156,68 @@ class MoonProductAdminInline(admin.TabularInline):
 
 @admin.register(Moon)
 class MoonAdmin(admin.ModelAdmin):
-    list_display = ("eve_moon",)
+    list_display = ("eve_moon", "_constellation", "_region", "label", "_refinery")
+    list_filter = (
+        "rarity_class",
+        MoonHasRefineryFilter,
+        "label",
+        (
+            "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
+            admin.RelatedOnlyFieldListFilter,
+        ),
+        (
+            "eve_moon__eve_planet__eve_solar_system__eve_constellation",
+            admin.RelatedOnlyFieldListFilter,
+        ),
+        ("eve_moon__eve_planet__eve_solar_system", admin.RelatedOnlyFieldListFilter),
+    )
     actions = ["update_calculated_properties"]
     inlines = (MoonProductAdminInline,)
+    fields = (
+        "eve_moon",
+        "rarity_class",
+        "value",
+        "label",
+        "products_updated_at",
+        "products_updated_by",
+    )
+    readonly_fields = (
+        "eve_moon",
+        "products_updated_at",
+        "products_updated_by",
+        "rarity_class",
+        "value",
+    )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related(
+            "refinery",
+            "eve_moon",
+            "eve_moon__eve_planet__eve_solar_system",
+            "eve_moon__eve_planet__eve_solar_system__eve_constellation",
+            "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
+        )
+
+    def has_add_permission(self, request):
+        return False
+
+    @admin.display(ordering="eve_moon__eve_planet__eve_solar_system")
+    def _solar_system(self, obj) -> str:
+        return obj.eve_moon.eve_planet.eve_solar_system
+
+    @admin.display(ordering="eve_moon__eve_planet__eve_solar_system__eve_constellation")
+    def _constellation(self, obj) -> str:
+        return obj.eve_moon.eve_planet.eve_solar_system.eve_constellation
+
+    @admin.display(
+        ordering="eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region"
+    )
+    def _region(self, obj) -> str:
+        return obj.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region
+
+    def _refinery(self, obj) -> str:
+        return obj.refinery.name
 
     @admin.display(description="Update calculated properties for selected moons.")
     def update_calculated_properties(self, request, queryset):
@@ -143,12 +228,6 @@ class MoonAdmin(admin.ModelAdmin):
         self.message_user(
             request, f"Started updating calculated properties for {num} moons."
         )
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def has_add_permission(self, request):
-        return False
 
 
 @admin.register(Notification)

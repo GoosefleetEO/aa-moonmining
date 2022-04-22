@@ -73,12 +73,7 @@
                     },
                     { data: 'solar_system_link' },
                     { data: 'region_name' },
-                    { data: 'rarity_class',
-                        render: {
-                            _: 'display',
-                            sort: 'sort'
-                        }
-                    },
+                    { data: 'tags'},
                     {
                         data: 'value',
                         render: $.fn.dataTable.render.formatisk()
@@ -92,46 +87,60 @@
                     { data: 'rarity_class_label' },
                     { data: 'has_extraction_str' },
                     { data: 'constellation_name' },
+                    { data: 'label_name' },
                 ],
                 lengthMenu: DEFAULT_LENGTH_MENU,
                 pageLength: DEFAULT_PAGE_LENGTH,
                 order: [ [0, "asc"] ],
                 columnDefs: [
                     { "orderable": false, "targets": [ 6 ] },
-                    { "visible": false, "targets": [ 7, 8, 9, 10, 11, 12, 13 ] },
+                    { "visible": false, "targets": [ 7, 8, 9, 10, 11, 12, 13, 14 ] },
                 ],
                 filterDropDown: {
                     columns: [
                         {
                             idx: 10,
-                            title: "Alliance"
+                            title: "Alliance",
+                            maxWidth: "10em"
                         },
                         {
                             idx: 9,
-                            title: "Corporation"
+                            title: "Corporation",
+                            maxWidth: "10em"
                         },
                         {
-                            idx: 3
+                            idx: 3,
+                            maxWidth: "10em"
                         },
                         {
                             idx: 13,
-                            title: "Constellation"
+                            title: "Constellation",
+                            maxWidth: "10em"
                         },
                         {
                             idx: 7,
-                            title: "System"
+                            title: "System",
+                            maxWidth: "10em"
                         },
                         {
                             idx: 11,
-                            title: "Rarity"
+                            title: "Rarity",
+                            maxWidth: "10em"
+                        },
+                        {
+                            idx: 14,
+                            title: "Label",
+                            maxWidth: "10em"
                         },
                         {
                             idx: 8,
-                            title: "Our moon"
+                            title: "Our moon",
+                            maxWidth: "10em"
                         },
                         {
                             idx: 12,
-                            title: "Active Extraction?"
+                            title: "Active Extraction?",
+                            maxWidth: "12em"
                         }
                     ],
                     bootstrap: true,

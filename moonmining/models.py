@@ -457,6 +457,44 @@ class ExtractionProduct(models.Model):
         return f"{self.extraction} - {self.ore_type}"
 
 
+class Label(models.Model):
+    """A custom label for structuring moons."""
+
+    class Style(models.TextChoices):
+        DARK_BLUE = "primary", "dark blue"
+        GREEN = "success", "green"
+        GREY = "default", "grey"
+        LIGHT_BLUE = "info", "light blue"
+        ORANGE = "warning", "orange"
+        RED = "danger", "red"
+
+        @property
+        def bootstrap_style(self) -> str:
+            map_to_type = {
+                self.DARK_BLUE: BootstrapStyle.PRIMARY,
+                self.GREEN: BootstrapStyle.SUCCESS,
+                self.LIGHT_BLUE: BootstrapStyle.INFO,
+                self.ORANGE: BootstrapStyle.WARNING,
+                self.RED: BootstrapStyle.DANGER,
+            }
+            try:
+                return map_to_type[self.value]
+            except KeyError:
+                return BootstrapStyle.DEFAULT
+
+    description = models.TextField(default="", blank=True)
+    name = models.CharField(max_length=100, unique=True)
+    style = models.CharField(max_length=16, choices=Style.choices, default=Style.GREY)
+
+    def __str__(self) -> str:
+        return self.name
+
+    @property
+    def tag_html(self) -> str:
+        label_style = self.Style(self.style).bootstrap_style
+        return bootstrap_label_html(self.name, label=label_style)
+
+
 class General(models.Model):
     """Meta model for global app permissions"""
 
@@ -531,6 +569,9 @@ class Moon(models.Model):
         EveMoon, on_delete=models.CASCADE, primary_key=True, related_name="known_moon"
     )
     # regular
+    label = models.ForeignKey(
+        Label, on_delete=models.SET_DEFAULT, default=None, null=True
+    )
     products_updated_at = models.DateTimeField(
         null=True, default=None, help_text="Time the last moon survey was uploaded"
     )
@@ -568,6 +609,14 @@ class Moon(models.Model):
     def is_owned(self) -> bool:
         return hasattr(self, "refinery")
 
+    @property
+    def rarity_class_str(self) -> str:
+        return OreRarityClass(self.rarity_class).label
+
+    @property
+    def rarity_tag_html(self) -> str:
+        return OreRarityClass(self.rarity_class).bootstrap_tag_html
+
     def products_sorted(self) -> models.QuerySet:
         """Return current products as sorted iterable."""
         try:
@@ -580,14 +629,6 @@ class Moon(models.Model):
             )
         except (ObjectDoesNotExist, AttributeError):
             return type(self).objects.none()
-
-    @property
-    def rarity_class_str(self) -> str:
-        return OreRarityClass(self.rarity_class).label
-
-    @property
-    def rarity_tag_html(self) -> str:
-        return OreRarityClass(self.rarity_class).bootstrap_tag_html
 
     def calc_rarity_class(self) -> Optional[OreRarityClass]:
         try:
