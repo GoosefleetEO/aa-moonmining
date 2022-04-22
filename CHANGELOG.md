@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Report showing current ore prices
 - Ability to use calculated refined pricing instead of normal ore prices (#16)
+- Ability to add custom labels to moons and use them to filter moons (#17)
 
 ## [1.5.0] - 2022-04-21
 
