@@ -16,6 +16,7 @@ An Alliance Auth app for tracking moon extractions and scouting new moons.
 
 - [Features](#features)
 - [Installation](#installation)
+- [User manual](#user-manual)
 - [Permissions](#permissions)
 - [Settings](#settings)
 - [Management Commands](#management-commands)
@@ -163,6 +164,34 @@ Finally you want to setup permission to define which users / groups will have ac
 
 Congratulations! You are now ready to use Moon Mining!
 
+## User Manual
+
+### Pricing
+
+The app uses average market prices as basis for all price calculations. Average market prices are same prices that you also see in the Eve client e.g. for the mining ledger or fitting costs. These can be slightly different from Jita prices, since they are represent an average accross all of New Eden, not just Jita / The Forge.
+
+The calculation of ore prices can be done in two different ways.
+
+### Default ore pricing
+
+The default ore pricing uses the average market prices directly to calculate ore prices. This is the same approach that the Eve client uses in the minning ledger or when scheduling an extraction. So the main benefit of this approach that you will see the same prices in-game and in the app.
+
+### Reprocess ore pricing
+
+The disadvantage of this approach is that average market prices for ores are not always accurate. Ores are rarely sold directly on the market, instead most people of refining their ores and selling the refined materials instead. This is because they have they are much smaller in volume making them easier to transport. The total value of the refined materials is also often higher then the value of the ore.
+
+Therefore you can also chose to use refined ore pricing. This will give you more occurate prices, but the values will be very different from what you may be used to see in the Eve client. For this approach the app calculates the price for a unit of ore as the sum total of it's refined materials. For the materials again the average market price is used.
+
+Please see the settings `MOONMINING_USE_REPROCESS_PRICING` and `MOONMINING_REPROCESSING_YIELD` for configuring the ore pricing approach.
+
+>**Note**<br>You can see the current prices used for all ores in the app in the ore prices report.
+
+### Labels
+
+To help with organizing your moons you can label them. For example you might have some of your moons rented out to a third party. Just add a label "Rented out to X" to those moons and the moons and related extractions will show that label allowing you to quickly recognize which are related to your renters.
+
+Labels are created on the admin site under Label and can then be assigned under Moon.
+
 ## Permissions
 
 Here is an overview of all permissions:
@@ -185,8 +214,10 @@ Note that all settings are optional and the app will use the documented default 
 
 Name | Description | Default
 -- | -- | --
+`MOONMINING_ADMIN_NOTIFICATIONS_ENABLED`| whether admins will get notifications about important events like when someone adds a structure owner | `True`
 `MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE`| Number of hours an extractions that has passed its ready time is still shown on the upcoming extractions tab. | `12`
-`MOONMINING_REPROCESSING_YIELD`| Reprocessing yield used for calculating all values (currently not used) | `0.82`
+`MOONMINING_REPROCESSING_YIELD`| Reprocessing yield used for calculating all values | `0.85`
+`MOONMINING_USE_REPROCESS_PRICING`|  Whether to calculate prices from it's reprocessed materials or not. Will use direct ore prices when switched off | `False`
 `MOONMINING_VOLUME_PER_MONTH`| Total ore volume per month used for calculating moon values. | `14557923`
 
 ## Management Commands
