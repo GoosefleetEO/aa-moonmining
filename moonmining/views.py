@@ -27,7 +27,7 @@ from django.db.models.functions import Coalesce, Concat
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
-from django.utils.html import format_html
+from django.utils.html import format_html, strip_tags
 from django.utils.timezone import now
 from django.views.decorators.cache import cache_page
 from esi.decorators import token_required
@@ -1035,7 +1035,7 @@ def report_ore_prices_data(request) -> JsonResponse:
         {
             "id": obj.id,
             "name": obj.name,
-            "description": obj.description,
+            "description": strip_tags(obj.description),
             "price": obj.extras.current_price,
             "group": obj.eve_group.name,
             "rarity_html": {
