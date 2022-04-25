@@ -231,13 +231,14 @@
                         }
 
                     },
+                    { data: 'description' },
                     { data: 'rarity_str' },
                 ],
                 lengthMenu: DEFAULT_LENGTH_MENU,
                 pageLength: DEFAULT_PAGE_LENGTH,
                 order: [ [0, "asc"] ],
                 columnDefs: [
-                    { "visible": false, "targets": [ 4 ] },
+                    { "visible": false, "targets": [ 5 ] },
                 ],
                 filterDropDown: {
                     columns: [
@@ -245,7 +246,7 @@
                             idx: 2
                         },
                         {
-                            idx: 4,
+                            idx: 5,
                             title: "Rarity"
                         }
                     ],

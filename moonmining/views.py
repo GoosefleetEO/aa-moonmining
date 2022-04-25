@@ -1021,16 +1021,21 @@ def report_ore_prices_data(request) -> JsonResponse:
         EveGroupId.COMMON_MOON_ASTEROIDS,
         EveGroupId.RARE_MOON_ASTEROIDS,
     ]
-    qs = EveOreType.objects.filter(
-        eve_group_id__in=moon_ore_group_ids,
-        published=True,
-        extras__isnull=False,
-        extras__current_price__isnull=False,
-    ).select_related("eve_group", "extras")
+    qs = (
+        EveOreType.objects.filter(
+            eve_group_id__in=moon_ore_group_ids,
+            published=True,
+            extras__isnull=False,
+            extras__current_price__isnull=False,
+        )
+        .exclude(name__icontains=" ")
+        .select_related("eve_group", "extras")
+    )
     data = [
         {
             "id": obj.id,
             "name": obj.name,
+            "description": obj.description,
             "price": obj.extras.current_price,
             "group": obj.eve_group.name,
             "rarity_html": {
