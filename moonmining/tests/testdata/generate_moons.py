@@ -28,7 +28,7 @@ from django.contrib.auth.models import User
 from django.utils.timezone import now
 from eveuniverse.models import EveEntity, EveMarketPrice, EveMoon, EveType
 
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.eveonline.models import EveCorporationInfo
 
 from moonmining.app_settings import MOONMINING_VOLUME_PER_MONTH
 from moonmining.models import (
