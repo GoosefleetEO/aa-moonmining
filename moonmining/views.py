@@ -7,9 +7,9 @@ from django_datatables_view.base_datatable_view import BaseDatatableView
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.db.models import (
+    Case,
     Count,
     ExpressionWrapper,
     F,
@@ -21,8 +21,9 @@ from django.db.models import (
     Subquery,
     Sum,
     Value,
+    When,
 )
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, Concat
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -51,7 +52,7 @@ from .app_settings import (
 from .constants import DATE_FORMAT, DATETIME_FORMAT, EveGroupId
 from .forms import MoonScanForm
 from .helpers import HttpResponseUnauthorized
-from .models import EveOreType, Extraction, Moon, OreRarityClass, Owner, Refinery
+from .models import EveOreType, Extraction, Moon, Owner, Refinery
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
@@ -230,7 +231,7 @@ def extractions_data(request, category):
                 "moon_name": moon_name,
                 "region_name": region.name,
                 "constellation_name": constellation.name,
-                "rarity_class": moon.rarity_class_str,
+                "rarity_class": moon.get_rarity_class_display(),
                 "is_jackpot_str": yesno_str(extraction.is_jackpot),
                 "is_ready": extraction.chunk_arrival_at <= now(),
                 "status": extraction.status,
@@ -358,107 +359,6 @@ def moons(request):
     return render(request, "moonmining/moons.html", context)
 
 
-@login_required()
-@permission_required("moonmining.basic_access")
-def moons_data(request, category):
-    """returns moon list in JSON for DataTables AJAX"""
-    data = list()
-    current_extraction_qs = Extraction.objects.filter(
-        refinery__moon=OuterRef("pk"),
-        status__in=[Extraction.Status.STARTED, Extraction.Status.READY],
-    )
-    moon_query = Moon.objects.selected_related_defaults().annotate(
-        extraction_pk=Subquery(current_extraction_qs.values("pk")[:1])
-    )
-    if (
-        category == MoonsCategory.ALL
-        and request.user.has_perm("moonmining.extractions_access")
-        and request.user.has_perm("moonmining.view_all_moons")
-    ):
-        pass
-    elif category == MoonsCategory.OURS and request.user.has_perm(
-        "moonmining.extractions_access"
-    ):
-        moon_query = moon_query.filter(refinery__isnull=False)
-    elif category == MoonsCategory.UPLOADS and request.user.has_perm(
-        "moonmining.upload_moon_scan"
-    ):
-        moon_query = moon_query.filter(products_updated_by=request.user)
-    else:
-        return JsonResponse([], safe=False)
-
-    for moon in moon_query.iterator():
-        solar_system = moon.eve_moon.eve_planet.eve_solar_system
-        if solar_system.is_high_sec:
-            sec_class = "text-high-sec"
-        elif solar_system.is_low_sec:
-            sec_class = "text-low-sec"
-        else:
-            sec_class = "text-null-sec"
-        solar_system_link = format_html(
-            '{}&nbsp;<span class="{}">{}</span>',
-            link_html(dotlan.solar_system_url(solar_system.name), solar_system.name),
-            sec_class,
-            round(solar_system.security_status, 1),
-        )
-        try:
-            refinery = moon.refinery
-        except ObjectDoesNotExist:
-            has_refinery = False
-            refinery_html = "?"
-            refinery_name = ""
-            corporation_name = alliance_name = ""
-            has_details_access = request.user.has_perm("moonmining.view_all_moons")
-            extraction_pk = None
-        else:
-            has_refinery = True
-            refinery_html = refinery.name_html()
-            refinery_name = refinery.name
-            corporation_name = refinery.owner.name
-            alliance_name = refinery.owner.alliance_name
-            has_details_access = request.user.has_perm(
-                "moonmining.extractions_access"
-            ) or request.user.has_perm("moonmining.view_all_moons")
-            extraction_pk = moon.extraction_pk
-
-        constellation = moon.eve_moon.eve_planet.eve_solar_system.eve_constellation
-        region = constellation.eve_region
-        if has_details_access:
-            details_html = (
-                extraction_details_button_html(extraction_pk) + " "
-                if extraction_pk
-                else ""
-            )
-            details_html += moon_details_button_html(moon)
-        else:
-            details_html = ""
-        location_html = format_html(
-            "{}<br><em>{}</em>", constellation.name, region.name
-        )
-        moon_data = {
-            "id": moon.pk,
-            "moon_name": moon.name,
-            "refinery": {"display": refinery_html, "sort": refinery_name},
-            "labels": moon.labels_html(),
-            "solar_system_link": solar_system_link,
-            "location_html": location_html,
-            "region_name": region.name,
-            "constellation_name": constellation.name,
-            "value": moon.value,
-            "details": details_html,
-            "has_refinery_str": yesno_str(has_refinery),
-            "has_extraction_str": yesno_str(extraction_pk is not None),
-            "solar_system_name": solar_system.name,
-            "corporation_name": corporation_name,
-            "alliance_name": alliance_name,
-            "rarity_class_label": OreRarityClass(moon.rarity_class).label,
-            "has_refinery": has_refinery,
-            "label_name": moon.label.name if moon.label else "",
-        }
-        data.append(moon_data)
-    return JsonResponse(data, safe=False)
-
-
 class MoonListJson(PermissionRequiredMixin, LoginRequiredMixin, BaseDatatableView):
     model = Moon
     permission_required = "moonmining.basic_access"
@@ -520,8 +420,35 @@ class MoonListJson(PermissionRequiredMixin, LoginRequiredMixin, BaseDatatableVie
             refinery__moon=OuterRef("pk"),
             status__in=[Extraction.Status.STARTED, Extraction.Status.READY],
         )
-        moon_query = Moon.objects.selected_related_defaults().annotate(
-            extraction_pk=Subquery(current_extraction_qs.values("pk")[:1])
+        moon_query = (
+            Moon.objects.selected_related_defaults()
+            .annotate(extraction_pk=Subquery(current_extraction_qs.values("pk")[:1]))
+            .annotate(
+                has_refinery=Case(
+                    When(refinery__isnull=True, then=Value(False)), default=Value(True)
+                )
+            )
+            .annotate(
+                has_refinery_str=Case(
+                    When(has_refinery=False, then=Value("no")), default=Value("yes")
+                )
+            )
+            .annotate(
+                has_extraction=Case(
+                    When(extraction_pk__isnull=True, then=Value(False)),
+                    default=Value(True),
+                )
+            )
+            .annotate(
+                has_extraction_str=Case(
+                    When(has_extraction=False, then=Value("no")), default=Value("yes")
+                )
+            )
+            .annotate(
+                rarity_class_str=Concat(
+                    Value("R"), F("rarity_class"), output_field=models.CharField()
+                )
+            )
         )
         if (
             category == MoonsCategory.ALL
@@ -538,7 +465,7 @@ class MoonListJson(PermissionRequiredMixin, LoginRequiredMixin, BaseDatatableVie
         ):
             moon_query = moon_query.filter(products_updated_by=user)
         else:
-            moon_query = Moon.objects.empty()
+            moon_query = Moon.objects.none()
         return moon_query
 
     def filter_queryset(self, qs) -> models.QuerySet:
@@ -547,21 +474,25 @@ class MoonListJson(PermissionRequiredMixin, LoginRequiredMixin, BaseDatatableVie
         qs = self._apply_search_filter(
             qs, 7, "eve_moon__eve_planet__eve_solar_system__name"
         )
-        qs = self._apply_search_filter(
-            qs, 13, "eve_moon__eve_planet__eve_solar_system__eve_constellation__name"
-        )
-        qs = self._apply_search_filter(
-            qs,
-            15,
-            "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region__name",
-        )
-        qs = self._apply_search_filter(qs, 14, "label__name")
+        qs = self._apply_search_filter(qs, 8, "has_refinery_str")
         qs = self._apply_search_filter(
             qs, 9, "refinery__owner__corporation__corporation_name"
         )
         qs = self._apply_search_filter(
             qs, 10, "refinery__owner__corporation__alliance__alliance_name"
         )
+        qs = self._apply_search_filter(qs, 11, "rarity_class_str")
+        qs = self._apply_search_filter(qs, 12, "has_extraction_str")
+        qs = self._apply_search_filter(
+            qs, 13, "eve_moon__eve_planet__eve_solar_system__eve_constellation__name"
+        )
+        qs = self._apply_search_filter(qs, 14, "label__name")
+        qs = self._apply_search_filter(
+            qs,
+            15,
+            "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region__name",
+        )
+
         search = self.request.GET.get("search[value]", None)
         if search:
             qs = qs.filter(
@@ -609,7 +540,7 @@ class MoonListJson(PermissionRequiredMixin, LoginRequiredMixin, BaseDatatableVie
         if column == "label_name":
             return row.label.name if row.label else ""
         if column == "details":
-            self._render_details(row)
+            return self._render_details(row)
         result = self._render_refinery(row, column)
         if result:
             return result
@@ -661,33 +592,22 @@ class MoonListJson(PermissionRequiredMixin, LoginRequiredMixin, BaseDatatableVie
         return ""
 
     def _render_refinery(self, row, column):
-        try:
+        if row.has_refinery:
             refinery = row.refinery
-        except ObjectDoesNotExist:
-            has_refinery = False
-            refinery_html = "?"
-            refinery_name = ""
-            corporation_name = alliance_name = ""
-            extraction_pk = None
-        else:
-            has_refinery = True
             refinery_html = refinery.name_html()
             refinery_name = refinery.name
             corporation_name = refinery.owner.name
             alliance_name = refinery.owner.alliance_name
-            extraction_pk = row.extraction_pk
+        else:
+            refinery_html = "?"
+            refinery_name = ""
+            corporation_name = alliance_name = ""
         if column == "corporation_name":
             return corporation_name
         if column == "alliance_name":
             return alliance_name
         if column == "refinery":
             return {"display": refinery_html, "sort": refinery_name}
-        if column == "has_refinery_str":
-            return yesno_str(has_refinery)
-        if column == "has_extraction_str":
-            return yesno_str(extraction_pk is not None)
-        if column == "has_refinery":
-            return has_refinery
         return None
 
 
@@ -726,19 +646,15 @@ def moons_fdd_data(request, category) -> JsonResponse:
                     flat=True,
                 )
             elif column == "rarity_class_str":
-                options = [
-                    f"R{obj}"
-                    for obj in qs.values_list(
-                        "rarity_class",
-                        flat=True,
-                    )
-                ]
+                options = qs.values_list("rarity_class_str", flat=True)
             elif column == "label_name":
                 options = qs.exclude(label__isnull=True).values_list(
                     "label__name", flat=True
                 )
-            # elif column == "has_refinery_str":
-            #     options = qs.values_list("refinery__isnull", flat=True)
+            elif column == "has_refinery_str":
+                options = qs.values_list("has_refinery_str", flat=True)
+            elif column == "has_extraction_str":
+                options = qs.values_list("has_extraction_str", flat=True)
             else:
                 options = [f"** ERROR: Invalid column name '{column}' **"]
             result[column] = sorted(list(set(options)), key=str.casefold)

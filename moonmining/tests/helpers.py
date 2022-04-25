@@ -1,10 +1,12 @@
 import datetime as dt
+import json
 
+from django.http import JsonResponse
 from django.utils.timezone import now
 from eveuniverse.models import EveEntity, EveMarketPrice, EveMoon, EveType
 
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-from app_utils.testing import create_user_from_evecharacter
+from app_utils.testing import create_user_from_evecharacter, response_text
 
 from ..app_settings import MOONMINING_VOLUME_PER_MONTH
 from ..models import (
@@ -138,3 +140,14 @@ def generate_market_prices(use_process_pricing=False):
     EveMarketPrice.objects.create(eve_type_id=46678, average_price=310.9)
     EveMarketPrice.objects.create(eve_type_id=46689, average_price=7.7)
     EveOreType.objects.update_current_prices(use_process_pricing=use_process_pricing)
+
+
+def json_response_to_python_2(response: JsonResponse, data_key="data") -> object:
+    """Convert JSON response into Python object."""
+    data = json.loads(response_text(response))
+    return data[data_key]
+
+
+def json_response_to_dict_2(response: JsonResponse, key="id", data_key="data") -> dict:
+    """Convert JSON response into dict by given key."""
+    return {x[key]: x for x in json_response_to_python_2(response, data_key)}

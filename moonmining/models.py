@@ -611,10 +611,6 @@ class Moon(models.Model):
         return hasattr(self, "refinery")
 
     @property
-    def rarity_class_str(self) -> str:
-        return OreRarityClass(self.rarity_class).label
-
-    @property
     def rarity_tag_html(self) -> str:
         return OreRarityClass(self.rarity_class).bootstrap_tag_html
 

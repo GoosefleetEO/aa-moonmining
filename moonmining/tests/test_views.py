@@ -119,6 +119,11 @@ class TestMoonsData(TestCase):
         Moon.objects.create(eve_moon=EveMoon.objects.get(id=40131695))
         Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161709))
 
+    @staticmethod
+    def _response_to_dict(response):
+        data = helpers.json_response_to_python_2(response)
+        return {int(obj[0]): obj for obj in data}
+
     def test_should_return_all_moons(self):
         # given
         user, _ = create_user_from_evecharacter(
@@ -135,10 +140,10 @@ class TestMoonsData(TestCase):
         response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.ALL}")
         # then
         self.assertEqual(response.status_code, 200)
-        data = json_response_to_dict(response)
+        data = self._response_to_dict(response)
         self.assertSetEqual(set(data.keys()), {40131695, 40161708, 40161709})
         obj = data[40161708]
-        self.assertEqual(obj["moon_name"], "Auga V - 1")
+        self.assertEqual(obj[1], "Auga V - 1")
 
     def test_should_return_our_moons_only(self):
         # given
@@ -154,7 +159,7 @@ class TestMoonsData(TestCase):
         response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.OURS}")
         # then
         self.assertEqual(response.status_code, 200)
-        data = json_response_to_dict(response)
+        data = self._response_to_dict(response)
         self.assertSetEqual(set(data.keys()), {40131695})
 
     def test_should_handle_empty_refineries(self):
@@ -174,7 +179,7 @@ class TestMoonsData(TestCase):
         response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.OURS}")
         # then
         self.assertEqual(response.status_code, 200)
-        data = json_response_to_dict(response)
+        data = self._response_to_dict(response)
         self.assertSetEqual(set(data.keys()), {40131695})
 
     def test_should_return_empty_list_for_all_moons(self):
@@ -189,7 +194,7 @@ class TestMoonsData(TestCase):
         response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.ALL}")
         # then
         self.assertEqual(response.status_code, 200)
-        data = json_response_to_dict(response)
+        data = self._response_to_dict(response)
         self.assertEqual(len(data), 0)
 
     def test_should_return_empty_list_for_our_moons(self):
@@ -204,7 +209,7 @@ class TestMoonsData(TestCase):
         response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.OURS}")
         # then
         self.assertEqual(response.status_code, 200)
-        data = json_response_to_dict(response)
+        data = self._response_to_dict(response)
         self.assertEqual(len(data), 0)
 
     def test_should_return_uploaded_moons_only(self):
@@ -223,7 +228,7 @@ class TestMoonsData(TestCase):
         )
         # then
         self.assertEqual(response.status_code, 200)
-        data = json_response_to_dict(response)
+        data = self._response_to_dict(response)
         self.assertSetEqual(set(data.keys()), {40161708})
 
 
