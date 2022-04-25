@@ -57,10 +57,10 @@
     {{ block.super }}
     <script type="text/javascript">
         $(function(){
-            var def = {
+            const def = {
                 ajax: {
                     url: '',
-                    dataSrc: '',
+                    dataSrc: 'data',
                     cache: true
                 },
                 columns: [
@@ -79,17 +79,20 @@
                         render: $.fn.dataTable.render.formatisk()
                     },
                     { data: 'details' },
-
+                    /* hidden columns */
                     { data: 'solar_system_name' },
                     { data: 'has_refinery_str' },
                     { data: 'corporation_name' },
                     { data: 'alliance_name' },
-                    { data: 'rarity_class_label' },
+                    { data: 'rarity_class_str' },
                     { data: 'has_extraction_str' },
                     { data: 'constellation_name' },
                     { data: 'label_name' },
                     { data: 'region_name' },
                 ],
+                searching: true,
+                processing: true,
+                serverSide: true,
                 lengthMenu: DEFAULT_LENGTH_MENU,
                 pageLength: DEFAULT_PAGE_LENGTH,
                 order: [ [0, "asc"] ],
@@ -151,27 +154,33 @@
             };
 
             /* our moons table */
-            def.ajax.url = '{% url "moonmining:moons_data" MoonsCategory.OURS %}'
-            var table_our = $('#table_{{ MoonsCategory.OURS }}').DataTable(def);
-            table_our.on( 'xhr', function () {
+            let def_ours = jQuery.extend(true, {}, def)
+            def_ours.ajax.url = '{% url "moonmining:moons_data" MoonsCategory.OURS %}'
+            def_ours.filterDropDown.ajax = '{% url "moonmining:moons_fdd_data" MoonsCategory.OURS %}'
+            let table_our = $('#table_{{ MoonsCategory.OURS }}').DataTable(def_ours);
+            table_our.on( 'init', function () {
                 table_our.columns.adjust().draw();
                 $("#loader_{{ MoonsCategory.OURS }}").hide();
                 $("#wrapper_{{ MoonsCategory.OURS }}").show();
             } );
 
             /* all moons table */
-            def.ajax.url = '{% url "moonmining:moons_data" MoonsCategory.ALL %}'
-            var table_all = $('#table_{{ MoonsCategory.ALL }}').DataTable(def);
-            table_all.on( 'xhr', function () {
+            let def_all = jQuery.extend(true, {}, def)
+            def_all.ajax.url = '{% url "moonmining:moons_data" MoonsCategory.ALL %}'
+            def_all.filterDropDown.ajax = '{% url "moonmining:moons_fdd_data" MoonsCategory.ALL %}'
+            let table_all = $('#table_{{ MoonsCategory.ALL }}').DataTable(def_all);
+            table_all.on( 'init', function () {
                 table_all.columns.adjust().draw();
                 $("#loader_{{ MoonsCategory.ALL }}").hide();
                 $("#wrapper_{{ MoonsCategory.ALL }}").show();
             } );
 
             /* uploaded moons table */
-            def.ajax.url = '{% url "moonmining:moons_data" MoonsCategory.UPLOADS %}'
-            var table_uploads = $('#table_{{ MoonsCategory.UPLOADS }}').DataTable(def);
-            table_uploads.on( 'xhr', function () {
+            let def_uploads = jQuery.extend(true, {}, def)
+            def_uploads.ajax.url = '{% url "moonmining:moons_data" MoonsCategory.UPLOADS %}'
+            def_uploads.filterDropDown.ajax = '{% url "moonmining:moons_fdd_data" MoonsCategory.UPLOADS %}'
+            let table_uploads = $('#table_{{ MoonsCategory.UPLOADS }}').DataTable(def_uploads);
+            table_uploads.on( 'init', function () {
                 table_uploads.columns.adjust().draw();
                 $("#loader_{{ MoonsCategory.UPLOADS }}").hide();
                 $("#wrapper_{{ MoonsCategory.UPLOADS }}").show();

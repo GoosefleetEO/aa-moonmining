@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 - Set default reprocessing yield to 85 %
+- Changed moon tables to server-side rendering for significant performance boost (#15)
 
 ## [1.5.0] - 2022-04-21
 
