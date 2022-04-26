@@ -30,8 +30,8 @@
                         <td class="text-right" data-order="{{ record.total_volume }}">
                             {{ record.total_volume|intcomma }}
                         </td>
-                        <td class="text-right" data-order="{{ record.ore_type.market_price.average_price }}">
-                            {{ record.ore_type.market_price.average_price|floatformat:"0"|intcomma }}
+                        <td class="text-right" data-order="{{ record.ore_type.extras.current_price }}">
+                            {{ record.ore_type.extras.current_price|floatformat:"0"|intcomma }}
                         </td>
                         <td class="text-right" data-order="{{ record.quantity }}">
                             {{ record.quantity|intcomma }}

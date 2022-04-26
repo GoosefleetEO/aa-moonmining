@@ -182,12 +182,16 @@ class TestUpdateTasks(NoSocketsTestCase):
         mock_update_prices.return_value = None
         moon = helpers.create_moon_40161708()
         refinery = helpers.add_refinery(moon)
-        tungsten = EveType.objects.get(id=16637)
-        mercury = EveType.objects.get(id=16646)
-        evaporite_deposits = EveType.objects.get(id=16635)
-        EveMarketPrice.objects.create(eve_type=tungsten, average_price=7000)
-        EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
-        EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
+        # tungsten = EveType.objects.get(id=16637)
+        # mercury = EveType.objects.get(id=16646)
+        # evaporite_deposits = EveType.objects.get(id=16635)
+        # EveMarketPrice.objects.create(eve_type=tungsten, average_price=7000)
+        # EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
+        # EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
+        EveMarketPrice.objects.create(eve_type_id=45506, average_price=2400.0)
+        EveMarketPrice.objects.create(eve_type_id=46676, average_price=609.0)
+        EveMarketPrice.objects.create(eve_type_id=46678, average_price=310.9)
+        EveMarketPrice.objects.create(eve_type_id=46689, average_price=7.7)
         # when
         tasks.run_calculated_properties_update.delay()
         # then
@@ -196,7 +200,7 @@ class TestUpdateTasks(NoSocketsTestCase):
         extraction = refinery.extractions.first()
         self.assertIsNotNone(extraction.value)
         cinnebar = EveOreType.objects.get(id=45506)
-        self.assertIsNotNone(cinnebar.extras.refined_price)
+        self.assertIsNotNone(cinnebar.extras.current_price)
 
 
 class TestProcessSurveyInput(TestCase):

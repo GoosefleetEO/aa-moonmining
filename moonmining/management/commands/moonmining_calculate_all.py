@@ -26,17 +26,7 @@ class Command(BaseCommand):
         user_input = get_input("Are you sure you want to proceed? (Y/n)?")
 
         if user_input.lower() != "n":
-            for MyModel in [Moon, Extraction]:
-                obj_count = MyModel.objects.count()
-                for obj in MyModel.objects.all():
-                    if MyModel is Moon:
-                        tasks.update_moon_calculated_properties.delay(obj.pk)
-                    if MyModel is Extraction:
-                        tasks.update_extraction_calculated_properties.delay(obj.pk)
-                self.stdout.write(
-                    f"Started updating calculated properties for {obj_count} "
-                    f"{MyModel.__name__}s ..."
-                )
+            tasks.run_calculated_properties_update.delay()
             self.stdout.write(self.style.SUCCESS("Update started."))
         else:
             self.stdout.write(self.style.WARNING("Aborted"))

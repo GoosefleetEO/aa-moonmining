@@ -2,25 +2,32 @@ import datetime as dt
 from collections import defaultdict
 from enum import Enum
 
+from django_datatables_view.base_datatable_view import BaseDatatableView
+
 from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
+from django.db import models
 from django.db.models import (
+    Case,
     Count,
     ExpressionWrapper,
     F,
     FloatField,
     IntegerField,
     Min,
+    OuterRef,
     Q,
+    Subquery,
     Sum,
     Value,
+    When,
 )
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, Concat
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
-from django.utils.html import format_html
+from django.utils.html import format_html, strip_tags
 from django.utils.timezone import now
 from django.views.decorators.cache import cache_page
 from esi.decorators import token_required
@@ -34,16 +41,18 @@ from app_utils.logging import LoggerAddTag
 from app_utils.messages import messages_plus
 from app_utils.views import fontawesome_modal_button_html, link_html, yesno_str
 
-from . import __title__, constants, helpers, tasks
+from . import __title__, helpers, tasks
 from .app_settings import (
     MOONMINING_ADMIN_NOTIFICATIONS_ENABLED,
     MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE,
     MOONMINING_REPROCESSING_YIELD,
+    MOONMINING_USE_REPROCESS_PRICING,
     MOONMINING_VOLUME_PER_MONTH,
 )
+from .constants import DATE_FORMAT, DATETIME_FORMAT, EveGroupId
 from .forms import MoonScanForm
 from .helpers import HttpResponseUnauthorized
-from .models import Extraction, Moon, OreRarityClass, Owner, Refinery
+from .models import EveOreType, Extraction, Moon, Owner, Refinery
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
 
@@ -89,11 +98,11 @@ def moon_details_button_html(moon: Moon) -> str:
     )
 
 
-def extraction_details_button_html(extraction: Extraction) -> str:
+def extraction_details_button_html(extraction_pk: int) -> str:
     return fontawesome_modal_button_html(
         modal_id="modalExtractionDetails",
         fa_code="fas fa-hammer",
-        ajax_url=reverse("moonmining:extraction_details", args=[extraction.pk]),
+        ajax_url=reverse("moonmining:extraction_details", args=[extraction_pk]),
         tooltip="Extraction details",
     )
 
@@ -117,8 +126,7 @@ def default_if_false(value, default):
 def index(request):
     if request.user.has_perm("moonmining.extractions_access"):
         return redirect("moonmining:extractions")
-    else:
-        return redirect("moonmining:moons")
+    return redirect("moonmining:moons")
 
 
 @login_required
@@ -128,6 +136,7 @@ def extractions(request):
         "page_title": "Extractions",
         "ExtractionsCategory": ExtractionsCategory.to_dict(),
         "ExtractionsStatus": Extraction.Status,
+        "use_reprocess_pricing": MOONMINING_USE_REPROCESS_PRICING,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
         "stale_hours": MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE,
@@ -163,7 +172,6 @@ def extractions_data(request, category):
         extractions = Extraction.objects.none()
     can_see_ledger = request.user.has_perm("moonmining.view_moon_ledgers")
     for extraction in extractions:
-        corporation_html = extraction.refinery.owner.name_html
         corporation_name = extraction.refinery.owner.name
         alliance_name = extraction.refinery.owner.alliance_name
         moon = extraction.refinery.moon
@@ -192,30 +200,29 @@ def extractions_data(request, category):
         else:
             actions_html = ""
             mined_value = None
-        actions_html += extraction_details_button_html(extraction)
+        actions_html += extraction_details_button_html(extraction.pk)
         actions_html += "&nbsp;" + moon_details_button_html(extraction.refinery.moon)
+        status_html = format_html(
+            "{}<br>{}",
+            extraction.chunk_arrival_at.strftime(DATETIME_FORMAT),
+            extraction.status_enum.bootstrap_tag_html,
+        )
         data.append(
             {
                 "id": extraction.pk,
                 "chunk_arrival_at": {
-                    "display": extraction.chunk_arrival_at.strftime(
-                        constants.DATETIME_FORMAT
-                    ),
+                    "display": status_html,
                     "sort": extraction.chunk_arrival_at,
                 },
                 "refinery": {
-                    "display": refinery_name,
+                    "display": extraction.refinery.name_html(),
                     "sort": refinery_name,
                 },
                 "location": {
                     "display": location,
                     "sort": moon_name,
                 },
-                "status_tag": {
-                    "display": extraction.status_enum.bootstrap_tag_html,
-                    "sort": Extraction.Status(extraction.status).label,
-                },
-                "corporation": {"display": corporation_html, "sort": corporation_name},
+                "labels": moon.labels_html(),
                 "volume": extraction.volume,
                 "value": extraction.value if extraction.value else None,
                 "mined_value": mined_value,
@@ -225,7 +232,7 @@ def extractions_data(request, category):
                 "moon_name": moon_name,
                 "region_name": region.name,
                 "constellation_name": constellation.name,
-                "rarity_class": moon.rarity_class_str,
+                "rarity_class": moon.get_rarity_class_display(),
                 "is_jackpot_str": yesno_str(extraction.is_jackpot),
                 "is_ready": extraction.chunk_arrival_at <= now(),
                 "status": extraction.status,
@@ -258,7 +265,7 @@ def extraction_details(request, extraction_pk: int):
     context = {
         "page_title": (
             f"{extraction.refinery.moon} "
-            f"| {extraction.chunk_arrival_at.strftime(constants.DATE_FORMAT)}"
+            f"| {extraction.chunk_arrival_at.strftime(DATE_FORMAT)}"
         ),
         "extraction": extraction,
     }
@@ -326,7 +333,7 @@ def extraction_ledger(request, extraction_pk: int):
     context = {
         "page_title": (
             f"{extraction.refinery.moon} "
-            f"| {extraction.chunk_arrival_at.strftime(constants.DATE_FORMAT)}"
+            f"| {extraction.chunk_arrival_at.strftime(DATE_FORMAT)}"
         ),
         "extraction": extraction,
         "total_value": total_value,
@@ -347,37 +354,202 @@ def moons(request):
     context = {
         "page_title": "Moons",
         "MoonsCategory": MoonsCategory.to_dict(),
+        "use_reprocess_pricing": MOONMINING_USE_REPROCESS_PRICING,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
     }
     return render(request, "moonmining/moons.html", context)
 
 
-@login_required()
-@permission_required("moonmining.basic_access")
-def moons_data(request, category):
-    """returns moon list in JSON for DataTables AJAX"""
-    data = list()
-    moon_query = Moon.objects.selected_related_defaults()
-    if (
-        category == MoonsCategory.ALL
-        and request.user.has_perm("moonmining.extractions_access")
-        and request.user.has_perm("moonmining.view_all_moons")
-    ):
-        pass
-    elif category == MoonsCategory.OURS and request.user.has_perm(
-        "moonmining.extractions_access"
-    ):
-        moon_query = moon_query.filter(refinery__isnull=False)
-    elif category == MoonsCategory.UPLOADS and request.user.has_perm(
-        "moonmining.upload_moon_scan"
-    ):
-        moon_query = moon_query.filter(products_updated_by=request.user)
-    else:
-        return JsonResponse([], safe=False)
+class MoonListJson(PermissionRequiredMixin, LoginRequiredMixin, BaseDatatableView):
+    model = Moon
+    permission_required = "moonmining.basic_access"
+    columns = [
+        "id",
+        "moon_name",
+        "rarity_class_str",
+        "refinery",
+        "labels",
+        "solar_system_link",
+        "location_html",
+        "region_name",
+        "constellation_name",
+        "value",
+        "details",
+        "has_refinery_str",
+        "has_extraction_str",
+        "solar_system_name",
+        "corporation_name",
+        "alliance_name",
+        "has_refinery",
+        "label_name",
+    ]
 
-    for moon in moon_query.iterator():
-        solar_system = moon.eve_moon.eve_planet.eve_solar_system
+    # define column names that will be used in sorting
+    # order is important and should be same as order of columns
+    # displayed by datatables. For non sortable columns use empty
+    # value like ''
+    order_columns = [
+        "pk",
+        "name",
+        "refinery__eve_solar_system__name",
+        "refinery__name",
+        "",
+        "value",
+        "",
+        # hidden columns below
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+    ]
+
+    def get_initial_queryset(self) -> models.QuerySet:
+        return self.initial_queryset(
+            category=self.kwargs["category"], user=self.request.user
+        )
+
+    @classmethod
+    def initial_queryset(cls, category: str, user: User) -> models.QuerySet:
+        current_extraction_qs = Extraction.objects.filter(
+            refinery__moon=OuterRef("pk"),
+            status__in=[Extraction.Status.STARTED, Extraction.Status.READY],
+        )
+        moon_query = (
+            Moon.objects.selected_related_defaults()
+            .annotate(extraction_pk=Subquery(current_extraction_qs.values("pk")[:1]))
+            .annotate(
+                has_refinery=Case(
+                    When(refinery__isnull=True, then=Value(False)), default=Value(True)
+                )
+            )
+            .annotate(
+                has_refinery_str=Case(
+                    When(has_refinery=False, then=Value("no")), default=Value("yes")
+                )
+            )
+            .annotate(
+                has_extraction=Case(
+                    When(extraction_pk__isnull=True, then=Value(False)),
+                    default=Value(True),
+                )
+            )
+            .annotate(
+                has_extraction_str=Case(
+                    When(has_extraction=False, then=Value("no")), default=Value("yes")
+                )
+            )
+            .annotate(
+                rarity_class_str=Concat(
+                    Value("R"), F("rarity_class"), output_field=models.CharField()
+                )
+            )
+        )
+        if (
+            category == MoonsCategory.ALL
+            and user.has_perm("moonmining.extractions_access")
+            and user.has_perm("moonmining.view_all_moons")
+        ):
+            pass
+        elif category == MoonsCategory.OURS and user.has_perm(
+            "moonmining.extractions_access"
+        ):
+            moon_query = moon_query.filter(refinery__isnull=False)
+        elif category == MoonsCategory.UPLOADS and user.has_perm(
+            "moonmining.upload_moon_scan"
+        ):
+            moon_query = moon_query.filter(products_updated_by=user)
+        else:
+            moon_query = Moon.objects.none()
+        return moon_query
+
+    def filter_queryset(self, qs) -> models.QuerySet:
+        """use parameters passed in GET request to filter queryset"""
+
+        qs = self._apply_search_filter(
+            qs, 7, "eve_moon__eve_planet__eve_solar_system__name"
+        )
+        qs = self._apply_search_filter(qs, 8, "has_refinery_str")
+        qs = self._apply_search_filter(
+            qs, 9, "refinery__owner__corporation__corporation_name"
+        )
+        qs = self._apply_search_filter(
+            qs, 10, "refinery__owner__corporation__alliance__alliance_name"
+        )
+        qs = self._apply_search_filter(qs, 11, "rarity_class_str")
+        qs = self._apply_search_filter(qs, 12, "has_extraction_str")
+        qs = self._apply_search_filter(
+            qs, 13, "eve_moon__eve_planet__eve_solar_system__eve_constellation__name"
+        )
+        qs = self._apply_search_filter(qs, 14, "label__name")
+        qs = self._apply_search_filter(
+            qs,
+            15,
+            "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region__name",
+        )
+
+        search = self.request.GET.get("search[value]", None)
+        if search:
+            qs = qs.filter(
+                Q(eve_moon__name__istartswith=search)
+                | Q(refinery__name__istartswith=search)
+            )
+        return qs
+
+        qs = self._apply_search_filter(qs, 4, "user__profile__state__name")
+        qs = self._apply_search_filter(qs, 6, "character__alliance_name")
+        qs = self._apply_search_filter(qs, 7, "character__corporation_name")
+        qs = self._apply_search_filter(
+            qs, 8, "user__profile__main_character__alliance_name"
+        )
+        qs = self._apply_search_filter(
+            qs, 9, "user__profile__main_character__corporation_name"
+        )
+        qs = self._apply_search_filter(
+            qs, 10, "user__profile__main_character__character_name"
+        )
+        qs = self._apply_search_filter(qs, 11, "unregistered")
+
+        return qs
+
+    def _apply_search_filter(self, qs, column_num, field) -> models.QuerySet:
+        my_filter = self.request.GET.get(f"columns[{column_num}][search][value]", None)
+        if my_filter:
+            if self.request.GET.get(f"columns[{column_num}][search][regex]", False):
+                kwargs = {f"{field}__iregex": my_filter}
+            else:
+                kwargs = {f"{field}__istartswith": my_filter}
+            return qs.filter(**kwargs)
+        return qs
+
+    def render_column(self, row, column) -> str:
+        if column == "id":
+            return row.pk
+        if column == "moon_name":
+            return row.name
+        result = self._render_location(row, column)
+        if result:
+            return result
+        if column == "labels":
+            return row.labels_html()
+        if column == "label_name":
+            return row.label.name if row.label else ""
+        if column == "details":
+            return self._render_details(row)
+        result = self._render_refinery(row, column)
+        if result:
+            return result
+        return super().render_column(row, column)
+
+    def _render_location(self, row, column):
+        solar_system = row.eve_moon.eve_planet.eve_solar_system
         if solar_system.is_high_sec:
             sec_class = "text-high-sec"
         elif solar_system.is_low_sec:
@@ -390,57 +562,105 @@ def moons_data(request, category):
             sec_class,
             round(solar_system.security_status, 1),
         )
-        try:
-            refinery = moon.refinery
-        except ObjectDoesNotExist:
-            has_refinery = False
-            corporation_html = corporation_name = alliance_name = ""
-            has_details_access = request.user.has_perm("moonmining.view_all_moons")
-            extraction = None
-        else:
-            has_refinery = True
-            corporation_html = refinery.owner.name_html
-            corporation_name = refinery.owner.name
-            alliance_name = refinery.owner.alliance_name
-            has_details_access = request.user.has_perm(
-                "moonmining.extractions_access"
-            ) or request.user.has_perm("moonmining.view_all_moons")
-            extraction = refinery.extractions.filter(
-                status__in=[Extraction.Status.STARTED, Extraction.Status.READY]
-            ).first()
-
-        constellation = moon.eve_moon.eve_planet.eve_solar_system.eve_constellation
+        constellation = row.eve_moon.eve_planet.eve_solar_system.eve_constellation
         region = constellation.eve_region
+        location_html = format_html(
+            "{}<br><em>{}</em>", constellation.name, region.name
+        )
+        if column == "solar_system_name":
+            return solar_system.name
+        if column == "solar_system_link":
+            return solar_system_link
+        if column == "location_html":
+            return location_html
+        if column == "region_name":
+            return region.name
+        if column == "constellation_name":
+            return constellation.name
+        return None
+
+    def _render_details(self, row):
+        has_details_access = self.request.user.has_perm(
+            "moonmining.extractions_access"
+        ) or self.request.user.has_perm("moonmining.view_all_moons")
         if has_details_access:
             details_html = (
-                extraction_details_button_html(extraction) + " " if extraction else ""
+                extraction_details_button_html(row.extraction_pk) + " "
+                if row.extraction_pk
+                else ""
             )
-            details_html += moon_details_button_html(moon)
+            details_html += moon_details_button_html(row)
+            return details_html
+        return ""
+
+    def _render_refinery(self, row, column):
+        if row.has_refinery:
+            refinery = row.refinery
+            refinery_html = refinery.name_html()
+            refinery_name = refinery.name
+            corporation_name = refinery.owner.name
+            alliance_name = refinery.owner.alliance_name
         else:
-            details_html = ""
-        moon_data = {
-            "id": moon.pk,
-            "moon_name": moon.name,
-            "corporation": {"display": corporation_html, "sort": corporation_name},
-            "solar_system_link": solar_system_link,
-            "region_name": region.name,
-            "constellation_name": constellation.name,
-            "value": moon.value,
-            "rarity_class": {
-                "display": moon.rarity_tag_html,
-                "sort": moon.rarity_class,
-            },
-            "details": details_html,
-            "has_refinery_str": yesno_str(has_refinery),
-            "has_extraction_str": yesno_str(extraction is not None),
-            "solar_system_name": solar_system.name,
-            "corporation_name": corporation_name,
-            "alliance_name": alliance_name,
-            "rarity_class_label": OreRarityClass(moon.rarity_class).label,
-            "has_refinery": has_refinery,
-        }
-        data.append(moon_data)
-    return JsonResponse(data, safe=False)
+            refinery_html = "?"
+            refinery_name = ""
+            corporation_name = alliance_name = ""
+        if column == "corporation_name":
+            return corporation_name
+        if column == "alliance_name":
+            return alliance_name
+        if column == "refinery":
+            return {"display": refinery_html, "sort": refinery_name}
+        return None
+
+
+@login_required
+@permission_required("moonmining.basic_access")
+def moons_fdd_data(request, category) -> JsonResponse:
+    """Provide lists for drop down fields."""
+    qs = MoonListJson.initial_queryset(category=category, user=request.user)
+    columns = request.GET.get("columns")
+    result = dict()
+    if columns:
+        for column in columns.split(","):
+            if column == "alliance_name":
+                options = qs.exclude(
+                    refinery__owner__corporation__alliance__isnull=True,
+                ).values_list(
+                    "refinery__owner__corporation__alliance__alliance_name", flat=True
+                )
+            elif column == "corporation_name":
+                options = qs.exclude(refinery__isnull=True).values_list(
+                    "refinery__owner__corporation__corporation_name", flat=True
+                )
+            elif column == "region_name":
+                options = qs.values_list(
+                    "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region__name",
+                    flat=True,
+                )
+            elif column == "constellation_name":
+                options = qs.values_list(
+                    "eve_moon__eve_planet__eve_solar_system__eve_constellation__name",
+                    flat=True,
+                )
+            elif column == "solar_system_name":
+                options = qs.values_list(
+                    "eve_moon__eve_planet__eve_solar_system__name",
+                    flat=True,
+                )
+            elif column == "rarity_class_str":
+                options = qs.values_list("rarity_class_str", flat=True)
+            elif column == "label_name":
+                options = qs.exclude(label__isnull=True).values_list(
+                    "label__name", flat=True
+                )
+            elif column == "has_refinery_str":
+                options = qs.values_list("has_refinery_str", flat=True)
+            elif column == "has_extraction_str":
+                options = qs.values_list("has_extraction_str", flat=True)
+            else:
+                options = [f"** ERROR: Invalid column name '{column}' **"]
+            result[column] = sorted(list(set(options)), key=str.casefold)
+    return JsonResponse(result, safe=False)
 
 
 @login_required
@@ -455,6 +675,7 @@ def moon_details(request, moon_pk: int):
     context = {
         "page_title": moon.name,
         "moon": moon,
+        "use_reprocess_pricing": MOONMINING_USE_REPROCESS_PRICING,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
     }
@@ -557,6 +778,7 @@ def reports(request):
             ledger_last_updated = None
     context = {
         "page_title": "Reports",
+        "use_reprocess_pricing": MOONMINING_USE_REPROCESS_PRICING,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
         "month_minus_3": month_minus_3.strftime(month_format),
@@ -647,7 +869,7 @@ def report_user_mining_data(request):
     )
     sum_price = ExpressionWrapper(
         F("mining_ledger__quantity")
-        * Coalesce(F("mining_ledger__ore_type__market_price__average_price"), 0),
+        * Coalesce(F("mining_ledger__ore_type__extras__current_price"), 0),
         output_field=FloatField(),
     )
     today = now()
@@ -789,6 +1011,44 @@ def report_user_uploaded_data(request) -> JsonResponse:
             row["corporation"] = "?"
         if row["state"] is None:
             row["state"] = "?"
+    return JsonResponse(data, safe=False)
+
+
+@login_required()
+@permission_required(["moonmining.basic_access", "moonmining.reports_access"])
+def report_ore_prices_data(request) -> JsonResponse:
+    moon_ore_group_ids = [
+        EveGroupId.UNCOMMON_MOON_ASTEROIDS,
+        EveGroupId.UBIQUITOUS_MOON_ASTEROIDS,
+        EveGroupId.EXCEPTIONAL_MOON_ASTEROIDS,
+        EveGroupId.COMMON_MOON_ASTEROIDS,
+        EveGroupId.RARE_MOON_ASTEROIDS,
+    ]
+    qs = (
+        EveOreType.objects.filter(
+            eve_group_id__in=moon_ore_group_ids,
+            published=True,
+            extras__isnull=False,
+            extras__current_price__isnull=False,
+        )
+        .exclude(name__icontains=" ")
+        .select_related("eve_group", "extras")
+    )
+    data = [
+        {
+            "id": obj.id,
+            "name": obj.name,
+            "description": strip_tags(obj.description),
+            "price": obj.extras.current_price,
+            "group": obj.eve_group.name,
+            "rarity_html": {
+                "display": obj.rarity_class.bootstrap_tag_html,
+                "sort": obj.rarity_class.label,
+            },
+            "rarity_str": obj.rarity_class.label,
+        }
+        for obj in qs
+    ]
     return JsonResponse(data, safe=False)
 
 

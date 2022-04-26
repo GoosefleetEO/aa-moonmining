@@ -2,8 +2,11 @@ from django.contrib import admin
 
 from . import tasks
 from .models import (
+    EveOreType,
+    EveOreTypeExtras,
     Extraction,
     ExtractionProduct,
+    Label,
     MiningLedgerRecord,
     Moon,
     MoonProduct,
@@ -11,6 +14,44 @@ from .models import (
     Owner,
     Refinery,
 )
+
+
+class EveOreTypeExtrasInline(admin.StackedInline):
+    model = EveOreTypeExtras
+
+
+@admin.register(EveOreType)
+class EveOreTypeAdmin(admin.ModelAdmin):
+    list_display = ("name", "_current_price", "_group", "_pricing_method")
+    ordering = ("name",)
+    list_filter = (
+        "extras__pricing_method",
+        ("eve_group", admin.RelatedOnlyFieldListFilter),
+    )
+    search_fields = ("name",)
+    inlines = [EveOreTypeExtrasInline]
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related("extras", "eve_group")
+
+    @admin.display(ordering="extras__current_price")
+    def _current_price(self, obj):
+        return f"{obj.extras.current_price:,.2f}"
+
+    @admin.display(ordering="eve_group__name")
+    def _group(self, obj):
+        return str(obj.eve_group)
+
+    @admin.display(ordering="extras__pricing_method")
+    def _pricing_method(self, obj):
+        return obj.extras.get_pricing_method_display()
+
+    def has_add_permission(self, *args, **kwargs) -> bool:
+        return False
+
+    def has_change_permission(self, *args, **kwargs) -> bool:
+        return False
 
 
 class ExtractionProductAdmin(admin.TabularInline):
@@ -52,6 +93,12 @@ class ExtractionAdmin(admin.ModelAdmin):
         return False
 
 
+@admin.register(Label)
+class LabelAdmin(admin.ModelAdmin):
+    list_display = ("name", "style")
+    fields = ("name", "description", "style")
+
+
 @admin.register(MiningLedgerRecord)
 class MiningLedgerRecordAdmin(admin.ModelAdmin):
     list_display = ("refinery", "day", "user", "character", "ore_type", "quantity")
@@ -75,6 +122,25 @@ class MiningLedgerRecordAdmin(admin.ModelAdmin):
         return False
 
 
+class MoonHasRefineryFilter(admin.SimpleListFilter):
+    title = "has refinery"
+    parameter_name = "has_refinery"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "Yes"),
+            ("no", "No"),
+        )
+
+    def queryset(self, request, queryset):
+        """Return the filtered queryset"""
+        if self.value() == "yes":
+            return queryset.filter(refinery__isnull=False)
+        elif self.value() == "no":
+            return queryset.filter(refinery__isnull=True)
+        return queryset
+
+
 class MoonProductAdminInline(admin.TabularInline):
     model = MoonProduct
 
@@ -90,9 +156,84 @@ class MoonProductAdminInline(admin.TabularInline):
 
 @admin.register(Moon)
 class MoonAdmin(admin.ModelAdmin):
-    list_display = ("eve_moon",)
+    list_display = (
+        "eve_moon",
+        "_constellation",
+        "_region",
+        "label",
+        "_refinery",
+        "_owner",
+    )
+    list_filter = (
+        "rarity_class",
+        MoonHasRefineryFilter,
+        "label",
+        ("refinery__owner", admin.RelatedOnlyFieldListFilter),
+        (
+            "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
+            admin.RelatedOnlyFieldListFilter,
+        ),
+        (
+            "eve_moon__eve_planet__eve_solar_system__eve_constellation",
+            admin.RelatedOnlyFieldListFilter,
+        ),
+        ("eve_moon__eve_planet__eve_solar_system", admin.RelatedOnlyFieldListFilter),
+    )
     actions = ["update_calculated_properties"]
     inlines = (MoonProductAdminInline,)
+    fields = (
+        "eve_moon",
+        "rarity_class",
+        "value",
+        "label",
+        "products_updated_at",
+        "products_updated_by",
+    )
+    readonly_fields = (
+        "eve_moon",
+        "products_updated_at",
+        "products_updated_by",
+        "rarity_class",
+        "value",
+    )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related(
+            "refinery",
+            "refinery__owner",
+            "refinery__owner__corporation",
+            "refinery__owner__corporation__alliance",
+            "eve_moon",
+            "eve_moon__eve_planet__eve_solar_system",
+            "eve_moon__eve_planet__eve_solar_system__eve_constellation",
+            "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
+        )
+
+    def has_add_permission(self, request):
+        return False
+
+    @admin.display(ordering="eve_moon__eve_planet__eve_solar_system")
+    def _solar_system(self, obj) -> str:
+        return obj.eve_moon.eve_planet.eve_solar_system
+
+    @admin.display(ordering="eve_moon__eve_planet__eve_solar_system__eve_constellation")
+    def _constellation(self, obj) -> str:
+        return obj.eve_moon.eve_planet.eve_solar_system.eve_constellation
+
+    @admin.display(
+        ordering="eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region"
+    )
+    def _region(self, obj) -> str:
+        return obj.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region
+
+    @admin.display(ordering="refinery__name")
+    def _refinery(self, obj) -> str:
+        return obj.refinery.name
+
+    @admin.display(ordering="refinery__owner__name")
+    def _owner(self, obj) -> str:
+        return obj.refinery.owner.name
 
     @admin.display(description="Update calculated properties for selected moons.")
     def update_calculated_properties(self, request, queryset):
@@ -103,12 +244,6 @@ class MoonAdmin(admin.ModelAdmin):
         self.message_user(
             request, f"Started updating calculated properties for {num} moons."
         )
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def has_add_permission(self, request):
-        return False
 
 
 @admin.register(Notification)

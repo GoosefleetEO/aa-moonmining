@@ -116,7 +116,7 @@ def run_calculated_properties_update():
     if fetch_esi_status().is_ok:
         chain(
             update_market_prices.si(),
-            update_refined_ore_prices.si(),
+            update_current_ore_prices.si(),
             update_moons.si(),
             update_extractions.si(),
         ).apply_async(priority=TASK_PRIORITY_LOWER)
@@ -131,9 +131,9 @@ def update_market_prices():
 
 
 @shared_task
-def update_refined_ore_prices():
-    """Update refined priced for all ore types."""
-    EveOreType.objects.update_refined_prices()
+def update_current_ore_prices():
+    """Update current prices for all ore types."""
+    EveOreType.objects.update_current_prices()
 
 
 @shared_task

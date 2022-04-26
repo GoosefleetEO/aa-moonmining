@@ -5,17 +5,51 @@ import pytz
 
 from django.test import TestCase
 from django.utils.timezone import now
+from eveuniverse.models import EveMarketPrice, EveType
 
 from allianceauth.eveonline.models import EveCorporationInfo
 from app_utils.testing import NoSocketsTestCase
 
-from ..models import Extraction, Moon, Owner, Refinery
+from ..models import EveOreType, Extraction, Moon, Owner, Refinery
 from . import helpers
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
 from .testdata.survey_data import fetch_survey_data
 
 MANAGERS_PATH = "moonmining.managers"
+
+
+class TestEveOreTypeManager(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+
+    @patch(MANAGERS_PATH + ".MOONMINING_USE_REPROCESS_PRICING", False)
+    def test_should_update_current_prices_with_market_price(self):
+        # given
+        ore_type = EveOreType.objects.get(name="Cinnabar")
+        EveMarketPrice.objects.create(eve_type_id=ore_type.id, average_price=42)
+        # when
+        EveOreType.objects.update_current_prices()
+        # then
+        self.assertEqual(ore_type.extras.current_price, 42)
+
+    @patch(MANAGERS_PATH + ".MOONMINING_REPROCESSING_YIELD", 0.7)
+    @patch(MANAGERS_PATH + ".MOONMINING_USE_REPROCESS_PRICING", True)
+    def test_should_update_current_prices_with_reprocessed_value(self):
+        # given
+        ore_type = EveOreType.objects.get(name="Cinnabar")
+        tungsten = EveType.objects.get(id=16637)
+        mercury = EveType.objects.get(id=16646)
+        evaporite_deposits = EveType.objects.get(id=16635)
+        EveMarketPrice.objects.create(eve_type=tungsten, average_price=7000)
+        EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
+        EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
+        # when
+        EveOreType.objects.update_current_prices()
+        # then
+        self.assertEqual(ore_type.extras.current_price, 4002.25)
 
 
 class TestExtractionManager(TestCase):

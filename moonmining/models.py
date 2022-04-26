@@ -12,6 +12,7 @@ from django.db import models, transaction
 from django.db.models import F, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils.functional import cached_property, classproperty
+from django.utils.html import format_html
 from django.utils.timezone import now
 from esi.models import Token
 from eveuniverse.models import EveEntity, EveMoon, EveSolarSystem, EveType
@@ -28,8 +29,9 @@ from app_utils.views import (
     bootstrap_label_html,
 )
 
-from . import __title__, constants
+from . import __title__
 from .app_settings import MOONMINING_REPROCESSING_YIELD, MOONMINING_VOLUME_PER_MONTH
+from .constants import EveDogmaAttributeId, EveGroupId, EveTypeId, IconSize
 from .core import CalculatedExtraction, CalculatedExtractionProduct
 from .managers import (
     EveOreTypeManger,
@@ -72,8 +74,8 @@ class OreRarityClass(models.IntegerChoices):
     """Rarity class of an ore"""
 
     NONE = 0, ""
-    R4 = 4, "R4"
-    R8 = 8, "R8"
+    R4 = 4, "R 4"
+    R8 = 8, "R 8"
     R16 = 16, "R16"
     R32 = 32, "R32"
     R64 = 64, "R64"
@@ -98,11 +100,11 @@ class OreRarityClass(models.IntegerChoices):
     def from_eve_group_id(cls, eve_group_id: int) -> "OreRarityClass":
         """Create object from eve group ID"""
         map_group_2_rarity = {
-            constants.EVE_GROUP_ID_UBIQUITOUS_MOON_ASTEROIDS: cls.R4,
-            constants.EVE_GROUP_ID_COMMON_MOON_ASTEROIDS: cls.R8,
-            constants.EVE_GROUP_ID_UNCOMMON_MOON_ASTEROIDS: cls.R16,
-            constants.EVE_GROUP_ID_RARE_MOON_ASTEROIDS: cls.R32,
-            constants.EVE_GROUP_ID_EXCEPTIONAL_MOON_ASTEROIDS: cls.R64,
+            EveGroupId.UBIQUITOUS_MOON_ASTEROIDS: cls.R4,
+            EveGroupId.COMMON_MOON_ASTEROIDS: cls.R8,
+            EveGroupId.UNCOMMON_MOON_ASTEROIDS: cls.R16,
+            EveGroupId.RARE_MOON_ASTEROIDS: cls.R32,
+            EveGroupId.EXCEPTIONAL_MOON_ASTEROIDS: cls.R64,
         }
         try:
             return map_group_2_rarity[eve_group_id]
@@ -146,7 +148,7 @@ class OreQualityClass(models.TextChoices):
         }
         try:
             dogma_attribute = eve_type.dogma_attributes.get(
-                eve_dogma_attribute_id=constants.DOGMA_ATTRIBUTE_ID_ORE_QUALITY
+                eve_dogma_attribute_id=EveDogmaAttributeId.ORE_QUALITY
             )
         except ObjectDoesNotExist:
             return cls.UNDEFINED
@@ -188,7 +190,7 @@ class EveOreType(EveType):
     @cached_property
     def price(self) -> float:
         """Return calculated price estimate in ISK per unit."""
-        result = self.market_price.average_price
+        result = self.extras.current_price
         return result if result is not None else 0.0
 
     def price_by_volume(self, volume: int) -> float:
@@ -228,17 +230,24 @@ class EveOreType(EveType):
         return enabled_sections
 
 
-# This model is currently not used
 class EveOreTypeExtras(models.Model):
-    """Extra fields for an EveOreType."""
+    """Extra fields for an EveOreType, e.g. for pricing calculations."""
+
+    class PricingMethod(models.TextChoices):
+        UNKNOWN = "UN", "Unknown"
+        EVE_CLIENT = "EC", "Eve client"
+        REPROCESSED_MATERIALS = "RP", "Reprocessed materials"
 
     ore_type = models.OneToOneField(
         EveOreType, on_delete=models.CASCADE, related_name="extras"
     )
-    refined_price = models.FloatField(
+    current_price = models.FloatField(
         default=None,
         null=True,
-        help_text="price calculated as sum of prices for refined materials",
+        help_text="price used all price calculations with this type",
+    )
+    pricing_method = models.CharField(
+        max_length=2, choices=PricingMethod.choices, default=PricingMethod.UNKNOWN
     )
 
     def __str__(self) -> str:
@@ -261,7 +270,7 @@ class Extraction(models.Model):
                 self.STARTED: BootstrapStyle.SUCCESS,
                 self.CANCELED: BootstrapStyle.DANGER,
                 self.READY: BootstrapStyle.WARNING,
-                self.COMPLETED: BootstrapStyle.DEFAULT,
+                self.COMPLETED: BootstrapStyle.PRIMARY,
                 self.UNDEFINED: "",
             }
             try:
@@ -370,7 +379,7 @@ class Extraction(models.Model):
         try:
             return (
                 self.products.select_related(
-                    "ore_type", "ore_type__eve_group", "ore_type__market_price"
+                    "ore_type", "ore_type__eve_group", "ore_type__extras"
                 )
                 .annotate(total_price=self._total_price_db_func())
                 .order_by("ore_type__name")
@@ -391,7 +400,7 @@ class Extraction(models.Model):
         """Calculate value estimate."""
         try:
             return self.products.select_related(
-                "ore_type", "ore_type__market_price"
+                "ore_type", "ore_type__extras"
             ).aggregate(total_price=self._total_price_db_func())["total_price"]
         except (ObjectDoesNotExist, KeyError, AttributeError):
             return None
@@ -399,7 +408,7 @@ class Extraction(models.Model):
     @staticmethod
     def _total_price_db_func():
         return Sum(
-            Coalesce(F("ore_type__market_price__average_price"), 0.0)
+            Coalesce(F("ore_type__extras__current_price"), 0.0)
             * F("volume")
             / F("ore_type__volume"),
             output_field=models.FloatField(),
@@ -447,6 +456,44 @@ class ExtractionProduct(models.Model):
 
     def __str__(self) -> str:
         return f"{self.extraction} - {self.ore_type}"
+
+
+class Label(models.Model):
+    """A custom label for structuring moons."""
+
+    class Style(models.TextChoices):
+        DARK_BLUE = "primary", "dark blue"
+        GREEN = "success", "green"
+        GREY = "default", "grey"
+        LIGHT_BLUE = "info", "light blue"
+        ORANGE = "warning", "orange"
+        RED = "danger", "red"
+
+        @property
+        def bootstrap_style(self) -> str:
+            map_to_type = {
+                self.DARK_BLUE: BootstrapStyle.PRIMARY,
+                self.GREEN: BootstrapStyle.SUCCESS,
+                self.LIGHT_BLUE: BootstrapStyle.INFO,
+                self.ORANGE: BootstrapStyle.WARNING,
+                self.RED: BootstrapStyle.DANGER,
+            }
+            try:
+                return map_to_type[self.value]
+            except KeyError:
+                return BootstrapStyle.DEFAULT
+
+    description = models.TextField(default="", blank=True)
+    name = models.CharField(max_length=100, unique=True)
+    style = models.CharField(max_length=16, choices=Style.choices, default=Style.GREY)
+
+    def __str__(self) -> str:
+        return self.name
+
+    @property
+    def tag_html(self) -> str:
+        label_style = self.Style(self.style).bootstrap_style
+        return bootstrap_label_html(self.name, label=label_style)
 
 
 class General(models.Model):
@@ -523,6 +570,9 @@ class Moon(models.Model):
         EveMoon, on_delete=models.CASCADE, primary_key=True, related_name="known_moon"
     )
     # regular
+    label = models.ForeignKey(
+        Label, on_delete=models.SET_DEFAULT, default=None, null=True
+    )
     products_updated_at = models.DateTimeField(
         null=True, default=None, help_text="Time the last moon survey was uploaded"
     )
@@ -560,26 +610,29 @@ class Moon(models.Model):
     def is_owned(self) -> bool:
         return hasattr(self, "refinery")
 
+    @property
+    def rarity_tag_html(self) -> str:
+        return OreRarityClass(self.rarity_class).bootstrap_tag_html
+
+    def labels_html(self) -> str:
+        """Generate HTML with all labels."""
+        tags = [self.rarity_tag_html]
+        if self.label:
+            tags.append(self.label.tag_html)
+        return format_html(" ".join(tags))
+
     def products_sorted(self) -> models.QuerySet:
         """Return current products as sorted iterable."""
         try:
             return (
                 self.products.select_related(
-                    "ore_type", "ore_type__eve_group", "ore_type__market_price"
+                    "ore_type", "ore_type__eve_group", "ore_type__extras"
                 )
                 .annotate(total_price=self._total_price_db_func())
                 .order_by("ore_type__name")
             )
         except (ObjectDoesNotExist, AttributeError):
             return type(self).objects.none()
-
-    @property
-    def rarity_class_str(self) -> str:
-        return OreRarityClass(self.rarity_class).label
-
-    @property
-    def rarity_tag_html(self) -> str:
-        return OreRarityClass(self.rarity_class).bootstrap_tag_html
 
     def calc_rarity_class(self) -> Optional[OreRarityClass]:
         try:
@@ -597,16 +650,16 @@ class Moon(models.Model):
     def calc_value(self) -> Optional[float]:
         """Calculate value estimate."""
         try:
-            return self.products.select_related(
-                "ore_type", "ore_type__market_price"
-            ).aggregate(total_value=self._total_price_db_func())["total_value"]
+            return self.products.aggregate(total_value=self._total_price_db_func())[
+                "total_value"
+            ]
         except (ObjectDoesNotExist, KeyError, AttributeError):
             return None
 
     @staticmethod
     def _total_price_db_func():
         return Sum(
-            Coalesce(F("ore_type__market_price__average_price"), 0.0)
+            Coalesce(F("ore_type__extras__current_price"), 0.0)
             * F("amount")
             * Value(float(MOONMINING_VOLUME_PER_MONTH))
             / F("ore_type__volume"),
@@ -783,9 +836,9 @@ class Owner(models.Model):
     @property
     def name_html(self):
         return bootstrap_icon_plus_name_html(
-            self.corporation.logo_url(size=constants.IconSize.SMALL),
+            self.corporation.logo_url(size=IconSize.SMALL),
             self.name,
-            size=constants.IconSize.SMALL,
+            size=IconSize.SMALL,
         )
 
     def fetch_token(self) -> Token:
@@ -852,7 +905,7 @@ class Owner(models.Model):
                 else set()
             )
             if (
-                eve_type.eve_group_id == constants.EVE_GROUP_ID_REFINERY
+                eve_type.eve_group_id == EveGroupId.REFINERY
                 and self.ESI_SERVICE_NAME_MOON_DRILLING in service_names
             ):
                 refineries[structure_info["structure_id"]] = structure_info
@@ -1183,6 +1236,9 @@ class Refinery(models.Model):
     def __str__(self):
         return self.name
 
+    def name_html(self) -> str:
+        return format_html("{}<br>{}", self.name, self.owner.name)
+
     def update_moon_from_structure_info(self, structure_info: dict) -> bool:
         """Find moon based on location in space and update the object.
         Returns True when successful, else false
@@ -1195,15 +1251,12 @@ class Refinery(models.Model):
                 x=structure_info["position"]["x"],
                 y=structure_info["position"]["y"],
                 z=structure_info["position"]["z"],
-                group_id=constants.EVE_GROUP_ID_MOON,
+                group_id=EveGroupId.MOON,
             )
         except OSError:
             logger.exception("%s: Failed to fetch nearest celestial ", self)
             return False
-        if (
-            not nearest_celestial
-            or nearest_celestial.eve_type.id != constants.EVE_TYPE_ID_MOON
-        ):
+        if not nearest_celestial or nearest_celestial.eve_type.id != EveTypeId.MOON:
             return False
         eve_moon = nearest_celestial.eve_object
         moon, _ = Moon.objects.get_or_create(eve_moon=eve_moon)

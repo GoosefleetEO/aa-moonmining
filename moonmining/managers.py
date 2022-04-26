@@ -2,6 +2,7 @@ from collections import namedtuple
 from typing import Tuple
 
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models, transaction
 from django.db.models import ExpressionWrapper, F, FloatField, IntegerField, Sum
 from django.db.models.functions import Coalesce
@@ -13,7 +14,12 @@ from allianceauth.notifications import notify
 from allianceauth.services.hooks import get_extension_logger
 from app_utils.logging import LoggerAddTag
 
-from . import __title__, constants
+from . import __title__
+from .app_settings import (
+    MOONMINING_REPROCESSING_YIELD,
+    MOONMINING_USE_REPROCESS_PRICING,
+)
+from .constants import EveCategoryId
 from .core import CalculatedExtraction
 from .helpers import eveentity_get_or_create_esi_safe
 
@@ -34,17 +40,30 @@ class EveOreTypeManger(EveTypeManager):
             .get_queryset()
             .select_related("eve_group")
             .filter(published=True)
-            .filter(eve_group__eve_category_id=constants.EVE_CATEGORY_ID_ASTEROID)
+            .filter(eve_group__eve_category_id=EveCategoryId.ASTEROID)
         )
 
-    def update_refined_prices(self):
-        """Update refined prices for all EveOreTypes"""
+    def update_current_prices(self, use_process_pricing: bool = None):
+        """Update current prices for all ores."""
         from .models import EveOreTypeExtras
 
-        for obj in self.all():
+        if use_process_pricing is None:
+            use_process_pricing = MOONMINING_USE_REPROCESS_PRICING
+
+        for obj in self.filter(published=True).select_related("market_price"):
+            if use_process_pricing:
+                price = obj.calc_refined_value_per_unit(MOONMINING_REPROCESSING_YIELD)
+                pricing_method = EveOreTypeExtras.PricingMethod.REPROCESSED_MATERIALS
+            else:
+                try:
+                    price = obj.market_price.average_price
+                    pricing_method = EveOreTypeExtras.PricingMethod.EVE_CLIENT
+                except ObjectDoesNotExist:
+                    price = None
+                    pricing_method = EveOreTypeExtras.PricingMethod.UNKNOWN
             EveOreTypeExtras.objects.update_or_create(
                 ore_type=obj,
-                defaults={"refined_price": obj.calc_refined_value_per_unit},
+                defaults={"current_price": price, "pricing_method": pricing_method},
             )
 
 
@@ -61,8 +80,8 @@ class MiningLedgerRecordManager(models.Manager):
         return (
             super()
             .get_queryset()
-            .select_related("ore_type", "ore_type__market_price")
-            .annotate(unit_price=F("ore_type__market_price__average_price"))
+            .select_related("ore_type", "ore_type__extras")
+            .annotate(unit_price=F("ore_type__extras__current_price"))
             .annotate(total_price=Sum(sum_price, distinct=True))
             .annotate(total_volume=Sum(sum_volume, distinct=True))
         )
@@ -79,6 +98,7 @@ class MoonQuerySet(models.QuerySet):
             "refinery__owner",
             "refinery__owner__corporation",
             "refinery__owner__corporation__alliance",
+            "label",
         )
 
 
@@ -242,6 +262,7 @@ class ExtractionQuerySet(models.QuerySet):
             "refinery__owner",
             "refinery__owner__corporation",
             "refinery__owner__corporation__alliance",
+            "refinery__moon__label",
         )
 
     def update_status(self):

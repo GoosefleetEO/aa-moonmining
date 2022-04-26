@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.6.0] - 2022-04-26
+
+### Added
+
+- Ability to use calculated refined pricing instead of normal ore prices (#16)
+- Ability to add custom labels to moons and use them to filter moons (#17)
+- Report showing current ore prices
+
+### Changed
+
+- Default reprocessing yield set to 85 %
+- Changed moon tables to server-side rendering for significant performance boost (#15)
+
 ## [1.5.0] - 2022-04-21
 
 ### Added

@@ -13,6 +13,9 @@
         <li role="presentation">
             <a href="#tab_user_uploaded" aria-controls="tab_user_uploaded" role="tab" data-toggle="tab">Member Uploads</a>
         </li>
+        <li role="presentation">
+            <a href="#tab_ore_prices" aria-controls="tab_ore_prices" role="tab" data-toggle="tab">Ore prices</a>
+        </li>
     </ul>
 
     <div class="panel panel-default panel-tabs">
@@ -21,8 +24,8 @@
                 {% include "moonmining/partials/reports_owned_value_tab.html" %}
                 {% include "moonmining/partials/reports_user_mining_tab.html" %}
                 {% include "moonmining/partials/reports_user_uploaded_tab.html" %}
+                {% include "moonmining/partials/reports_ore_prices_tab.html" %}
             </div>
-            {% include 'moonmining/partials/value_estimate_legend.html' %}
         </div>
     </div>
 
@@ -203,6 +206,52 @@
                 },
                 footerCallback: function (row, data, start, end, display) {
                     dataTableFooterSumColumn(this.api(), 3);
+                }
+            });
+
+            $('#table_ore_prices').DataTable(
+                {
+                ajax: {
+                    url: '{% url "moonmining:report_ore_prices_data" %}',
+                    dataSrc: '',
+                    cache: true
+                },
+                columns: [
+                    { data: 'name' },
+                    {
+                        data: 'price',
+                        render: $.fn.dataTable.render.number(',', '.', 2)
+                    },
+                    { data: 'group' },
+                    {
+                        data: 'rarity_html',
+                        render: {
+                            _: 'display',
+                            sort: 'sort'
+                        }
+
+                    },
+                    { data: 'description' },
+                    { data: 'rarity_str' },
+                ],
+                lengthMenu: DEFAULT_LENGTH_MENU,
+                pageLength: DEFAULT_PAGE_LENGTH,
+                order: [ [0, "asc"] ],
+                columnDefs: [
+                    { "visible": false, "targets": [ 5 ] },
+                ],
+                filterDropDown: {
+                    columns: [
+                        {
+                            idx: 2
+                        },
+                        {
+                            idx: 5,
+                            title: "Rarity"
+                        }
+                    ],
+                    bootstrap: true,
+                    autoSize: false
                 }
             });
 

@@ -1,0 +1,24 @@
+{% load humanize %}
+
+<div role="tabpanel" class="tab-pane" id="tab_ore_prices">
+    <p class="report-title">Current ore prices</p>
+    <div class="table-responsive">
+        <table class="table table-striped table-width-fix" id="table_ore_prices">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Price&nbsp;(ISK)</th>
+                    <th>Group</th>
+                    <th>Rarity</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+    <p class="text-muted">Ore prices shown on this report are used for all calculations in this app.</p>
+    {% if use_reprocess_pricing %}
+        <p class="text-muted">Ore prices are calculated as sum of it's reprocessed materials with a yield of {{ reprocessing_yield }}%.</p>
+    {% else %}
+        <p class="text-muted">The Eve client prices (average prices) are used for ore prices.</p>
+    {% endif %}
+</div>

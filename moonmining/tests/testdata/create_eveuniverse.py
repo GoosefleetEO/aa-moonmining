@@ -2,7 +2,7 @@ from django.test import TestCase
 from eveuniverse.models import EveType
 from eveuniverse.tools.testdata import ModelSpec, create_testdata
 
-from moonmining import constants
+from moonmining.constants import EveCategoryId, EveGroupId
 
 from . import test_data_filename
 
@@ -10,12 +10,10 @@ from . import test_data_filename
 class CreateEveUniverseTestData(TestCase):
     def test_create_testdata(self):
         testdata_spec = [
-            ModelSpec(
-                "EveGroup", ids=[constants.EVE_GROUP_ID_MOON], include_children=True
-            ),
+            ModelSpec("EveGroup", ids=[EveGroupId.MOON.value], include_children=True),
             ModelSpec(
                 "EveCategory",
-                ids=[constants.EVE_CATEGORY_ID_ASTEROID],
+                ids=[EveCategoryId.ASTEROID.value],
                 include_children=True,
                 enabled_sections=[
                     EveType.Section.TYPE_MATERIALS,
