@@ -18,7 +18,15 @@ from app_utils.testing import (
 )
 
 from .. import views
-from ..models import EveOreType, Extraction, MiningLedgerRecord, Moon, Owner, Refinery
+from ..models import (
+    EveOreType,
+    Extraction,
+    Label,
+    MiningLedgerRecord,
+    Moon,
+    Owner,
+    Refinery,
+)
 from . import helpers
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
@@ -116,8 +124,13 @@ class TestMoonsData(TestCase):
         load_eveuniverse()
         load_allianceauth()
         cls.moon = helpers.create_moon_40161708()
+        cls.moon.label = Label.objects.create(name="Dummy")
+        cls.moon.save()
         Moon.objects.create(eve_moon=EveMoon.objects.get(id=40131695))
         Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161709))
+        helpers.generate_market_prices()
+        for moon in Moon.objects.all():
+            moon.update_calculated_properties()
 
     @staticmethod
     def _response_to_dict(response):
@@ -230,6 +243,41 @@ class TestMoonsData(TestCase):
         self.assertEqual(response.status_code, 200)
         data = self._response_to_dict(response)
         self.assertSetEqual(set(data.keys()), {40161708})
+
+    def test_should_return_fdd_for_all_moons(self):
+        # given
+        user, _ = create_user_from_evecharacter(
+            1001,
+            permissions=[
+                "moonmining.basic_access",
+                "moonmining.extractions_access",
+                "moonmining.view_all_moons",
+            ],
+            scopes=Owner.esi_scopes(),
+        )
+        moon = Moon.objects.get(pk=40131695)
+        helpers.add_refinery(moon)
+        self.client.force_login(user)
+        # when
+        response = self.client.get(
+            f"/moonmining/moons_fdd_data/{views.MoonsCategory.ALL}"
+            "?columns=alliance_name,corporation_name,region_name,"
+            "constellation_name,solar_system_name,rarity_class_str,label_name,"
+            "has_refinery_str,has_extraction_str,invalid_column"
+        )
+        # then
+        self.assertEqual(response.status_code, 200)
+        data = json_response_to_python(response)
+        self.assertListEqual(data["alliance_name"], ["Wayne Enterprises"])
+        self.assertListEqual(data["corporation_name"], ["Wayne Technologies"])
+        self.assertListEqual(data["region_name"], ["Heimatar", "Metropolis"])
+        self.assertListEqual(data["constellation_name"], ["Aldodan", "Hed"])
+        self.assertListEqual(data["solar_system_name"], ["Auga", "Helgatild"])
+        self.assertListEqual(data["rarity_class_str"], ["R0", "R32"])
+        self.assertListEqual(data["label_name"], ["Dummy"])
+        self.assertListEqual(data["has_refinery_str"], ["no", "yes"])
+        self.assertListEqual(data["has_extraction_str"], ["no", "yes"])
+        self.assertIn("ERROR", data["invalid_column"][0])
 
 
 class TestMoonInfo(TestCase):
