@@ -136,6 +136,7 @@ def extractions(request):
         "page_title": "Extractions",
         "ExtractionsCategory": ExtractionsCategory.to_dict(),
         "ExtractionsStatus": Extraction.Status,
+        "use_reprocess_pricing": MOONMINING_USE_REPROCESS_PRICING,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
         "stale_hours": MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE,
@@ -353,6 +354,7 @@ def moons(request):
     context = {
         "page_title": "Moons",
         "MoonsCategory": MoonsCategory.to_dict(),
+        "use_reprocess_pricing": MOONMINING_USE_REPROCESS_PRICING,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
     }
@@ -673,6 +675,7 @@ def moon_details(request, moon_pk: int):
     context = {
         "page_title": moon.name,
         "moon": moon,
+        "use_reprocess_pricing": MOONMINING_USE_REPROCESS_PRICING,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
     }

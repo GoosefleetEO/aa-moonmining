@@ -1,3 +1,3 @@
 <p class="text-muted">
-    * A value estimate represents an estimated monthly income calculated with current average market prices and an assumed monthly ore volume of {{ total_volume_per_month|floatformat:"1" }} million m3. All values in B ISK.
+    * A value estimate represents an estimated monthly income calculated with average market prices {% if use_reprocess_pricing %}from reprocessed minerals{% endif %} and an assumed monthly ore volume of {{ total_volume_per_month|floatformat:"1" }} million m3. All values in B ISK.
 </p>

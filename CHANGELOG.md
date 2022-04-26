@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
-## [1.6.0] - 2022-04-24
+## [1.6.0] - 2022-04-26
 
 ### Added
 
@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
-- Set default reprocessing yield to 85 %
+- Default reprocessing yield set to 85 %
 - Changed moon tables to server-side rendering for significant performance boost (#15)
 
 ## [1.5.0] - 2022-04-21
