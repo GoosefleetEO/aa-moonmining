@@ -46,6 +46,9 @@
                 </span>
                 {% if extraction.status == extraction.Status.CANCELED %}</s>{% endif %}
             </dd>
+
+            <dt>Duration:</dt>
+            <dd>{{ extraction.duration_in_days|floatformat }} days</dd>
         </dl>
     </div>
 </div>

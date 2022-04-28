@@ -310,7 +310,7 @@ class TestMoonProductsSorted(NoSocketsTestCase):
         result = moon.products_sorted()
         # then
         moon_product = result.get(ore_type_id=45506)
-        self.assertEqual(moon_product.total_price, 1201363646.4)
+        self.assertEqual(moon_product.total_price, 1331344896.0)
         ore_type_ids = list(result.values_list("ore_type_id", flat=True))
         self.assertListEqual([45506, 46676, 46678, 46689], ore_type_ids)
 
@@ -364,23 +364,34 @@ class TestMoonOverwriteProducts(NoSocketsTestCase):
     def test_should_overwrite_from_calculated_extraction(self):
         # given
         moon = helpers.create_moon_40161708()
+        base_time = now()
         extraction = CalculatedExtraction(
-            refinery_id=1, status=CalculatedExtraction.Status.STARTED
+            refinery_id=1,
+            status=CalculatedExtraction.Status.STARTED,
+            started_at=base_time,
+            chunk_arrival_at=base_time + dt.timedelta(days=20),
         )
-        ores = {"45506": 10000, "46676": 20000}
+        ores = {"45506": 7_683_200, "46676": 9_604_000}
         extraction.products = CalculatedExtractionProduct.create_list_from_dict(ores)
         # when
         result = moon.update_products_from_calculated_extraction(extraction)
         # then
         self.assertTrue(result)
-        self.assertEqual(moon.products.get(ore_type_id=45506).amount, 1 / 3)
-        self.assertEqual(moon.products.get(ore_type_id=46676).amount, 2 / 3)
+        self.assertAlmostEqual(
+            moon.products.get(ore_type_id=45506).amount, 0.4, places=2
+        )
+        self.assertAlmostEqual(
+            moon.products.get(ore_type_id=46676).amount, 0.5, places=2
+        )
 
     def test_should_not_overwrite_from_calculated_extraction_without_products(self):
         # given
         moon = helpers.create_moon_40161708()
         extraction = CalculatedExtraction(
-            refinery_id=1, status=CalculatedExtraction.Status.STARTED
+            refinery_id=1,
+            status=CalculatedExtraction.Status.STARTED,
+            started_at=now(),
+            chunk_arrival_at=now() + dt.timedelta(days=20),
         )
         # when
         result = moon.update_products_from_calculated_extraction(extraction)

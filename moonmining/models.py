@@ -30,7 +30,11 @@ from app_utils.views import (
 )
 
 from . import __title__
-from .app_settings import MOONMINING_REPROCESSING_YIELD, MOONMINING_VOLUME_PER_MONTH
+from .app_settings import (
+    MOONMINING_REPROCESSING_YIELD,
+    MOONMINING_VOLUME_PER_DAY,
+    MOONMINING_VOLUME_PER_MONTH,
+)
 from .constants import EveDogmaAttributeId, EveGroupId, EveTypeId, IconSize
 from .core import CalculatedExtraction, CalculatedExtractionProduct
 from .managers import (
@@ -370,6 +374,16 @@ class Extraction(models.Model):
         return f"{self.refinery} - {self.started_at} - {self.status}"
 
     @property
+    def duration(self) -> dt.timedelta:
+        """Duration of this extraction."""
+        return self.chunk_arrival_at - self.started_at
+
+    @property
+    def duration_in_days(self) -> float:
+        """Duration of this extraction in days."""
+        return self.duration.total_seconds() / (60 * 60 * 24)
+
+    @property
     def status_enum(self) -> "Extraction.Status":
         """Return current status as enum type."""
         return self.Status(self.status)
@@ -682,17 +696,19 @@ class Moon(models.Model):
     def update_products_from_calculated_extraction(
         self, extraction: CalculatedExtraction
     ) -> bool:
+        """Replace moon product with calculated values from this extraction."""
         if extraction.products:
-            total_volume = extraction.total_volume()
             moon_products = [
                 MoonProduct(
                     moon=self,
-                    amount=product.volume / total_volume,
+                    amount=product.amount,
                     ore_type=EveOreType.objects.get_or_create_esi(
                         id=product.ore_type_id
                     )[0],
                 )
-                for product in extraction.products
+                for product in extraction.moon_products_estimated(
+                    MOONMINING_VOLUME_PER_DAY
+                )
             ]
             self.update_products(moon_products)
             return True
@@ -1078,6 +1094,7 @@ class Owner(models.Model):
                         auto_fracture_at=ldap_time_2_datetime(
                             notif.details["autoTime"]
                         ),
+                        started_at=notif.timestamp,
                         started_by=notif.details.get("startedBy"),
                         products=CalculatedExtractionProduct.create_list_from_dict(
                             notif.details["oreVolumeByType"]

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.6.1] - tbd
+
+### Added
+
+### Fixed
+
+- Automatically updated moon product percentages are sometimes off (#18)
+
+### Changed
+
+- Setting `MOONMINING_VOLUME_PER_MONTH` replaced by new settings: `MOONMINING_VOLUME_PER_DAY` and `MOONMINING_DAYS_PER_MONTH`
+
 ## [1.6.0] - 2022-04-26
 
 ### Added

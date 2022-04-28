@@ -218,7 +218,8 @@ Name | Description | Default
 `MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE`| Number of hours an extractions that has passed its ready time is still shown on the upcoming extractions tab. | `12`
 `MOONMINING_REPROCESSING_YIELD`| Reprocessing yield used for calculating all values | `0.85`
 `MOONMINING_USE_REPROCESS_PRICING`|  Whether to calculate prices from it's reprocessed materials or not. Will use direct ore prices when switched off | `False`
-`MOONMINING_VOLUME_PER_MONTH`| Total ore volume per month used for calculating moon values. | `14557923`
+`MOONMINING_VOLUME_PER_DAY`| Maximum ore volume per day used for calculating moon values. | `960400`
+`MOONMINING_DAYS_PER_MONTH`| Average days per months used for calculating moon values. | `30.4`
 
 ## Management Commands
 
