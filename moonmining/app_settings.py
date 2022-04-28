@@ -15,8 +15,10 @@ MOONMINING_USE_REPROCESS_PRICING = clean_setting(
     "MOONMINING_USE_REPROCESS_PRICING", False
 )
 
-# Total ore volume per month (30.4 days) used for calculating moon values.
-MOONMINING_VOLUME_PER_MONTH = clean_setting("MOONMINING_VOLUME_PER_MONTH", 26345694)
+# Total ore volume per month used for calculating moon values.
+MOONMINING_VOLUME_PER_DAY = clean_setting("MOONMINING_VOLUME_PER_DAY", 960_400)
+MOONMINING_DAYS_PER_MONTH = clean_setting("MOONMINING_DAYS_PER_MONTH", 30.4)
+MOONMINING_VOLUME_PER_MONTH = MOONMINING_VOLUME_PER_DAY * MOONMINING_DAYS_PER_MONTH
 
 # whether admins will get notifications about important events like
 # when someone adds a structure owner

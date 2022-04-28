@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.6.1] - 2022-04-28
+
+**Update notes**:<br>Due to the previous bug (#18) the calculated moon values may be inaccurate. We recommend to run the action "update selected owners from ESI" for all active ownwer on the admin site, which will also update moon values from the last extractions.
+
+### Added
+
+- Show duration on extraction details page
+
+### Fixed
+
+- Automatically updated moon product percentages are sometimes off (#18)
+- Show "ESTIMATED" as "survey submitter" for extimated moon products
+
+### Changed
+
+- Setting `MOONMINING_VOLUME_PER_MONTH` replaced by new settings: `MOONMINING_VOLUME_PER_DAY` and `MOONMINING_DAYS_PER_MONTH`
+
 ## [1.6.0] - 2022-04-26
 
 ### Added

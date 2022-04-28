@@ -49,4 +49,11 @@
         </div>
     {% endfor %}
 {% endif %}
-<p class="text-muted">Last updated on {{moon.products_updated_at|datetime|default:"?"}} by {{moon.products_updated_by.profile.main_character|default:"?"}}<p>
+<p class="text-muted">
+    Last updated on
+    {% if moon.products_updated_at %}
+        {{moon.products_updated_at|datetime|default:"?"}} by {{moon.products_updated_by.profile.main_character|default:"ESTIMATED"}}
+    {% else %}
+        ?
+    {% endif %}
+<p>
