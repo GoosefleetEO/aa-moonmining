@@ -686,11 +686,15 @@ class Moon(models.Model):
         self.rarity_class = self.calc_rarity_class()
         self.save()
 
-    def update_products(self, moon_products: List["MoonProduct"]) -> None:
+    def update_products(
+        self, moon_products: List["MoonProduct"], updated_by: User = None
+    ) -> None:
         """Update products of this moon."""
         with transaction.atomic():
             self.products.all().delete()
             MoonProduct.objects.bulk_create(moon_products, batch_size=500)
+        self.products_updated_at = now()
+        self.products_updated_by = updated_by
         self.update_calculated_properties()
 
     def update_products_from_calculated_extraction(

@@ -181,8 +181,6 @@ class MoonManagerBase(models.Manager):
                 moon_id = survey[1][6]
                 eve_moon, _ = EveMoon.objects.get_or_create_esi(id=moon_id)
                 moon, _ = self.get_or_create(eve_moon=eve_moon)
-                moon.products_updated_by = user
-                moon.products_updated_at = now()
                 moon_products = list()
                 survey = survey[1:]
                 for product_data in survey:
@@ -196,7 +194,7 @@ class MoonManagerBase(models.Manager):
                             moon=moon, amount=product_data[1], ore_type=ore_type
                         )
                     )
-                moon.update_products(moon_products)
+                moon.update_products(moon_products, updated_by=user)
                 logger.info("Added moon survey for %s", moon.name)
 
             except Exception as ex:

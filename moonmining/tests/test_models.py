@@ -383,6 +383,11 @@ class TestMoonOverwriteProducts(NoSocketsTestCase):
         self.assertAlmostEqual(
             moon.products.get(ore_type_id=46676).amount, 0.5, places=2
         )
+        self.assertIsNone(moon.products_updated_by)
+        self.assertIsNotNone(moon.products_updated_at)
+        self.assertAlmostEqual(
+            moon.products_updated_at, now(), delta=dt.timedelta(minutes=1)
+        )
 
     def test_should_not_overwrite_from_calculated_extraction_without_products(self):
         # given
