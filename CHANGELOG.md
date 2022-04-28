@@ -11,9 +11,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- Show duration on extraction details page
+
 ### Fixed
 
 - Automatically updated moon product percentages are sometimes off (#18)
+- Show "ESTIMATED" as "survey submitter" for extimated moon products
 
 ### Changed
 
