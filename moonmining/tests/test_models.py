@@ -7,7 +7,6 @@ from django.utils.timezone import now
 from esi.models import Token
 from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 
-from allianceauth.eveonline.models import EveCorporationInfo
 from app_utils.testing import NoSocketsTestCase
 
 from ..constants import EveTypeId
@@ -15,11 +14,9 @@ from ..core import CalculatedExtractionProduct
 from ..models import (
     EveOreType,
     Extraction,
-    MiningLedgerRecord,
     NotificationType,
     OreQualityClass,
     OreRarityClass,
-    Owner,
     Refinery,
 )
 from . import helpers
@@ -28,6 +25,7 @@ from .testdata.factories import (
     CalculatedExtractionFactory,
     ExtractionFactory,
     ExtractionProductFactory,
+    MiningLedgerRecordFactory,
     MoonFactory,
     MoonProductFactory,
     OwnerFactory,
@@ -719,6 +717,7 @@ class TestOwnerUpdateExtractionsFromEsi(NoSocketsTestCase):
             chunk_arrival_at=dt.datetime(2021, 3, 15, 18, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2021, 3, 15, 21, 0, tzinfo=pytz.UTC),
             status=Extraction.Status.STARTED,
+            create_products=False,
         )
         # when
         with patch(MODELS_PATH + ".now") as mock_now:
@@ -750,6 +749,7 @@ class TestOwnerUpdateExtractionsFromNotifications(NoSocketsTestCase):
             chunk_arrival_at=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
             started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2021, 4, 15, 21, 0, tzinfo=pytz.UTC),
+            create_products=False,
         )
         # when
         owner.update_extractions_from_notifications()
@@ -778,6 +778,7 @@ class TestOwnerUpdateExtractionsFromNotifications(NoSocketsTestCase):
             chunk_arrival_at=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
             started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2021, 4, 15, 21, 0, tzinfo=pytz.UTC),
+            create_products=False,
         )
         ExtractionProductFactory(
             extraction=extraction, ore_type_id=45506, volume=1288475
@@ -811,6 +812,7 @@ class TestOwnerUpdateExtractionsFromNotifications(NoSocketsTestCase):
             chunk_arrival_at=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
             started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2021, 4, 15, 21, 0, tzinfo=pytz.UTC),
+            create_products=False,
         )
         ExtractionProductFactory(
             extraction=extraction, ore_type_id=45506, volume=1288475
@@ -845,6 +847,7 @@ class TestOwnerUpdateExtractionsFromNotifications(NoSocketsTestCase):
             chunk_arrival_at=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
             started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2021, 4, 15, 21, 0, tzinfo=pytz.UTC),
+            create_products=False,
         )
         ExtractionProductFactory(
             extraction=extraction, ore_type_id=45506, volume=1288475
@@ -883,6 +886,7 @@ class TestOwnerUpdateExtractionsFromNotifications(NoSocketsTestCase):
             started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2021, 4, 15, 21, 00, tzinfo=pytz.UTC),
             status=Extraction.Status.STARTED,
+            create_products=False,
         )
         # when
         owner.update_extractions_from_notifications()
@@ -908,6 +912,7 @@ class TestOwnerUpdateExtractionsFromNotifications(NoSocketsTestCase):
             chunk_arrival_at=dt.datetime(2021, 4, 15, 18, 0, tzinfo=pytz.UTC),
             started_at=dt.datetime(2021, 4, 10, 18, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2021, 4, 15, 21, 0, tzinfo=pytz.UTC),
+            create_products=False,
         )
         # when
         owner.update_extractions_from_notifications()
@@ -932,6 +937,7 @@ class TestOwnerUpdateExtractionsFromNotifications(NoSocketsTestCase):
             started_at=ready_time_1 - dt.timedelta(days=14),
             auto_fracture_at=ready_time_1 + dt.timedelta(hours=4),
             status=Extraction.Status.STARTED,
+            create_products=False,
         )
         extraction_2 = ExtractionFactory(
             refinery=refinery,
@@ -939,6 +945,7 @@ class TestOwnerUpdateExtractionsFromNotifications(NoSocketsTestCase):
             started_at=ready_time_2 - dt.timedelta(days=14),
             auto_fracture_at=ready_time_2 + dt.timedelta(hours=4),
             status=Extraction.Status.STARTED,
+            create_products=False,
         )
         ExtractionProductFactory(
             extraction=extraction_2, ore_type_id=45506, volume=1288475
@@ -956,6 +963,7 @@ class TestOwnerUpdateExtractionsFromNotifications(NoSocketsTestCase):
             started_at=ready_time_3 - dt.timedelta(days=14),
             auto_fracture_at=ready_time_3 + dt.timedelta(hours=4),
             status=Extraction.Status.STARTED,
+            create_products=False,
         )
         # when
         owner.update_extractions_from_notifications()
@@ -999,31 +1007,21 @@ class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
-        cls.moon = helpers.create_moon_40161708()
-        _, character_ownership = helpers.create_default_user_from_evecharacter(1001)
-        cls.owner = Owner.objects.create(
-            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
-            character_ownership=character_ownership,
-        )
 
     def test_should_return_observer_ids_from_esi(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
+        owner = OwnerFactory()
         # when
-        result = self.owner.fetch_mining_ledger_observers_from_esi()
+        result = owner.fetch_mining_ledger_observers_from_esi()
         # then
         self.assertSetEqual(result, {1000000000001, 1000000000002})
 
     def test_should_create_new_mining_ledger(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
-        refinery = Refinery.objects.create(
-            id=1000000000001,
-            name="Test",
-            moon=self.moon,
-            owner=self.owner,
-            eve_type=helpers.eve_type_athanor(),
-        )
+        owner = OwnerFactory()
+        refinery = RefineryFactory(id=1000000000001, owner=owner)
         # when
         refinery.update_mining_ledger_from_esi()
         # then
@@ -1042,19 +1040,12 @@ class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
     def test_should_update_existing_mining_ledger(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
-        refinery = Refinery.objects.create(
-            id=1000000000001,
-            name="Test",
-            moon=self.moon,
-            owner=self.owner,
-            eve_type=helpers.eve_type_athanor(),
-        )
-        MiningLedgerRecord.objects.create(
+        owner = OwnerFactory()
+        refinery = RefineryFactory(id=1000000000001, owner=owner)
+        MiningLedgerRecordFactory(
             refinery=refinery,
-            character_id=1001,
             day=dt.date(2017, 9, 19),
-            ore_type_id=45506,
-            corporation_id=2001,
+            ore_type_id=EveTypeId.CINNABAR,
             quantity=199,
         )
         # when
@@ -1069,13 +1060,8 @@ class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
         mock_esi.client.Industry.get_corporation_corporation_id_mining_observers_observer_id.side_effect = (
             OSError
         )
-        refinery = Refinery.objects.create(
-            id=1000000000001,
-            name="Test",
-            moon=self.moon,
-            owner=self.owner,
-            eve_type=helpers.eve_type_athanor(),
-        )
+        owner = OwnerFactory()
+        refinery = RefineryFactory(id=1000000000001, owner=owner)
         # when
         with self.assertRaises(OSError):
             refinery.update_mining_ledger_from_esi()
