@@ -8,6 +8,7 @@ from esi.models import Token
 from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 
 from allianceauth.eveonline.models import EveCorporationInfo
+from allianceauth.tests.auth_utils import AuthUtils
 from app_utils.testing import NoSocketsTestCase
 
 from ..core import CalculatedExtraction, CalculatedExtractionProduct
@@ -26,6 +27,7 @@ from ..models import (
 )
 from . import helpers
 from .testdata.esi_client_stub import esi_client_stub
+from .testdata.factories import create_moon
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse, nearest_celestial_stub
 
@@ -360,10 +362,11 @@ class TestMoonOverwriteProducts(NoSocketsTestCase):
     def setUpClass(cls):
         super().setUpClass()
         load_eveuniverse()
+        helpers.generate_market_prices()
 
-    def test_should_overwrite_from_calculated_extraction(self):
+    def test_should_overwrite_existing_estimates(self):
         # given
-        moon = helpers.create_moon_40161708()
+        moon = create_moon()
         base_time = now()
         extraction = CalculatedExtraction(
             refinery_id=1,
@@ -389,9 +392,47 @@ class TestMoonOverwriteProducts(NoSocketsTestCase):
             moon.products_updated_at, now(), delta=dt.timedelta(minutes=1)
         )
 
+    def test_should_not_overwrite_existing_survey(self):
+        # given
+        user = AuthUtils.create_user("Dummy")
+        moon = create_moon(products_updated_by=user)
+        base_time = now()
+        extraction = CalculatedExtraction(
+            refinery_id=1,
+            status=CalculatedExtraction.Status.STARTED,
+            started_at=base_time,
+            chunk_arrival_at=base_time + dt.timedelta(days=20),
+        )
+        ores = {"45506": 7_683_200, "46676": 9_604_000}
+        extraction.products = CalculatedExtractionProduct.create_list_from_dict(ores)
+        # when
+        result = moon.update_products_from_calculated_extraction(extraction)
+        # then
+        self.assertFalse(result)
+
+    def test_should_overwrite_existing_survey_when_requested(self):
+        # given
+        user = AuthUtils.create_user("Dummy")
+        moon = create_moon(products_updated_by=user)
+        base_time = now()
+        extraction = CalculatedExtraction(
+            refinery_id=1,
+            status=CalculatedExtraction.Status.STARTED,
+            started_at=base_time,
+            chunk_arrival_at=base_time + dt.timedelta(days=20),
+        )
+        ores = {"45506": 7_683_200, "46676": 9_604_000}
+        extraction.products = CalculatedExtractionProduct.create_list_from_dict(ores)
+        # when
+        result = moon.update_products_from_calculated_extraction(
+            extraction, overwrite_survey=True
+        )
+        # then
+        self.assertTrue(result)
+
     def test_should_not_overwrite_from_calculated_extraction_without_products(self):
         # given
-        moon = helpers.create_moon_40161708()
+        moon = create_moon()
         extraction = CalculatedExtraction(
             refinery_id=1,
             status=CalculatedExtraction.Status.STARTED,

@@ -9,6 +9,7 @@ class EveCategoryId(IntEnum):
 
 class EveGroupId(IntEnum):
     MOON = 8
+    MINERAL = 18
     REFINERY = 1406
     UBIQUITOUS_MOON_ASTEROIDS = 1884
     COMMON_MOON_ASTEROIDS = 1920
@@ -18,6 +19,10 @@ class EveGroupId(IntEnum):
 
 
 class EveTypeId(IntEnum):
+    ATHANOR = 35835
+    CHROMITE = 45501
+    EUXENITE = 45495
+    XENOTIME = 45510
     MOON = 14
 
 

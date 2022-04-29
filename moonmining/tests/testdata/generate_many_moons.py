@@ -31,6 +31,8 @@ from eveuniverse.models import EveMoon
 
 from moonmining.models import EveOreType, Moon, MoonProduct
 
+from .factories import random_percentages
+
 MAX_MOONS = 1000
 
 ORE_TYPES = {
@@ -55,17 +57,6 @@ ORE_TYPES = {
     45512: "Loparite",
     45513: "Ytterbite",
 }
-
-
-def random_percentages(parts) -> list:
-    percentages = []
-    total = 0
-    for _ in range(parts - 1):
-        part = random.randint(0, 100 - total)
-        percentages.append(part)
-        total += part
-    percentages.append(100 - total)
-    return percentages
 
 
 def create_moon(moon_id):

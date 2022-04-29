@@ -583,6 +583,7 @@ class Moon(models.Model):
     eve_moon = models.OneToOneField(
         EveMoon, on_delete=models.CASCADE, primary_key=True, related_name="known_moon"
     )
+    # TODO: Remove "related_name"
     # regular
     label = models.ForeignKey(
         Label, on_delete=models.SET_DEFAULT, default=None, null=True
@@ -698,10 +699,15 @@ class Moon(models.Model):
         self.update_calculated_properties()
 
     def update_products_from_calculated_extraction(
-        self, extraction: CalculatedExtraction
+        self, extraction: CalculatedExtraction, overwrite_survey: bool = False
     ) -> bool:
-        """Replace moon product with calculated values from this extraction."""
-        if extraction.products:
+        """Replace moon product with calculated values from this extraction.
+
+        Returns True if update was done, else False
+        """
+        if extraction.products and (
+            overwrite_survey or self.products_updated_by is None
+        ):
             moon_products = [
                 MoonProduct(
                     moon=self,
@@ -814,6 +820,7 @@ class Owner(models.Model):
         primary_key=True,
         related_name="mining_corporation",
     )
+    # TODO: remove "mining_corporation"
     # regular
     character_ownership = models.ForeignKey(
         CharacterOwnership,
