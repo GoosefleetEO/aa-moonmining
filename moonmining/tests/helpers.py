@@ -1,81 +1,13 @@
-import datetime as dt
 import json
 
 from django.http import JsonResponse
-from django.utils.timezone import now
-from eveuniverse.models import EveEntity, EveMarketPrice, EveMoon, EveType
+from eveuniverse.models import EveEntity, EveMarketPrice, EveType
 
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.eveonline.models import EveCharacter
 from app_utils.testing import create_user_from_evecharacter, response_text
 
-from ..app_settings import MOONMINING_VOLUME_PER_MONTH
 from ..constants import EveTypeId
-from ..models import (
-    EveOreType,
-    Extraction,
-    ExtractionProduct,
-    Moon,
-    MoonProduct,
-    Owner,
-    Refinery,
-)
-
-
-def create_moon_40161708() -> EveMoon:
-    Moon.objects.filter(pk=40161708).delete()
-    moon = Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161708))
-    MoonProduct.objects.create(
-        moon=moon, ore_type=EveType.objects.get(id=45506), amount=0.19
-    )
-    MoonProduct.objects.create(
-        moon=moon, ore_type=EveType.objects.get(id=46676), amount=0.23
-    )
-    MoonProduct.objects.create(
-        moon=moon, ore_type=EveType.objects.get(id=46678), amount=0.25
-    )
-    MoonProduct.objects.create(
-        moon=moon, ore_type=EveType.objects.get(id=46689), amount=0.33
-    )
-    return moon
-
-
-def create_owner_from_character_ownership(
-    character_ownership,
-) -> Owner:
-    owner, _ = Owner.objects.get_or_create(
-        corporation=EveCorporationInfo.objects.get(
-            corporation_id=character_ownership.character.corporation_id
-        ),
-        character_ownership=character_ownership,
-    )
-    return owner
-
-
-def add_refinery(moon: Moon, owner: Owner = None) -> Refinery:
-    if not owner:
-        owner, _ = Owner.objects.get_or_create(
-            corporation=EveCorporationInfo.objects.get(corporation_id=2001)
-        )
-    refinery = Refinery.objects.create(
-        id=moon.eve_moon_id,
-        moon=moon,
-        owner=owner,
-        eve_type=EveType.objects.get(id=35835),
-    )
-    extraction = Extraction.objects.create(
-        refinery=refinery,
-        chunk_arrival_at=now() + dt.timedelta(days=3),
-        auto_fracture_at=now() + dt.timedelta(days=3, hours=12),
-        started_at=now() - dt.timedelta(days=3),
-        status=Extraction.Status.STARTED,
-    )
-    for product in moon.products.all():
-        ExtractionProduct.objects.create(
-            extraction=extraction,
-            ore_type=product.ore_type,
-            volume=MOONMINING_VOLUME_PER_MONTH * product.amount,
-        )
-    return refinery
+from ..models import EveOreType, Owner
 
 
 def create_default_user_from_evecharacter(character_id):
@@ -89,14 +21,6 @@ def create_default_user_from_evecharacter(character_id):
         ],
         scopes=Owner.esi_scopes(),
     )
-
-
-def create_default_user_1001():
-    return create_default_user_from_evecharacter(1001)
-
-
-def eve_type_athanor():
-    return EveType.objects.get(id=35835)
 
 
 def generate_eve_entities_from_allianceauth():

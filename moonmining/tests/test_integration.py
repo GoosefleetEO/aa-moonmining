@@ -64,7 +64,7 @@ class TestUpdateTasks(NoSocketsTestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
-        _, cls.character_ownership = helpers.create_default_user_1001()
+        _, cls.character_ownership = helpers.create_default_user_from_evecharacter(1001)
 
     @patch(MODELS_PATH + ".esi")
     def test_should_update_all_mining_corporations(self, mock_esi):

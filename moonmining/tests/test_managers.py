@@ -11,7 +11,7 @@ from app_utils.testing import NoSocketsTestCase
 
 from ..models import EveOreType, Extraction, Moon, Refinery
 from . import helpers
-from .testdata.factories import ExtractionFactory, RefineryFactory
+from .testdata.factories import ExtractionFactory, OwnerFactory, RefineryFactory
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
 from .testdata.survey_data import fetch_survey_data
@@ -169,8 +169,9 @@ class TestRefineryManager(NoSocketsTestCase):
 
     def test_should_return_ids(self):
         # given
-        RefineryFactory(id=1001)
-        RefineryFactory(id=1002)
+        owner = OwnerFactory()
+        RefineryFactory(id=1001, owner=owner)
+        RefineryFactory(id=1002, owner=owner)
         # when
         result = Refinery.objects.ids()
         # then
