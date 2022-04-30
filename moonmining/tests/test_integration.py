@@ -13,7 +13,7 @@ from app_utils.esi import EsiStatus
 from app_utils.testing import NoSocketsTestCase, create_user_from_evecharacter
 
 from .. import tasks
-from ..models import EveOreType, Owner, Refinery
+from ..models import Owner, Refinery
 from . import helpers
 from .testdata.esi_client_stub import esi_client_stub
 from .testdata.factories import (
@@ -64,6 +64,7 @@ class TestUpdateTasks(NoSocketsTestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
+        helpers.generate_market_prices()
         _, cls.character_ownership = helpers.create_default_user_from_evecharacter(1001)
 
     @patch(MODELS_PATH + ".esi")
@@ -171,8 +172,8 @@ class TestUpdateTasks(NoSocketsTestCase):
         extraction.refresh_from_db()
         self.assertIsNotNone(moon.value)
         self.assertIsNotNone(extraction.value)
-        cinnebar = EveOreType.objects.get(id=45506)
-        self.assertIsNotNone(cinnebar.extras.current_price)
+        ore = extraction.products.first().ore_type
+        self.assertIsNotNone(ore.extras.current_price)
 
 
 class TestProcessSurveyInput(TestCase):
