@@ -10,7 +10,7 @@ from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 from app_utils.testing import NoSocketsTestCase
 
 from ..constants import EveTypeId
-from ..core import CalculatedExtractionProduct
+from ..core import CalculatedExtraction, CalculatedExtractionProduct
 from ..models import (
     EveOreType,
     Extraction,
@@ -28,6 +28,7 @@ from .testdata.factories import (
     MiningLedgerRecordFactory,
     MoonFactory,
     MoonProductFactory,
+    NotificationFactory,
     OwnerFactory,
     RefineryFactory,
     UserFactory,
@@ -431,6 +432,50 @@ class TestMoonOverwriteProducts(NoSocketsTestCase):
         # then
         self.assertFalse(result)
         self.assertTrue(moon.products.exists())
+
+
+class TestNotification(NoSocketsTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        load_eveuniverse()
+        load_allianceauth()
+
+    def test_should_return_status_for_notifications(self):
+        # given
+        refinery = RefineryFactory()
+        my_map = [
+            (Extraction.Status.STARTED, CalculatedExtraction.Status.STARTED),
+            (Extraction.Status.CANCELED, CalculatedExtraction.Status.CANCELED),
+            (Extraction.Status.READY, CalculatedExtraction.Status.READY),
+            (Extraction.Status.COMPLETED, CalculatedExtraction.Status.COMPLETED),
+        ]
+        for in_status, out_status in my_map:
+            with self.subTest(status=in_status):
+                extraction = ExtractionFactory(status=in_status, refinery=refinery)
+                notification = NotificationFactory(extraction=extraction)
+                # when/then
+                self.assertEqual(
+                    notification.to_calculated_extraction_status(), out_status
+                )
+
+    def test_should_convert_to_calculated_extraction(self):
+        # given
+        refinery = RefineryFactory()
+        my_map = [
+            (Extraction.Status.STARTED, CalculatedExtraction.Status.STARTED),
+            (Extraction.Status.CANCELED, CalculatedExtraction.Status.CANCELED),
+            (Extraction.Status.READY, CalculatedExtraction.Status.READY),
+            (Extraction.Status.COMPLETED, CalculatedExtraction.Status.COMPLETED),
+        ]
+        for in_status, out_status in my_map:
+            with self.subTest(status=in_status):
+                extraction = ExtractionFactory(status=in_status, refinery=refinery)
+                notification = NotificationFactory(extraction=extraction)
+                # when
+                obj = notification.to_calculated_extraction()
+                # then
+                self.assertEqual(obj.status, out_status)
 
 
 class TestOreQualityClass(NoSocketsTestCase):

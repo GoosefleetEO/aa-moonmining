@@ -43,5 +43,6 @@ setup(
         "allianceauth-app-utils>=1.12",
         "django-eveuniverse>=0.14",
         "django-datatables-view>=1.20",
+        "PyYAML",
     ],
 )

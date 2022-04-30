@@ -282,6 +282,19 @@ class Extraction(models.Model):
             except KeyError:
                 return ""
 
+        @property
+        def to_notification_type(self) -> str:
+            map_to_type = {
+                self.STARTED: NotificationType.MOONMINING_EXTRACTION_STARTED,
+                self.CANCELED: NotificationType.MOONMINING_EXTRACTION_CANCELLED,
+                self.READY: NotificationType.MOONMINING_EXTRACTION_FINISHED,
+                self.COMPLETED: NotificationType.MOONMINING_LASER_FIRED,
+            }
+            try:
+                return map_to_type[self.value]
+            except KeyError:
+                raise ValueError("Invalid status for notification type") from None
+
         @classproperty
         def considered_active(cls):
             return [cls.STARTED, cls.READY]
@@ -619,7 +632,10 @@ class Moon(models.Model):
         return self.eve_moon.name.replace("Moon ", "")
 
     def region(self) -> str:
-        return self.eve_moon.eve_planet.eve_solar_system.eve_constellation.eve_region
+        return self.solar_system().eve_constellation.eve_region
+
+    def solar_system(self) -> str:
+        return self.eve_moon.eve_planet.eve_solar_system
 
     @property
     def is_owned(self) -> bool:
@@ -724,6 +740,9 @@ class Moon(models.Model):
             return True
         return False
 
+    def update_products_from_notification(self, notification):
+        ...
+
 
 class MoonProduct(models.Model):
     """A product of a moon, i.e. a specifc ore."""
@@ -806,6 +825,75 @@ class Notification(models.Model):
             self.owner,
             self.notif_type,
         )
+
+    def to_calculated_extraction_status(self) -> CalculatedExtraction.Status:
+        status_map = {
+            NotificationType.MOONMINING_EXTRACTION_STARTED: (
+                CalculatedExtraction.Status.STARTED
+            ),
+            NotificationType.MOONMINING_EXTRACTION_CANCELLED: (
+                CalculatedExtraction.Status.CANCELED
+            ),
+            NotificationType.MOONMINING_EXTRACTION_FINISHED: (
+                CalculatedExtraction.Status.READY
+            ),
+            NotificationType.MOONMINING_LASER_FIRED: (
+                CalculatedExtraction.Status.COMPLETED
+            ),
+            NotificationType.MOONMINING_AUTOMATIC_FRACTURE: (
+                CalculatedExtraction.Status.COMPLETED
+            ),
+        }
+        try:
+            return status_map[self.notif_type]
+        except KeyError:
+            return CalculatedExtraction.Status.UNDEFINED
+
+    def to_calculated_extraction(self) -> CalculatedExtraction:
+        params = {"refinery_id": self.details["structureID"]}
+        if self.notif_type == NotificationType.MOONMINING_EXTRACTION_STARTED:
+            params.update(
+                {
+                    "status": CalculatedExtraction.Status.STARTED,
+                    "chunk_arrival_at": ldap_time_2_datetime(self.details["readyTime"]),
+                    "auto_fracture_at": ldap_time_2_datetime(self.details["autoTime"]),
+                    "started_at": self.timestamp,
+                    "started_by": self.details.get("startedBy"),
+                    "products": CalculatedExtractionProduct.create_list_from_dict(
+                        self.details["oreVolumeByType"]
+                    ),
+                }
+            )
+        elif self.notif_type == NotificationType.MOONMINING_EXTRACTION_FINISHED:
+            params.update(
+                {
+                    "status": CalculatedExtraction.Status.READY,
+                    "auto_fracture_at": ldap_time_2_datetime(self.details["autoTime"]),
+                    "products": CalculatedExtractionProduct.create_list_from_dict(
+                        self.details["oreVolumeByType"]
+                    ),
+                }
+            )
+        elif (
+            self.notif_type == NotificationType.MOONMINING_LASER_FIRED
+            or self.notif_type == NotificationType.MOONMINING_AUTOMATIC_FRACTURE
+        ):
+            params.update(
+                {
+                    "status": CalculatedExtraction.Status.COMPLETED,
+                    "products": CalculatedExtractionProduct.create_list_from_dict(
+                        self.details["oreVolumeByType"]
+                    ),
+                }
+            )
+        elif self.notif_type == NotificationType.MOONMINING_EXTRACTION_CANCELLED:
+            params.update(
+                {
+                    "status": CalculatedExtraction.Status.CANCELED,
+                    "canceled_by": self.details.get("cancelledBy"),
+                }
+            )
+        return CalculatedExtraction(**params)
 
 
 class Owner(models.Model):
