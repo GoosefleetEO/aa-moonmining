@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [1.7.0] - tbd
 
+### Added
+
+- Ability to manually update moon products from extractions
+
 ### Changed
 
 - When updating a moon's products with an estimate the app will no longer overwrite existing surveys. But estimates are still generated for owned moons, without surveys.

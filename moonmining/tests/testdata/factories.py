@@ -238,7 +238,7 @@ class NotificationFactory(factory.django.DjangoModelFactory):
     )
     last_updated = factory.LazyFunction(now)
     sender = factory.SubFactory(EveEntityCorporationFactory, name="DED")
-    timestamp = factory.LazyFunction(now)
+    timestamp = factory.LazyAttribute(lambda obj: obj.extraction.started_at)
 
     class Params:
         extraction = factory.SubFactory(ExtractionFactory)
@@ -273,7 +273,7 @@ class NotificationFactory(factory.django.DjangoModelFactory):
             data.update(
                 {
                     "autoTime": datetime_to_ldap(self.extraction.auto_fracture_at),
-                    "readyTime": datetime_to_ldap(self.extraction.started_at),
+                    "readyTime": datetime_to_ldap(self.extraction.chunk_arrival_at),
                     "startedBy": started_by.id,
                     "startedByLink": _details_link(started_by),
                     "oreVolumeByType": _to_ore_volume_by_type(self.extraction),

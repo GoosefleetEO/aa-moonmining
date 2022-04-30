@@ -161,6 +161,7 @@ class MoonAdmin(admin.ModelAdmin):
         "_constellation",
         "_region",
         "label",
+        "products_updated_at",
         "_refinery",
         "_owner",
     )
@@ -168,6 +169,7 @@ class MoonAdmin(admin.ModelAdmin):
         "rarity_class",
         MoonHasRefineryFilter,
         "label",
+        "products_updated_at",
         ("refinery__owner", admin.RelatedOnlyFieldListFilter),
         (
             "eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
@@ -179,7 +181,7 @@ class MoonAdmin(admin.ModelAdmin):
         ),
         ("eve_moon__eve_planet__eve_solar_system", admin.RelatedOnlyFieldListFilter),
     )
-    actions = ["update_calculated_properties"]
+    actions = ["update_calculated_properties", "update_products_from_latest_extraction"]
     inlines = (MoonProductAdminInline,)
     fields = (
         "eve_moon",
@@ -196,6 +198,12 @@ class MoonAdmin(admin.ModelAdmin):
         "rarity_class",
         "value",
     )
+    search_fields = [
+        "eve_moon__name",
+        "refinery__name",
+        "refinery__owner__corporation__corporation_name",
+        "refinery__owner__corporation__alliance__alliance_name",
+    ]
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -243,6 +251,19 @@ class MoonAdmin(admin.ModelAdmin):
             num += 1
         self.message_user(
             request, f"Started updating calculated properties for {num} moons."
+        )
+
+    @admin.display(
+        description=("Update products from latest extraction for selected moons.")
+    )
+    def update_products_from_latest_extraction(self, request, queryset):
+        num = 0
+        for obj in queryset:
+            tasks.update_moon_products_from_latest_extraction.delay(moon_pk=obj.pk)
+            num += 1
+        self.message_user(
+            request,
+            f"Started updating products from latest extractions for {num} moons.",
         )
 
 
