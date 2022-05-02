@@ -31,6 +31,7 @@ from app_utils.views import (
 
 from . import __title__
 from .app_settings import (
+    MOONMINING_OVERWRITE_SURVEYS_WITH_ESTIMATES,
     MOONMINING_REPROCESSING_YIELD,
     MOONMINING_VOLUME_PER_DAY,
     MOONMINING_VOLUME_PER_MONTH,
@@ -1239,7 +1240,8 @@ class Owner(models.Model):
                 if notif.notif_type == NotificationType.MOONMINING_EXTRACTION_STARTED:
                     extraction = notif.to_calculated_extraction()
                     if refinery.moon.update_products_from_calculated_extraction(
-                        extraction
+                        extraction,
+                        overwrite_survey=MOONMINING_OVERWRITE_SURVEYS_WITH_ESTIMATES,
                     ):
                         logger.info(
                             "%s: Products updated from extraction", refinery.moon

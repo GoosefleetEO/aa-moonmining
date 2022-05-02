@@ -452,7 +452,7 @@ class TestMoonOverwriteProducts(NoSocketsTestCase):
     def test_should_not_overwrite_from_calculated_extraction_without_products(self):
         # given
         moon = MoonFactory()
-        extraction = CalculatedExtractionFactory()
+        extraction = CalculatedExtractionFactory(products=[])
         # when
         result = moon.update_products_from_calculated_extraction(extraction)
         # then
@@ -526,7 +526,7 @@ class TestOwner(NoSocketsTestCase):
 
     def test_should_return_token(self):
         # given
-        owner = OwnerFactory.build()
+        owner = OwnerFactory()
         # when
         result = owner.fetch_token()
         # then
@@ -541,7 +541,7 @@ class TestOwner(NoSocketsTestCase):
 
     def test_should_raise_error_when_no_token_found(self):
         # given
-        owner = OwnerFactory.build()
+        owner = OwnerFactory()
         Token.objects.filter(user=owner.character_ownership.user).delete()
         # when
         with self.assertRaises(Token.DoesNotExist):
@@ -727,16 +727,16 @@ class TestOwnerUpdateExtractionsFromEsi(NoSocketsTestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
+        cls.owner = OwnerFactory()
 
     def test_should_create_started_extraction(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
-        owner = OwnerFactory()
-        refinery = RefineryFactory(id=1000000000001, owner=owner)
+        refinery = RefineryFactory(id=1000000000001, owner=self.owner)
         # when
         with patch(MODELS_PATH + ".now") as mock_now:
             mock_now.return_value = dt.datetime(2021, 4, 5, 12, 0, 0, tzinfo=pytz.UTC)
-            owner.update_extractions_from_esi()
+            self.owner.update_extractions_from_esi()
         # then
         self.assertEqual(refinery.extractions.count(), 1)
         extraction = refinery.extractions.first()
@@ -759,12 +759,11 @@ class TestOwnerUpdateExtractionsFromEsi(NoSocketsTestCase):
     def test_should_create_completed_extraction(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
-        owner = OwnerFactory()
-        refinery = RefineryFactory(id=1000000000001, owner=owner)
+        refinery = RefineryFactory(id=1000000000001, owner=self.owner)
         # when
         with patch(MODELS_PATH + ".now") as mock_now:
             mock_now.return_value = dt.datetime(2021, 4, 18, 18, 15, 0, tzinfo=pytz.UTC)
-            owner.update_extractions_from_esi()
+            self.owner.update_extractions_from_esi()
         # then
         self.assertEqual(refinery.extractions.count(), 1)
         extraction = refinery.extractions.first()
@@ -773,8 +772,7 @@ class TestOwnerUpdateExtractionsFromEsi(NoSocketsTestCase):
     def test_should_identify_canceled_extractions(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
-        owner = OwnerFactory()
-        refinery = RefineryFactory(id=1000000000001, owner=owner)
+        refinery = RefineryFactory(id=1000000000001, owner=self.owner)
         started_extraction = ExtractionFactory(
             refinery=refinery,
             started_at=dt.datetime(2021, 3, 10, 18, 0, tzinfo=pytz.UTC),
@@ -786,7 +784,7 @@ class TestOwnerUpdateExtractionsFromEsi(NoSocketsTestCase):
         # when
         with patch(MODELS_PATH + ".now") as mock_now:
             mock_now.return_value = dt.datetime(2021, 4, 1, 12, 0, tzinfo=pytz.UTC)
-            owner.update_extractions_from_esi()
+            self.owner.update_extractions_from_esi()
         # then
         started_extraction.refresh_from_db()
         self.assertEqual(started_extraction.status, Extraction.Status.CANCELED)
