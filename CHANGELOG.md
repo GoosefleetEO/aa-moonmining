@@ -7,12 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
-## [1.7.0] - tbd
+## [1.7.0] - 2022-05-03
 
 ### Added
 
 - Ability to manually update moon products from extractions
-- New setting to turn on overwriting any moon products incl. surveys
+- New setting `MOONMINING_OVERWRITE_SURVEYS_WITH_ESTIMATES` to turn on overwriting any moon products incl. surveys
 
 ### Changed
 

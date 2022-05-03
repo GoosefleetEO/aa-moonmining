@@ -220,6 +220,7 @@ Name | Description | Default
 `MOONMINING_USE_REPROCESS_PRICING`|  Whether to calculate prices from it's reprocessed materials or not. Will use direct ore prices when switched off | `False`
 `MOONMINING_VOLUME_PER_DAY`| Maximum ore volume per day used for calculating moon values. | `960400`
 `MOONMINING_DAYS_PER_MONTH`| Average days per months used for calculating moon values. | `30.4`
+`MOONMINING_OVERWRITE_SURVEYS_WITH_ESTIMATES`| Whether uploaded survey are automatically overwritten by product estimates from extractions to keep the moon values current | `False`
 
 ## Management Commands
 
