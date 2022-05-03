@@ -21,6 +21,8 @@ from .. import views
 from ..models import EveOreType, Extraction, Label, Moon, Owner
 from . import helpers
 from .testdata.factories import (
+    EveEntityCharacterFactory,
+    EveEntityCorporationFactory,
     ExtractionFactory,
     MiningLedgerRecordFactory,
     MoonFactory,
@@ -430,9 +432,7 @@ class TestExtractionsData(TestCase):
             refinery=self.refinery,
             character_id=1001,
             day=dt.date(2019, 11, 20),
-            ore_type_id=45506,
             corporation_id=2001,
-            quantity=100,
             user=self.user_1003,
         )
         user, _ = create_user_from_evecharacter(
@@ -479,9 +479,7 @@ class TestExtractionsData(TestCase):
             refinery=self.refinery,
             character_id=1001,
             day=dt.date(2019, 11, 20),
-            ore_type_id=45506,
             corporation_id=2001,
-            quantity=100,
             user=self.user_1003,
         )
         user, _ = create_user_from_evecharacter(
@@ -562,48 +560,50 @@ class TestReportsData(TestCase):
         EveMarketPrice.objects.create(eve_type_id=45506, average_price=10)
         EveMarketPrice.objects.create(eve_type_id=45494, average_price=20)
         EveOreType.objects.update_current_prices(use_process_pricing=False)
+        character = EveEntityCharacterFactory()
+        corporation = EveEntityCorporationFactory()
         MiningLedgerRecordFactory(
             refinery=self.refinery,
-            character_id=1001,
             day=today.date() - dt.timedelta(days=1),
+            character=character,
+            corporation=corporation,
             ore_type_id=45506,
-            corporation_id=2001,
             quantity=100,
             user=self.user,
         )
         MiningLedgerRecordFactory(
             refinery=self.refinery,
-            character_id=1001,
             day=today.date() - dt.timedelta(days=2),
+            character=character,
+            corporation=corporation,
             ore_type_id=45494,
-            corporation_id=2001,
             quantity=200,
             user=self.user,
         )
         MiningLedgerRecordFactory(
             refinery=self.refinery,
-            character_id=1001,
             day=months_1.date() - dt.timedelta(days=1),
+            character=character,
+            corporation=corporation,
             ore_type_id=45494,
-            corporation_id=2001,
             quantity=200,
             user=self.user,
         )
         MiningLedgerRecordFactory(
             refinery=self.refinery,
-            character_id=1001,
             day=months_2.date() - dt.timedelta(days=1),
+            character=character,
+            corporation=corporation,
             ore_type_id=45494,
-            corporation_id=2001,
             quantity=500,
             user=self.user,
         )
         MiningLedgerRecordFactory(
             refinery=self.refinery,
-            character_id=1001,
             day=months_3.date() - dt.timedelta(days=1),
+            character=character,
+            corporation=corporation,
             ore_type_id=45494,
-            corporation_id=2001,
             quantity=600,
             user=self.user,
         )

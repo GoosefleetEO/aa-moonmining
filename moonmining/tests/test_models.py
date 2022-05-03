@@ -29,6 +29,7 @@ from .testdata.factories import (
     MoonFactory,
     MoonProductFactory,
     NotificationFactory,
+    NotificationFactory2,
     OwnerFactory,
     RefineryFactory,
     UserFactory,
@@ -800,6 +801,28 @@ class TestOwnerUpdateExtractionsFromNotifications(NoSocketsTestCase):
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
 
+    def test_should_update_started_extraction_with_products(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        owner = OwnerFactory()
+        refinery = RefineryFactory(owner=owner)
+        extraction = ExtractionFactory(
+            refinery=refinery, create_products=False, status=Extraction.Status.STARTED
+        )
+        calc_extraction = extraction.to_calculated_extraction()
+        NotificationFactory2(
+            extraction=calc_extraction, owner=owner, create_products=True
+        )
+        # when
+        owner.update_extractions_from_notifications()
+        # then
+        extraction.refresh_from_db()
+        self.assertEqual(extraction.status, Extraction.Status.STARTED)
+        self.assertEqual(
+            set(extraction.products.values_list("ore_type_id", flat=True)),
+            {EveTypeId.CHROMITE, EveTypeId.EUXENITE, EveTypeId.XENOTIME},
+        )
+
     def test_should_create_canceled_extraction_with_products(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
@@ -1060,6 +1083,65 @@ class TestOwnerUpdateExtractionsFromNotifications(NoSocketsTestCase):
         refinery.refresh_from_db()
         self.assertEqual(refinery.moon.pk, 40161708)
 
+    def test_should_update_moon_products_when_no_survey_exists(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        moon = MoonFactory()
+        moon.products.first().delete()
+        owner = OwnerFactory()
+        refinery = RefineryFactory(owner=owner, moon=moon)
+        extraction = ExtractionFactory(
+            refinery=refinery, status=Extraction.Status.STARTED
+        )
+        calc_extraction = extraction.to_calculated_extraction()
+        NotificationFactory2(
+            extraction=calc_extraction, owner=owner, create_products=True
+        )
+        # when
+        owner.update_extractions_from_notifications()
+        # then
+        self.assertEqual(moon.products.count(), 3)
+
+    @patch(MODELS_PATH + ".MOONMINING_OVERWRITE_SURVEYS_WITH_ESTIMATES", False)
+    def test_should_not_update_moon_products_when_survey_exists(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        moon = MoonFactory(products_updated_by=UserFactory())
+        moon.products.first().delete()
+        owner = OwnerFactory()
+        refinery = RefineryFactory(owner=owner, moon=moon)
+        extraction = ExtractionFactory(
+            refinery=refinery, status=Extraction.Status.STARTED
+        )
+        calc_extraction = extraction.to_calculated_extraction()
+        NotificationFactory2(
+            extraction=calc_extraction, owner=owner, create_products=True
+        )
+        # when
+        owner.update_extractions_from_notifications()
+        # then
+        self.assertEqual(moon.products.count(), 2)
+
+    @patch(MODELS_PATH + ".MOONMINING_OVERWRITE_SURVEYS_WITH_ESTIMATES", True)
+    def test_should_update_moon_products_when_survey_exists_alternate(self, mock_esi):
+        # given
+        mock_esi.client = esi_client_stub
+        moon = MoonFactory(products_updated_by=UserFactory())
+        moon.products.first().delete()
+        owner = OwnerFactory()
+        refinery = RefineryFactory(owner=owner, moon=moon)
+        extraction = ExtractionFactory(
+            refinery=refinery, status=Extraction.Status.STARTED
+        )
+        calc_extraction = extraction.to_calculated_extraction()
+        NotificationFactory2(
+            extraction=calc_extraction, owner=owner, create_products=True
+        )
+        # when
+        owner.update_extractions_from_notifications()
+        # then
+        self.assertEqual(moon.products.count(), 3)
+
 
 @patch(MODELS_PATH + ".esi")
 class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
@@ -1107,6 +1189,7 @@ class TestOwnerUpdateMiningLedger(NoSocketsTestCase):
         MiningLedgerRecordFactory(
             refinery=refinery,
             day=dt.date(2017, 9, 19),
+            character_id=1001,
             ore_type_id=EveTypeId.CINNABAR,
             quantity=199,
         )

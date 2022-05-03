@@ -33,6 +33,8 @@ from ...models import (
     Refinery,
 )
 
+FUZZY_START_YEAR = 2008
+
 
 def datetime_to_ldap(my_dt: dt.datetime) -> int:
     """datetime.datetime to ldap"""
@@ -234,6 +236,31 @@ def random_percentages(num_parts: int) -> List[float]:
     return percentages
 
 
+def _generate_calculated_extraction_products(
+    extraction: CalculatedExtraction,
+) -> List[CalculatedExtractionProduct]:
+    ore_type_ids = [EveTypeId.CHROMITE, EveTypeId.EUXENITE, EveTypeId.XENOTIME]
+    percentages = random_percentages(3)
+    duration = (
+        (extraction.chunk_arrival_at - extraction.started_at).total_seconds()
+        / 3600
+        / 24
+    )
+    products = [
+        CalculatedExtractionProductFactory(
+            ore_type_id=ore_type_id,
+            volume=percentages.pop() * MOONMINING_VOLUME_PER_DAY * duration,
+        )
+        for ore_type_id in ore_type_ids
+    ]
+    return products
+
+
+class CalculatedExtractionProductFactory(factory.Factory):
+    class Meta:
+        model = CalculatedExtractionProduct
+
+
 class CalculatedExtractionFactory(factory.Factory):
     class Meta:
         model = CalculatedExtraction
@@ -246,7 +273,9 @@ class CalculatedExtractionFactory(factory.Factory):
     )
     refinery_id = factory.Sequence(lambda n: n + 1800000000001)
     status = CalculatedExtraction.Status.STARTED
-    started_at = factory.LazyFunction(now)
+    started_at = factory.fuzzy.FuzzyDateTime(
+        dt.datetime(FUZZY_START_YEAR, 1, 1, tzinfo=pytz.utc), force_microsecond=0
+    )
 
     @factory.lazy_attribute
     def started_by(self):
@@ -255,29 +284,17 @@ class CalculatedExtractionFactory(factory.Factory):
 
     @factory.lazy_attribute
     def products(self):
-        ore_type_ids = [EveTypeId.CHROMITE, EveTypeId.EUXENITE, EveTypeId.XENOTIME]
-        percentages = random_percentages(3)
-        duration = (self.chunk_arrival_at - self.started_at).total_seconds() / 3600 / 24
-        products = [
-            CalculatedExtractionProduct(
-                ore_type_id=ore_type_id,
-                volume=percentages.pop() * MOONMINING_VOLUME_PER_DAY * duration,
-            )
-            for ore_type_id in ore_type_ids
-        ]
-        return products
+        return _generate_calculated_extraction_products(self)
 
 
 class MiningLedgerRecordFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = MiningLedgerRecord
 
-    day = factory.LazyFunction(lambda: now().date())
-    character = factory.LazyFunction(lambda: EveEntity.objects.get(id=1001))
-    corporation = factory.LazyFunction(lambda: EveEntity.objects.get(id=2001))
-    ore_type = factory.LazyFunction(
-        lambda: EveOreType.objects.get(id=EveTypeId.CINNABAR)
-    )
+    day = factory.fuzzy.FuzzyDate((now() - dt.timedelta(days=120)).date())
+    character = factory.SubFactory(EveEntityCharacterFactory)
+    corporation = factory.SubFactory(EveEntityCorporationFactory)
+    ore_type = factory.LazyFunction(lambda: EveOreType.objects.order_by("?").first())
     quantity = factory.fuzzy.FuzzyInteger(10000)
 
 
@@ -286,7 +303,9 @@ class MoonFactory(factory.django.DjangoModelFactory):
         model = Moon
         exclude = ("create_products",)
 
-    products_updated_at = factory.LazyFunction(now)
+    products_updated_at = factory.fuzzy.FuzzyDateTime(
+        dt.datetime(FUZZY_START_YEAR, 1, 1, tzinfo=pytz.utc), force_microsecond=0
+    )
 
     @factory.lazy_attribute
     def eve_moon(self):
@@ -361,7 +380,9 @@ class ExtractionFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Extraction
 
-    started_at = factory.LazyFunction(now)
+    started_at = factory.fuzzy.FuzzyDateTime(
+        dt.datetime(FUZZY_START_YEAR, 1, 1, tzinfo=pytz.utc), force_microsecond=0
+    )
     chunk_arrival_at = factory.LazyAttribute(
         lambda obj: obj.started_at + dt.timedelta(days=20)
     )
@@ -403,7 +424,9 @@ class NotificationFactory(factory.django.DjangoModelFactory):
 
     notification_id = factory.Sequence(lambda n: 1_900_000_001 + n)
     owner = factory.LazyAttribute(lambda obj: obj.extraction.refinery.owner)
-    created = factory.LazyFunction(now)
+    created = factory.fuzzy.FuzzyDateTime(
+        dt.datetime(FUZZY_START_YEAR, 1, 1, tzinfo=pytz.utc), force_microsecond=0
+    )
     notif_type = factory.LazyAttribute(
         lambda obj: obj.extraction.status_enum.to_notification_type
     )
@@ -499,10 +522,15 @@ class NotificationFactory2(factory.django.DjangoModelFactory):
             "structure_type_id",
         )
 
+    class Params:
+        create_products = False
+
     # regular
     notification_id = factory.Sequence(lambda n: 1_900_000_001 + n)
     owner = factory.SubFactory(OwnerFactory)
-    created = factory.LazyFunction(now)
+    created = factory.fuzzy.FuzzyDateTime(
+        dt.datetime(FUZZY_START_YEAR, 1, 1, tzinfo=pytz.utc), force_microsecond=0
+    )
     last_updated = factory.LazyFunction(now)
     sender = factory.SubFactory(EveEntityCorporationFactory, name="DED")
     timestamp = factory.LazyAttribute(lambda obj: obj.extraction.started_at)
@@ -542,6 +570,11 @@ class NotificationFactory2(factory.django.DjangoModelFactory):
 
         def _to_ore_volume_by_type(extraction):
             return {str(obj.ore_type_id): obj.volume for obj in extraction.products}
+
+        if self.create_products:
+            self.extraction.products = _generate_calculated_extraction_products(
+                self.extraction
+            )
 
         data = {
             "moonID": self.moon_id,

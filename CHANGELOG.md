@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - Ability to manually update moon products from extractions
+- New setting to turn on overwriting any moon products incl. surveys
 
 ### Changed
 
