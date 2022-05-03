@@ -21,7 +21,13 @@ MOONMINING_DAYS_PER_MONTH = clean_setting("MOONMINING_DAYS_PER_MONTH", 30.4)
 MOONMINING_VOLUME_PER_MONTH = MOONMINING_VOLUME_PER_DAY * MOONMINING_DAYS_PER_MONTH
 
 # whether admins will get notifications about important events like
-# when someone adds a structure owner
+# when someone adds a new owner
 MOONMINING_ADMIN_NOTIFICATIONS_ENABLED = clean_setting(
-    "STRUCTURES_ADMIN_NOTIFICATIONS_ENABLED", True
+    "MOONMINING_ADMIN_NOTIFICATIONS_ENABLED", True
+)
+
+# whether uploaded survey are automatically overwritten by product estimates from
+# extractions to keep the moon values current
+MOONMINING_OVERWRITE_SURVEYS_WITH_ESTIMATES = clean_setting(
+    "MOONMINING_OVERWRITE_SURVEYS_WITH_ESTIMATES", False
 )

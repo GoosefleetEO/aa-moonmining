@@ -10,7 +10,11 @@ from . import test_data_filename
 class CreateEveUniverseTestData(TestCase):
     def test_create_testdata(self):
         testdata_spec = [
-            ModelSpec("EveGroup", ids=[EveGroupId.MOON.value], include_children=True),
+            ModelSpec(
+                "EveGroup",
+                ids=[EveGroupId.MOON.value, EveGroupId.MINERAL.value],
+                include_children=True,
+            ),
             ModelSpec(
                 "EveCategory",
                 ids=[EveCategoryId.ASTEROID.value],

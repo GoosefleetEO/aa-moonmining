@@ -18,16 +18,16 @@ from app_utils.testing import (
 )
 
 from .. import views
-from ..models import (
-    EveOreType,
-    Extraction,
-    Label,
-    MiningLedgerRecord,
-    Moon,
-    Owner,
-    Refinery,
-)
+from ..models import EveOreType, Extraction, Label, Moon, Owner
 from . import helpers
+from .testdata.factories import (
+    EveEntityCharacterFactory,
+    EveEntityCorporationFactory,
+    ExtractionFactory,
+    MiningLedgerRecordFactory,
+    MoonFactory,
+    RefineryFactory,
+)
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
 
@@ -123,14 +123,12 @@ class TestMoonsData(TestCase):
         super().setUpClass()
         load_eveuniverse()
         load_allianceauth()
-        cls.moon = helpers.create_moon_40161708()
+        helpers.generate_market_prices()
+        cls.moon = MoonFactory(eve_moon=EveMoon.objects.get(id=40161708))
         cls.moon.label = Label.objects.create(name="Dummy")
         cls.moon.save()
-        Moon.objects.create(eve_moon=EveMoon.objects.get(id=40131695))
-        Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161709))
-        helpers.generate_market_prices()
-        for moon in Moon.objects.all():
-            moon.update_calculated_properties()
+        MoonFactory(eve_moon=EveMoon.objects.get(id=40131695))
+        MoonFactory(eve_moon=EveMoon.objects.get(id=40161709))
 
     @staticmethod
     def _response_to_dict(response):
@@ -161,9 +159,9 @@ class TestMoonsData(TestCase):
     def test_should_return_our_moons_only(self):
         # given
         moon = Moon.objects.get(pk=40131695)
-        helpers.add_refinery(moon)
+        RefineryFactory(moon=moon)
         user, _ = create_user_from_evecharacter(
-            1001,
+            1002,
             permissions=["moonmining.basic_access", "moonmining.extractions_access"],
             scopes=Owner.esi_scopes(),
         )
@@ -178,16 +176,14 @@ class TestMoonsData(TestCase):
     def test_should_handle_empty_refineries(self):
         # given
         user, _ = create_user_from_evecharacter(
-            1001,
+            1002,
             permissions=["moonmining.basic_access", "moonmining.extractions_access"],
             scopes=Owner.esi_scopes(),
         )
         self.client.force_login(user)
         moon = Moon.objects.get(pk=40131695)
-        refinery = helpers.add_refinery(moon)
-        Refinery.objects.create(
-            id=99, name="Empty refinery", owner=refinery.owner, eve_type_id=35835
-        )
+        refinery = RefineryFactory(moon=moon)
+        RefineryFactory(owner=refinery.owner, moon=None)
         # when
         response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.OURS}")
         # then
@@ -247,7 +243,7 @@ class TestMoonsData(TestCase):
     def test_should_return_fdd_for_all_moons(self):
         # given
         user, _ = create_user_from_evecharacter(
-            1001,
+            1002,
             permissions=[
                 "moonmining.basic_access",
                 "moonmining.extractions_access",
@@ -256,7 +252,7 @@ class TestMoonsData(TestCase):
             scopes=Owner.esi_scopes(),
         )
         moon = Moon.objects.get(pk=40131695)
-        helpers.add_refinery(moon)
+        RefineryFactory(moon=moon)
         self.client.force_login(user)
         # when
         response = self.client.get(
@@ -273,10 +269,10 @@ class TestMoonsData(TestCase):
         self.assertListEqual(data["region_name"], ["Heimatar", "Metropolis"])
         self.assertListEqual(data["constellation_name"], ["Aldodan", "Hed"])
         self.assertListEqual(data["solar_system_name"], ["Auga", "Helgatild"])
-        self.assertListEqual(data["rarity_class_str"], ["R0", "R32"])
+        self.assertListEqual(data["rarity_class_str"], ["R64"])
         self.assertListEqual(data["label_name"], ["Dummy"])
         self.assertListEqual(data["has_refinery_str"], ["no", "yes"])
-        self.assertListEqual(data["has_extraction_str"], ["no", "yes"])
+        self.assertListEqual(data["has_extraction_str"], ["no"])
         self.assertIn("ERROR", data["invalid_column"][0])
 
 
@@ -289,10 +285,9 @@ class TestMoonInfo(TestCase):
 
     def test_should_open_page(self):
         # given
-        moon = helpers.create_moon_40161708()
-        helpers.add_refinery(moon)
+        moon = MoonFactory()
         user, _ = create_user_from_evecharacter(
-            1001,
+            1002,
             permissions=[
                 "moonmining.basic_access",
                 "moonmining.extractions_access",
@@ -309,7 +304,7 @@ class TestMoonInfo(TestCase):
         )
         self.client.force_login(user)
         # when
-        response = self.client.get("/moonmining/moon/40161708")
+        response = self.client.get(f"/moonmining/moon/{moon.pk}")
         # then
         self.assertTemplateUsed(response, "moonmining/modals/moon_details.html")
 
@@ -321,7 +316,7 @@ class TestViewsAreWorking(TestCase):
         load_eveuniverse()
         load_allianceauth()
         cls.user, _ = create_user_from_evecharacter(
-            1001,
+            1002,
             permissions=[
                 "moonmining.basic_access",
                 "moonmining.extractions_access",
@@ -337,8 +332,7 @@ class TestViewsAreWorking(TestCase):
                 "esi-corporations.read_structures.v1",
             ],
         )
-        cls.moon = helpers.create_moon_40161708()
-        cls.refinery = helpers.add_refinery(cls.moon)
+        cls.moon = MoonFactory()
 
     def test_should_redirect_to_extractions_page(self):
         # given
@@ -367,7 +361,8 @@ class TestViewsAreWorking(TestCase):
 
     def test_should_open_extraction_details_page(self):
         # given
-        extraction = self.refinery.extractions.first()
+        refinery = RefineryFactory(moon=self.moon)
+        extraction = ExtractionFactory(refinery=refinery)
         self.client.force_login(self.user)
         # when
         response = self.client.get(
@@ -402,19 +397,8 @@ class TestViewsAreWorking(TestCase):
 
     def test_should_handle_empty_refineries_extractions_page(self):
         # given
-        refinery = Refinery.objects.create(
-            id=99,
-            name="Empty refinery",
-            owner=self.refinery.owner,
-            eve_type_id=35835,
-        )
-        Extraction.objects.create(
-            refinery=refinery,
-            chunk_arrival_at=now() + dt.timedelta(days=1),
-            auto_fracture_at=now() + dt.timedelta(days=1),
-            started_at=now() - dt.timedelta(days=3),
-            status=Extraction.Status.STARTED,
-        )
+        refinery = RefineryFactory()
+        ExtractionFactory(refinery=refinery)
         self.client.force_login(self.user)
         # when
         response = self.client.get("/moonmining/extractions")
@@ -429,9 +413,9 @@ class TestExtractionsData(TestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
-        moon = helpers.create_moon_40161708()
-        cls.refinery = helpers.add_refinery(moon)
-        cls.extraction = Extraction.objects.create(
+        moon = MoonFactory(eve_moon=EveMoon.objects.get(id=40161708))
+        cls.refinery = RefineryFactory(moon=moon)
+        cls.extraction = ExtractionFactory(
             refinery=cls.refinery,
             chunk_arrival_at=dt.datetime(2019, 11, 20, 0, 1, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2019, 11, 20, 3, 1, 0, tzinfo=pytz.UTC),
@@ -440,21 +424,19 @@ class TestExtractionsData(TestCase):
             status=Extraction.Status.COMPLETED,
         )
         EveMarketPrice.objects.create(eve_type_id=45506, average_price=10)
-        cls.user_1002, _ = create_user_from_evecharacter(1002)
+        cls.user_1003, _ = create_user_from_evecharacter(1003)
 
     def test_should_show_extraction(self):
         # given
-        MiningLedgerRecord.objects.create(
+        MiningLedgerRecordFactory(
             refinery=self.refinery,
             character_id=1001,
             day=dt.date(2019, 11, 20),
-            ore_type_id=45506,
             corporation_id=2001,
-            quantity=100,
-            user=self.user_1002,
+            user=self.user_1003,
         )
         user, _ = create_user_from_evecharacter(
-            1001,
+            1002,
             permissions=[
                 "moonmining.basic_access",
                 "moonmining.extractions_access",
@@ -479,7 +461,7 @@ class TestExtractionsData(TestCase):
     def test_should_not_show_extraction(self):
         # given
         user, _ = create_user_from_evecharacter(
-            1001,
+            1002,
             permissions=["moonmining.basic_access"],
             scopes=Owner.esi_scopes(),
         )
@@ -493,17 +475,15 @@ class TestExtractionsData(TestCase):
 
     def test_should_not_show_ledger_button_wo_permission(self):
         # given
-        MiningLedgerRecord.objects.create(
+        MiningLedgerRecordFactory(
             refinery=self.refinery,
             character_id=1001,
             day=dt.date(2019, 11, 20),
-            ore_type_id=45506,
             corporation_id=2001,
-            quantity=100,
-            user=self.user_1002,
+            user=self.user_1003,
         )
         user, _ = create_user_from_evecharacter(
-            1001,
+            1002,
             permissions=["moonmining.basic_access", "moonmining.extractions_access"],
             scopes=Owner.esi_scopes(),
         )
@@ -521,7 +501,7 @@ class TestExtractionsData(TestCase):
     def test_should_not_show_ledger_button_when_no_data(self):
         # given
         user, _ = create_user_from_evecharacter(
-            1001,
+            1002,
             permissions=[
                 "moonmining.basic_access",
                 "moonmining.extractions_access",
@@ -548,17 +528,17 @@ class TestReportsData(TestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
-        cls.moon = helpers.create_moon_40161708()
-        cls.refinery = helpers.add_refinery(cls.moon)
+        cls.moon = MoonFactory(eve_moon=EveMoon.objects.get(id=40161708))
+        cls.refinery = RefineryFactory(moon=cls.moon)
         cls.user, _ = create_user_from_evecharacter(
-            1001,
+            1002,
             permissions=["moonmining.basic_access", "moonmining.reports_access"],
             scopes=Owner.esi_scopes(),
         )
-        Moon.objects.create(
+        MoonFactory(
             eve_moon=EveMoon.objects.get(id=40131695), products_updated_by=cls.user
         )
-        Moon.objects.create(
+        MoonFactory(
             eve_moon=EveMoon.objects.get(id=40161709), products_updated_by=cls.user
         )
 
@@ -580,48 +560,50 @@ class TestReportsData(TestCase):
         EveMarketPrice.objects.create(eve_type_id=45506, average_price=10)
         EveMarketPrice.objects.create(eve_type_id=45494, average_price=20)
         EveOreType.objects.update_current_prices(use_process_pricing=False)
-        MiningLedgerRecord.objects.create(
+        character = EveEntityCharacterFactory()
+        corporation = EveEntityCorporationFactory()
+        MiningLedgerRecordFactory(
             refinery=self.refinery,
-            character_id=1001,
             day=today.date() - dt.timedelta(days=1),
+            character=character,
+            corporation=corporation,
             ore_type_id=45506,
-            corporation_id=2001,
             quantity=100,
             user=self.user,
         )
-        MiningLedgerRecord.objects.create(
+        MiningLedgerRecordFactory(
             refinery=self.refinery,
-            character_id=1001,
             day=today.date() - dt.timedelta(days=2),
+            character=character,
+            corporation=corporation,
             ore_type_id=45494,
-            corporation_id=2001,
             quantity=200,
             user=self.user,
         )
-        MiningLedgerRecord.objects.create(
+        MiningLedgerRecordFactory(
             refinery=self.refinery,
-            character_id=1001,
             day=months_1.date() - dt.timedelta(days=1),
+            character=character,
+            corporation=corporation,
             ore_type_id=45494,
-            corporation_id=2001,
             quantity=200,
             user=self.user,
         )
-        MiningLedgerRecord.objects.create(
+        MiningLedgerRecordFactory(
             refinery=self.refinery,
-            character_id=1001,
             day=months_2.date() - dt.timedelta(days=1),
+            character=character,
+            corporation=corporation,
             ore_type_id=45494,
-            corporation_id=2001,
             quantity=500,
             user=self.user,
         )
-        MiningLedgerRecord.objects.create(
+        MiningLedgerRecordFactory(
             refinery=self.refinery,
-            character_id=1001,
             day=months_3.date() - dt.timedelta(days=1),
+            character=character,
+            corporation=corporation,
             ore_type_id=45494,
-            corporation_id=2001,
             quantity=600,
             user=self.user,
         )
@@ -653,7 +635,7 @@ class TestReportsData(TestCase):
         user_data = [
             row
             for row in json_response_to_python(response)
-            if row["name"] == "Bruce Wayne"
+            if row["name"] == self.user.profile.main_character.character_name
         ]
         self.assertEqual(user_data[0]["num_moons"], 2)
 
@@ -680,9 +662,9 @@ class TestExtractionLedgerData(TestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
-        moon = helpers.create_moon_40161708()
-        cls.refinery = helpers.add_refinery(moon)
-        cls.extraction = Extraction.objects.create(
+        moon = MoonFactory(eve_moon=EveMoon.objects.get(id=40161708))
+        cls.refinery = RefineryFactory(moon=moon)
+        cls.extraction = ExtractionFactory(
             refinery=cls.refinery,
             chunk_arrival_at=dt.datetime(2019, 11, 20, 0, 1, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2019, 11, 20, 3, 1, 0, tzinfo=pytz.UTC),
@@ -690,8 +672,8 @@ class TestExtractionLedgerData(TestCase):
             started_at=now() - dt.timedelta(days=3),
             status=Extraction.Status.STARTED,
         )
-        user_1001, _ = create_user_from_evecharacter(
-            1001,
+        user_1003, _ = create_user_from_evecharacter(
+            1003,
             permissions=[
                 "moonmining.basic_access",
                 "moonmining.extractions_access",
@@ -700,14 +682,14 @@ class TestExtractionLedgerData(TestCase):
             scopes=Owner.esi_scopes(),
         )
         EveMarketPrice.objects.create(eve_type_id=45506, average_price=10)
-        MiningLedgerRecord.objects.create(
+        MiningLedgerRecordFactory(
             refinery=cls.refinery,
             character_id=1001,
             day=dt.date(2021, 4, 18),
             ore_type_id=45506,
             corporation_id=2001,
             quantity=100,
-            user=user_1001,
+            user=user_1003,
         )
 
     def test_should_show_ledger(self):

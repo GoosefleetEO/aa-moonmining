@@ -58,6 +58,8 @@ class CalculatedExtraction:
     ) -> List["CalculatedMoonProduct"]:
         """List of products with estimated amounts."""
         duration_in_days = self.duration.total_seconds() / (60 * 60 * 24)
+        if duration_in_days <= 0:
+            raise ValueError("Can not estimate products without duration.")
         max_volume = duration_in_days * volume_per_day
         correction_factor = max(1, self.total_volume() / max_volume)
         products = [

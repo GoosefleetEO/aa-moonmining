@@ -7,11 +7,11 @@ from django.test import TestCase
 from django.utils.timezone import now
 from eveuniverse.models import EveMarketPrice, EveType
 
-from allianceauth.eveonline.models import EveCorporationInfo
 from app_utils.testing import NoSocketsTestCase
 
-from ..models import EveOreType, Extraction, Moon, Owner, Refinery
+from ..models import EveOreType, Extraction, Moon, Refinery
 from . import helpers
+from .testdata.factories import ExtractionFactory, OwnerFactory, RefineryFactory
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse
 from .testdata.survey_data import fetch_survey_data
@@ -59,49 +59,41 @@ class TestExtractionManager(TestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
-        cls.moon = helpers.create_moon_40161708()
-
-    def setUp(self) -> None:
-        owner = Owner.objects.create(
-            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
-        )
-        self.refinery = Refinery.objects.create(
-            id=1000000000001,
-            name="Test",
-            moon=self.moon,
-            owner=owner,
-            eve_type=helpers.eve_type_athanor(),
-        )
 
     def test_should_update_completed(self):
         # given
-        extraction_1 = Extraction.objects.create(
-            refinery=self.refinery,
+        refinery = RefineryFactory()
+        extraction_1 = ExtractionFactory(
+            refinery=refinery,
             started_at=dt.datetime(2021, 1, 1, 1, 0, tzinfo=pytz.UTC),
             chunk_arrival_at=dt.datetime(2021, 1, 1, 12, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2021, 1, 1, 15, 0, tzinfo=pytz.UTC),
             status=Extraction.Status.STARTED,
+            create_products=False,
         )
-        extraction_2 = Extraction.objects.create(
-            refinery=self.refinery,
+        extraction_2 = ExtractionFactory(
+            refinery=refinery,
             started_at=dt.datetime(2021, 1, 1, 2, 0, tzinfo=pytz.UTC),
             chunk_arrival_at=dt.datetime(2021, 1, 1, 15, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2021, 1, 1, 18, 0, tzinfo=pytz.UTC),
             status=Extraction.Status.STARTED,
+            create_products=False,
         )
-        extraction_3 = Extraction.objects.create(
-            refinery=self.refinery,
+        extraction_3 = ExtractionFactory(
+            refinery=refinery,
             started_at=dt.datetime(2021, 1, 1, 3, 0, tzinfo=pytz.UTC),
             chunk_arrival_at=dt.datetime(2021, 1, 1, 18, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2021, 1, 1, 21, 0, tzinfo=pytz.UTC),
             status=Extraction.Status.STARTED,
+            create_products=False,
         )
-        extraction_4 = Extraction.objects.create(
-            refinery=self.refinery,
+        extraction_4 = ExtractionFactory(
+            refinery=refinery,
             started_at=dt.datetime(2021, 1, 1, 4, 0, tzinfo=pytz.UTC),
             chunk_arrival_at=dt.datetime(2021, 1, 1, 4, 0, tzinfo=pytz.UTC),
             auto_fracture_at=dt.datetime(2021, 1, 1, 7, 0, tzinfo=pytz.UTC),
             status=Extraction.Status.CANCELED,
+            create_products=False,
         )
         # when
         with patch(MANAGERS_PATH + ".now") as mock_now:
@@ -174,24 +166,12 @@ class TestRefineryManager(NoSocketsTestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
-        cls.owner = Owner.objects.create(
-            corporation=EveCorporationInfo.objects.get(corporation_id=2001),
-        )
 
     def test_should_return_ids(self):
         # given
-        Refinery.objects.create(
-            id=1001,
-            name="Test",
-            owner=self.owner,
-            eve_type=helpers.eve_type_athanor(),
-        )
-        Refinery.objects.create(
-            id=1002,
-            name="Test",
-            owner=self.owner,
-            eve_type=helpers.eve_type_athanor(),
-        )
+        owner = OwnerFactory()
+        RefineryFactory(id=1001, owner=owner)
+        RefineryFactory(id=1002, owner=owner)
         # when
         result = Refinery.objects.ids()
         # then

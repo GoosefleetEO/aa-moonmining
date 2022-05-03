@@ -242,7 +242,6 @@
                     "text": "moonID: 40161708\noreVolumeByType:\n  45506: 1928443.0826145012\n  46676: 3308839.521195312\n  46678: 1780056.9386565287\nsolarSystemID: 30002542\nstructureID: 1000000000001\nstructureLink: <a href=\"showinfo:35835\/\/1000000000001\">Dummy<\/a>\nstructureName: Dummy\nstructureTypeID: 35835\n",
                     "is_read": false
                 }
-
             ]
         }
     },
@@ -366,19 +365,19 @@
         "get_corporation_corporation_id_mining_extractions": {
             "2001": [
                 {
-                "chunk_arrival_time": "2021-04-15T18:00:00Z",
-                "extraction_start_time": "2021-04-01T12:00:00Z",
-                "moon_id": 40161708,
-                "natural_decay_time": "2021-04-15T21:00:00Z",
-                "structure_id": 1000000000001
-              },
-              {
-                "chunk_arrival_time": "2021-04-28T18:00:00Z",
-                "extraction_start_time": "2021-03-22T16:11:47Z",
-                "moon_id": 40161709,
-                "natural_decay_time": "2021-04-28T21:01:00Z",
-                "structure_id": 1000000000002
-              }
+                    "chunk_arrival_time": "2021-04-15T18:00:00Z",
+                    "extraction_start_time": "2021-04-01T12:00:00Z",
+                    "moon_id": 40161708,
+                    "natural_decay_time": "2021-04-15T21:00:00Z",
+                    "structure_id": 1000000000001
+                },
+                {
+                    "chunk_arrival_time": "2021-04-28T18:00:00Z",
+                    "extraction_start_time": "2021-03-22T16:11:47Z",
+                    "moon_id": 40161709,
+                    "natural_decay_time": "2021-04-28T21:01:00Z",
+                    "structure_id": 1000000000002
+                }
             ]
         },
         "get_corporation_corporation_id_mining_observers": {

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.7.0] - tbd
+
+### Added
+
+- Ability to manually update moon products from extractions
+- New setting to turn on overwriting any moon products incl. surveys
+
+### Changed
+
+- When updating a moon's products with an estimate the app will no longer overwrite existing surveys. But estimates are still generated for owned moons, without surveys.
+
 ## [1.6.1] - 2022-04-28
 
 **Update notes**:<br>Due to the previous bug (#18) the calculated moon values may be inaccurate. We recommend to run the action "update selected owners from ESI" for all active ownwer on the admin site, which will also update moon values from the last extractions.

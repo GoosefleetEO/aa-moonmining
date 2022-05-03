@@ -106,7 +106,7 @@ for moon_id in random.sample(moon_ids, k=MAX_MOONS):
         for ore_type_id in random.sample(ore_type_ids, k=4):
             ore_type, _ = EveOreType.objects.get_or_create_esi(id=ore_type_id)
             MoonProduct.objects.create(
-                moon=moon, ore_type=ore_type, amount=percentages.pop() / 100
+                moon=moon, ore_type=ore_type, amount=percentages.pop()
             )
         moon.update_calculated_properties()
 print(f"Generating {MAX_REFINERIES} refineries...")

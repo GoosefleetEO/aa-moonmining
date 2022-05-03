@@ -7,15 +7,21 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils.timezone import now
 from django_webtest import WebTest
-from eveuniverse.models import EveMarketPrice, EveMoon, EveType
+from eveuniverse.models import EveMoon
 
 from app_utils.esi import EsiStatus
 from app_utils.testing import NoSocketsTestCase, create_user_from_evecharacter
 
 from .. import tasks
-from ..models import EveOreType, Moon, Owner, Refinery
+from ..models import Owner, Refinery
 from . import helpers
 from .testdata.esi_client_stub import esi_client_stub
+from .testdata.factories import (
+    ExtractionFactory,
+    MoonFactory,
+    OwnerFactory,
+    RefineryFactory,
+)
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse, nearest_celestial_stub
 from .testdata.survey_data import fetch_survey_data
@@ -58,16 +64,15 @@ class TestUpdateTasks(NoSocketsTestCase):
         load_eveuniverse()
         load_allianceauth()
         helpers.generate_eve_entities_from_allianceauth()
-        _, cls.character_ownership = helpers.create_default_user_1001()
+        helpers.generate_market_prices()
+        _, cls.character_ownership = helpers.create_default_user_from_evecharacter(1001)
 
     @patch(MODELS_PATH + ".esi")
     def test_should_update_all_mining_corporations(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
-        helpers.create_moon_40161708()
-        corporation_2001 = helpers.create_owner_from_character_ownership(
-            self.character_ownership
-        )
+        MoonFactory(eve_moon=EveMoon.objects.get(id=40161708))
+        corporation_2001 = OwnerFactory(character_ownership=self.character_ownership)
         # when
         tasks.run_regular_updates.delay()
         # then
@@ -86,9 +91,7 @@ class TestUpdateTasks(NoSocketsTestCase):
         mock_esi.client.Corporation.get_corporations_corporation_id_structures.side_effect = (
             OSError
         )
-        corporation_2001 = helpers.create_owner_from_character_ownership(
-            self.character_ownership
-        )
+        corporation_2001 = OwnerFactory(character_ownership=self.character_ownership)
         # when
         try:
             tasks.run_regular_updates.delay()
@@ -107,10 +110,8 @@ class TestUpdateTasks(NoSocketsTestCase):
     def test_should_not_update_disabled_corporation(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
-        helpers.create_moon_40161708()
-        corporation_2001 = helpers.create_owner_from_character_ownership(
-            self.character_ownership
-        )
+        MoonFactory(eve_moon=EveMoon.objects.get(id=40161708))
+        corporation_2001 = OwnerFactory(character_ownership=self.character_ownership)
         _, character_ownership_1003 = create_user_from_evecharacter(
             1003,
             permissions=[
@@ -120,8 +121,8 @@ class TestUpdateTasks(NoSocketsTestCase):
             ],
             scopes=Owner.esi_scopes(),
         )
-        corporation_2002 = helpers.create_owner_from_character_ownership(
-            character_ownership_1003
+        corporation_2002 = OwnerFactory(
+            character_ownership=character_ownership_1003, last_update_ok=None
         )
         my_date = dt.datetime(2020, 1, 11, 12, 30, tzinfo=pytz.UTC)
         corporation_2002.last_update_at = my_date
@@ -143,32 +144,12 @@ class TestUpdateTasks(NoSocketsTestCase):
     def test_should_update_mining_ledgers(self, mock_esi):
         # given
         mock_esi.client = esi_client_stub
-        owner_2001 = helpers.create_owner_from_character_ownership(
-            self.character_ownership
-        )
-        moon_40161708 = helpers.create_moon_40161708()
-        refinery_1 = Refinery.objects.create(
-            id=1000000000001,
-            moon=moon_40161708,
-            owner=owner_2001,
-            eve_type=EveType.objects.get(id=35835),
-        )
-        moon_40161709 = Moon.objects.create(eve_moon=EveMoon.objects.get(id=40161709))
-        refinery_2 = Refinery.objects.create(
-            id=1000000000002,
-            moon=moon_40161709,
-            owner=owner_2001,
-            eve_type=EveType.objects.get(id=35835),
-        )
+        owner_2001 = OwnerFactory(character_ownership=self.character_ownership)
+        refinery_1 = RefineryFactory(id=1000000000001, owner=owner_2001)
+        refinery_2 = RefineryFactory(id=1000000000002, owner=owner_2001)
         _, ownership_1003 = helpers.create_default_user_from_evecharacter(1003)
-        owner_2002 = helpers.create_owner_from_character_ownership(ownership_1003)
-        moon_40131695 = Moon.objects.create(eve_moon=EveMoon.objects.get(id=40131695))
-        refinery_11 = Refinery.objects.create(
-            id=1000000000011,
-            moon=moon_40131695,
-            owner=owner_2002,
-            eve_type=EveType.objects.get(id=35835),
-        )
+        owner_2002 = OwnerFactory(character_ownership=ownership_1003)
+        refinery_11 = RefineryFactory.create(id=1000000000011, owner=owner_2002)
         # when
         tasks.run_report_updates()
         # then
@@ -180,27 +161,19 @@ class TestUpdateTasks(NoSocketsTestCase):
     def test_should_update_all_calculated_values(self, mock_update_prices):
         # given
         mock_update_prices.return_value = None
-        moon = helpers.create_moon_40161708()
-        refinery = helpers.add_refinery(moon)
-        # tungsten = EveType.objects.get(id=16637)
-        # mercury = EveType.objects.get(id=16646)
-        # evaporite_deposits = EveType.objects.get(id=16635)
-        # EveMarketPrice.objects.create(eve_type=tungsten, average_price=7000)
-        # EveMarketPrice.objects.create(eve_type=mercury, average_price=9750)
-        # EveMarketPrice.objects.create(eve_type=evaporite_deposits, average_price=950)
-        EveMarketPrice.objects.create(eve_type_id=45506, average_price=2400.0)
-        EveMarketPrice.objects.create(eve_type_id=46676, average_price=609.0)
-        EveMarketPrice.objects.create(eve_type_id=46678, average_price=310.9)
-        EveMarketPrice.objects.create(eve_type_id=46689, average_price=7.7)
+        moon = MoonFactory()
+        owner = OwnerFactory(character_ownership=self.character_ownership)
+        refinery = RefineryFactory(moon=moon, owner=owner)
+        extraction = ExtractionFactory(refinery=refinery)
         # when
         tasks.run_calculated_properties_update.delay()
         # then
         moon.refresh_from_db()
+        extraction.refresh_from_db()
         self.assertIsNotNone(moon.value)
-        extraction = refinery.extractions.first()
         self.assertIsNotNone(extraction.value)
-        cinnebar = EveOreType.objects.get(id=45506)
-        self.assertIsNotNone(cinnebar.extras.current_price)
+        ore = extraction.products.first().ore_type
+        self.assertIsNotNone(ore.extras.current_price)
 
 
 class TestProcessSurveyInput(TestCase):

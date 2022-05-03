@@ -155,6 +155,23 @@ def update_moon_calculated_properties(moon_pk):
 
 
 @shared_task
+def update_moon_products_from_latest_extraction(moon_pk):
+    """Update moon products from latest extraction."""
+    moon = Moon.objects.get(pk=moon_pk)
+    result = moon.update_products_from_latest_extraction(overwrite_survey=True)
+    if result is True:
+        logger.info("%s: Updated moon products from latest extraction", moon)
+    elif result is None:
+        logger.info(
+            "%s: Failed to update moon products from latest extraction, "
+            "because this moon has no extractions.",
+            moon,
+        )
+    else:
+        logger.info("%s: Failed to update moon products from latest extraction", moon)
+
+
+@shared_task
 def update_extractions():
     """Update the calculated properties of all extractions."""
     extraction_pks = Extraction.objects.values_list("pk", flat=True)
