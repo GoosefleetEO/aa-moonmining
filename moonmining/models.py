@@ -1419,7 +1419,7 @@ class Refinery(models.Model):
         self.save()
 
     def update_mining_ledger_from_esi(self):
-        logger.info("%s: Fetching mining observer records from ESI...", self)
+        logger.debug("%s: Fetching mining observer records from ESI...", self)
         self.ledger_last_update_at = now()
         self.ledger_last_update_ok = None
         self.save()
@@ -1428,6 +1428,9 @@ class Refinery(models.Model):
             observer_id=self.id,
             token=self.owner.fetch_token().valid_access_token(),
         ).results()
+        logger.info(
+            "%s: Received %d mining observer records from ESI", self, len(records)
+        )
         # preload all missing ore types
         EveOreType.objects.bulk_get_or_create_esi(
             ids={record["type_id"] for record in records}
