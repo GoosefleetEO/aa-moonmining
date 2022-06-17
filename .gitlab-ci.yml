@@ -12,7 +12,7 @@ before_script:
 
 pre-commit:
   stage: checks
-  image: python:3.7-bullseye
+  image: python:3.8-bullseye
   variables:
     PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
   cache:
@@ -24,14 +24,17 @@ pre-commit:
 
 .test-py37:
   stage: test
+  needs: []
   image: python:3.7-bullseye
 
 .test-py38:
   stage: test
+  needs: []
   image: python:3.8-bullseye
 
 .test-py39:
   stage: test
+  needs: []
   image: python:3.9-bullseye
 
 test-py37-dj32:
@@ -54,13 +57,13 @@ test-py39-dj32:
 
 deploy-pypi:
   stage: deploy
-  image: python:3.7-bullseye
+  image: python:3.8-bullseye
 
   before_script:
     - pip install twine
 
   script:
-    - python setup.py sdist
+    - python setup.py sdist bdist_wheel
     - twine upload dist/*
 
   only:
