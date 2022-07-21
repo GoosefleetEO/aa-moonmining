@@ -40,7 +40,7 @@ setup(
         "allianceauth>=2.9",
         "django-bootstrap-form",
         "django-navhelper",
-        "allianceauth-app-utils>=1.12",
+        "allianceauth-app-utils>=1.14",
         "django-eveuniverse>=0.14",
         "django-datatables-view>=1.20",
         "PyYAML",

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.7.3] - 2022-07-21
+
+### Changed
+
+- Moved some test factories to app_utils
+
 ## [1.7.2] - 2022-06-18
 
 ### Fixed

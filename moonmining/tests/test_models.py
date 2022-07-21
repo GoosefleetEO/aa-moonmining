@@ -7,6 +7,7 @@ from django.utils.timezone import now
 from esi.models import Token
 from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 
+from app_utils.testdata_factories import UserFactory
 from app_utils.testing import NoSocketsTestCase
 
 from ..constants import EveTypeId
@@ -32,7 +33,6 @@ from .testdata.factories import (
     NotificationFactory2,
     OwnerFactory,
     RefineryFactory,
-    UserFactory,
 )
 from .testdata.load_allianceauth import load_allianceauth
 from .testdata.load_eveuniverse import load_eveuniverse, nearest_celestial_stub
