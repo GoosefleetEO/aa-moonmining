@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 - Remove support for Python 3.7 and add support for Python 3.10
+- Update swagger.json to 1.12
 
 ## [1.7.3] - 2022-07-21
 
