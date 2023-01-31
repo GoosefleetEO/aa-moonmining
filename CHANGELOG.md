@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.8.1] - 2023-01-31
+
+### Fixed
+
+- Applied workaround for chained task priority bug
+
 ## [1.8.0] - 2022-12-13
 
 ### Changed

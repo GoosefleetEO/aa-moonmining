@@ -115,11 +115,11 @@ def run_calculated_properties_update():
     """Update the calculated properties of all moons and all extractions."""
     if fetch_esi_status().is_ok:
         chain(
-            update_market_prices.si(),
-            update_current_ore_prices.si(),
-            update_moons.si(),
-            update_extractions.si(),
-        ).apply_async(priority=TASK_PRIORITY_LOWER)
+            update_market_prices.si().set(priority=TASK_PRIORITY_LOWER),
+            update_current_ore_prices.si().set(priority=TASK_PRIORITY_LOWER),
+            update_moons.si().set(priority=TASK_PRIORITY_LOWER),
+            update_extractions.si().set(priority=TASK_PRIORITY_LOWER),
+        ).delay()
     else:
         logger.warning("ESI ist not available. Aborting.")
 
