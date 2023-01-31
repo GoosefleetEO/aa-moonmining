@@ -109,11 +109,11 @@ CELERYBEAT_SCHEDULE['moonmining_run_value_updates'] = {
  'task': 'moonmining.tasks.run_calculated_properties_update',
  'schedule': crontab(minute=30, hour=3)
 }
-
-> **Hint**: The value updates are supposed to run once a day during off hours. Feel free to adjust to timing according to your timezone.
 ```
 
-- Optional: Add additional settings if you want to change any defaults. See [Settings](#settings) for the full list.
+> **Hint**: The value updates are supposed to run once a day during off hours. Feel free to adjust the timing according to your timezone.
+
+Optional: Add additional settings if you want to change any defaults. See [Settings](#settings) for the full list.
 
 ### Step 4 - Finalize App installation
 
