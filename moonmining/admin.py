@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.core.exceptions import ObjectDoesNotExist
 
 from . import tasks
 from .models import (
@@ -37,7 +38,10 @@ class EveOreTypeAdmin(admin.ModelAdmin):
 
     @admin.display(ordering="extras__current_price")
     def _current_price(self, obj):
-        return f"{obj.extras.current_price:,.2f}"
+        try:
+            return f"{obj.extras.current_price:,.2f}"
+        except ObjectDoesNotExist:
+            return None
 
     @admin.display(ordering="eve_group__name")
     def _group(self, obj):
@@ -45,7 +49,10 @@ class EveOreTypeAdmin(admin.ModelAdmin):
 
     @admin.display(ordering="extras__pricing_method")
     def _pricing_method(self, obj):
-        return obj.extras.get_pricing_method_display()
+        try:
+            return obj.extras.get_pricing_method_display()
+        except ObjectDoesNotExist:
+            return None
 
     def has_add_permission(self, *args, **kwargs) -> bool:
         return False

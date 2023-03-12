@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.8.2] - 2023-03-12
+
+### Fixed
+
+- Admin page with ore prices crashed when prices have not been loaded yet
+
 ## [1.8.1] - 2023-01-31
 
 ### Fixed

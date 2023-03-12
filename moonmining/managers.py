@@ -267,7 +267,10 @@ class ExtractionQuerySet(models.QuerySet):
         """Update status of given extractions according to current time."""
         self.exclude(
             status__in=[self.model.Status.READY, self.model.Status.CANCELED]
-        ).filter(chunk_arrival_at__lte=now(), auto_fracture_at__gt=now(),).update(
+        ).filter(
+            chunk_arrival_at__lte=now(),
+            auto_fracture_at__gt=now(),
+        ).update(
             status=self.model.Status.READY
         )
         self.exclude(
