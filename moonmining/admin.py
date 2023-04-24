@@ -40,7 +40,7 @@ class EveOreTypeAdmin(admin.ModelAdmin):
     def _current_price(self, obj):
         try:
             return f"{obj.extras.current_price:,.2f}"
-        except ObjectDoesNotExist:
+        except (ObjectDoesNotExist, TypeError):
             return None
 
     @admin.display(ordering="eve_group__name")
@@ -74,7 +74,7 @@ class ExtractionAdmin(admin.ModelAdmin):
     inlines = [ExtractionProductAdmin]
     actions = ["update_calculated_properties"]
 
-    @admin.display(description="Update calculated properties for selected extrations.")
+    @admin.display(description="Update calculated properties for selected extractions.")
     def update_calculated_properties(self, request, queryset):
         num = 0
         for obj in queryset:
