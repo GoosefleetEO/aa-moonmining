@@ -4,7 +4,7 @@
 
 {% if product_rows|length_is:"0" %}
     <p class="text-warning"><strong>
-        We could not find a survey for this moon in our database.
+        {% translate 'There is no survey for this moon in the database.' %}
     </strong></p>
 {% else %}
 
@@ -19,7 +19,7 @@
                     <a href="{{ product.ore_type.profile_url }}" target="_blank">{{ product.ore_type.name }}</a>
                     &nbsp;{{ product.ore_type.rarity_class.bootstrap_tag_html }}
                     &nbsp;{{ product.ore_type.extras.current_price|floatformat:"0"|intcomma|default:"?" }}
-                    <small class="text-muted">ISK per unit</small>
+                    <small class="text-muted">{% translate 'ISK per unit' %}</small>
                 </p>
                 <div class="progress" style="height: 20px; width: 100%">
                     <div
@@ -50,10 +50,11 @@
     {% endfor %}
 {% endif %}
 <p class="text-muted">
-    Last updated on
     {% if moon.products_updated_at %}
-        {{moon.products_updated_at|datetime|default:"?"}} by {{moon.products_updated_by.profile.main_character|default:"ESTIMATED"}}
+        {% translate 'Last updated at' %}
+        {% translate "Moonminning App" as estimated_by %}
+        {% blocktranslate with updated_at=moon.products_updated_at|datetime|default:"?" updated_by=moon.products_updated_by.profile.main_character|default:estimated_by %}{{ updated_at }} by {{ updated_by }}{% endblocktranslate %}
     {% else %}
-        ?
+        {% translate 'Not yet updated' %}
     {% endif %}
 <p>

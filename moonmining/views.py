@@ -29,6 +29,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.html import format_html, strip_tags
 from django.utils.timezone import now
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import cache_page
 from esi.decorators import token_required
 
@@ -706,10 +707,10 @@ def add_owner(request, token):
         )
         corporation.save()
 
-    owner, _ = Owner.objects.update_or_create(
+    owner = Owner.objects.update_or_create(
         corporation=corporation,
         defaults={"character_ownership": character_ownership},
-    )
+    )[0]
     tasks.update_owner.delay(owner.pk)
     messages_plus.success(request, f"Update of refineries started for {owner}.")
     if MOONMINING_ADMIN_NOTIFICATIONS_ENABLED:
@@ -847,7 +848,7 @@ def report_owned_value_data(request):
         data.append(
             {
                 "corporation": corporation,
-                "moon": {"display": "TOTAL", "sort": counter},
+                "moon": {"display": _("Total"), "sort": counter},
                 "region": None,
                 "rarity_class": None,
                 "value": None,

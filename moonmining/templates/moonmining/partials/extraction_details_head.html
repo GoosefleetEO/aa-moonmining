@@ -9,10 +9,10 @@
 
     <div class="col-md-6">
         <dl class="dl-horizontal">
-            <dt>Status:</dt>
+            <dt>{% translate 'Status:' %}</dt>
             <dd>{{ extraction.status_enum.bootstrap_tag_html }}</dd>
 
-            <dt>Started:</dt>
+            <dt>{% translate 'Started:' %}</dt>
             <dd>
                 <span title="{{ extraction.started_at|naturaltime }}">
                     {{ extraction.started_at|datetime }}
@@ -21,7 +21,7 @@
             </dd>
 
             {% if extraction.status == extraction.Status.CANCELED %}
-                <dt>Canceled:</dt>
+                <dt>{% translate 'Canceled:' %}</dt>
                 <dd>
                     <span title="{{ extraction.canceled_at|naturaltime|default:'?' }}">
                         {{ extraction.canceled_at|datetime|default:"?" }}
@@ -29,7 +29,7 @@
                 </dd>
             {% endif %}
 
-            <dt>Chunk arrival:</dt>
+            <dt>{% translate 'Chunk arrival:' %}</dt>
             <dd>
                 {% if extraction.status == extraction.Status.CANCELED %}<s>{% endif %}
                 <span title="{{ extraction.chunk_arrival_at|naturaltime }}">
@@ -38,7 +38,7 @@
                 {% if extraction.status == extraction.Status.CANCELED %}</s>{% endif %}
             </dd>
 
-            <dt>Auto Fracture:</dt>
+            <dt>{% translate 'Auto Fracture:' %}</dt>
             <dd>
                 {% if extraction.status == extraction.Status.CANCELED %}<s>{% endif %}
                 <span title="{{ extraction.auto_fracture_at|naturaltime }}">
@@ -47,8 +47,10 @@
                 {% if extraction.status == extraction.Status.CANCELED %}</s>{% endif %}
             </dd>
 
-            <dt>Duration:</dt>
-            <dd>{{ extraction.duration_in_days|floatformat }} days</dd>
+            <dt>{% translate 'Duration:' %}</dt>
+            <dd>
+                {% blocktranslate with duration_days=extraction.duration_in_days|floatformat %}{{ duration_days }} days{% endblocktranslate %}
+            </dd>
         </dl>
     </div>
 </div>
