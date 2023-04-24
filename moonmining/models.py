@@ -107,7 +107,7 @@ class OreRarityClass(models.IntegerChoices):
         }
         try:
             return bootstrap_label_html(
-                f"R{self.value}", label=map_rarity_to_type[self.value]
+                f"R{self.value}", label=map_rarity_to_type[self].value
             )
         except KeyError:
             return ""
@@ -116,11 +116,11 @@ class OreRarityClass(models.IntegerChoices):
     def from_eve_group_id(cls, eve_group_id: int) -> "OreRarityClass":
         """Create object from eve group ID"""
         map_group_2_rarity = {
-            EveGroupId.UBIQUITOUS_MOON_ASTEROIDS: cls.R4,
-            EveGroupId.COMMON_MOON_ASTEROIDS: cls.R8,
-            EveGroupId.UNCOMMON_MOON_ASTEROIDS: cls.R16,
-            EveGroupId.RARE_MOON_ASTEROIDS: cls.R32,
-            EveGroupId.EXCEPTIONAL_MOON_ASTEROIDS: cls.R64,
+            EveGroupId.UBIQUITOUS_MOON_ASTEROIDS.value: cls.R4,
+            EveGroupId.COMMON_MOON_ASTEROIDS.value: cls.R8,
+            EveGroupId.UNCOMMON_MOON_ASTEROIDS.value: cls.R16,
+            EveGroupId.RARE_MOON_ASTEROIDS.value: cls.R32,
+            EveGroupId.EXCEPTIONAL_MOON_ASTEROIDS.value: cls.R64,
         }
         try:
             return map_group_2_rarity[eve_group_id]
@@ -149,7 +149,7 @@ class OreQualityClass(models.TextChoices):
             self.EXCELLENT: {"text": "+100%", "label": BootstrapStyle.WARNING},
         }
         try:
-            label_def = map_quality_to_label_def[self.value]
+            label_def = map_quality_to_label_def[self]
             return bootstrap_label_html(label_def["text"], label=label_def["label"])
         except KeyError:
             return ""
@@ -205,15 +205,17 @@ class EveOreType(EveType):
         result = self.extras.current_price
         return result if result is not None else 0.0
 
-    def price_by_volume(self, volume: int) -> float:
+    def price_by_volume(self, volume: int) -> Optional[float]:
         """Return calculated price estimate in ISK for volume in m3."""
-        return self.price_by_units(volume / self.volume)
+        return self.price_by_units(int(volume // self.volume)) if self.volume else None
 
     def price_by_units(self, units: int) -> float:
         """Return calculated price estimate in ISK for units."""
         return self.price * units
 
-    def calc_refined_value_per_unit(self, reprocessing_yield: float = None) -> float:
+    def calc_refined_value_per_unit(
+        self, reprocessing_yield: Optional[float] = None
+    ) -> float:
         """Calculate the refined total value per unit and return it."""
         if not reprocessing_yield:
             reprocessing_yield = MOONMINING_REPROCESSING_YIELD
@@ -290,12 +292,12 @@ class Extraction(models.Model):
                 self.UNDEFINED: "",
             }
             try:
-                return bootstrap_label_html(self.label, label=map_to_type[self.value])
+                return bootstrap_label_html(self.label, label=map_to_type[self].value)
             except KeyError:
                 return ""
 
         @property
-        def to_notification_type(self) -> str:
+        def to_notification_type(self) -> NotificationType:
             map_to_type = {
                 self.STARTED: NotificationType.MOONMINING_EXTRACTION_STARTED,
                 self.CANCELED: NotificationType.MOONMINING_EXTRACTION_CANCELLED,
@@ -303,7 +305,7 @@ class Extraction(models.Model):
                 self.COMPLETED: NotificationType.MOONMINING_LASER_FIRED,
             }
             try:
-                return map_to_type[self.value]
+                return map_to_type[self]
             except KeyError:
                 raise ValueError("Invalid status for notification type") from None
 
@@ -473,7 +475,7 @@ class Extraction(models.Model):
                 return None
             return all(products_qualities)
 
-    def update_calculated_properties(self) -> float:
+    def update_calculated_properties(self) -> None:
         """Update calculated properties for this extraction."""
         self.value = self.calc_value()
         self.is_jackpot = self.calc_is_jackpot()
@@ -575,7 +577,7 @@ class Label(models.Model):
                 self.RED: BootstrapStyle.DANGER,
             }
             try:
-                return map_to_type[self.value]
+                return map_to_type[self].value
             except KeyError:
                 return BootstrapStyle.DEFAULT
 
@@ -782,7 +784,7 @@ class Moon(models.Model):
         self.save()
 
     def update_products(
-        self, moon_products: List["MoonProduct"], updated_by: User = None
+        self, moon_products: List["MoonProduct"], updated_by: Optional[User] = None
     ) -> None:
         """Update products of this moon."""
         with transaction.atomic():
@@ -820,7 +822,7 @@ class Moon(models.Model):
 
     def update_products_from_latest_extraction(
         self, overwrite_survey: bool = False
-    ) -> bool:
+    ) -> Optional[bool]:
         try:
             extraction = self.refinery.extractions.order_by("-started_at").first()
         except ObjectDoesNotExist:
@@ -1118,12 +1120,12 @@ class Owner(models.Model):
             refinery.update_moon_from_structure_info(structure_info)
         return True
 
-    def fetch_notifications_from_esi(self) -> bool:
+    def fetch_notifications_from_esi(self) -> None:
         """fetches notification for the current owners and process them"""
         notifications = self._fetch_moon_notifications_from_esi()
         self._store_notifications(notifications)
 
-    def _fetch_moon_notifications_from_esi(self) -> dict:
+    def _fetch_moon_notifications_from_esi(self) -> List[dict]:
         """Fetch all notifications from ESI for current owner."""
         logger.info("%s: Fetching notifications from ESI...", self)
         all_notifications = (
@@ -1172,7 +1174,7 @@ class Owner(models.Model):
                     notification_id=notification["notification_id"],
                     owner=self,
                     created=now(),
-                    details=yaml.safe_load(text),
+                    details=yaml.safe_load(text) if text else {},
                     is_read=is_read,
                     last_updated=now(),
                     # at least one type has a trailing white space
@@ -1456,7 +1458,7 @@ class Refinery(models.Model):
         )
         # preload all missing ore types
         EveOreType.objects.bulk_get_or_create_esi(
-            ids={record["type_id"] for record in records}
+            ids=[record["type_id"] for record in records]
         )
         character_2_user = {
             obj[0]: obj[1]
