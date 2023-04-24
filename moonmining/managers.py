@@ -160,7 +160,7 @@ class MoonManagerBase(models.Manager):
                     else:
                         surveys.append(lines[sub_lists[i] : sub_lists[i + 1]])
 
-        except Exception as ex:
+        except (TypeError, ValueError, KeyError, AttributeError, IndexError) as ex:
             logger.warning(
                 "An issue occurred while trying to parse the surveys", exc_info=True
             )

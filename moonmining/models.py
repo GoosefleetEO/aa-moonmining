@@ -912,7 +912,7 @@ class Notification(models.Model):
         return str(self.notification_id)
 
     def __repr__(self) -> str:
-        return "%s(notification_id=%d, owner='%s', notif_type='%s')" % (
+        return "%s(notification_id=%s, owner='%s', notif_type='%s')" % (
             self.__class__.__name__,
             self.notification_id,
             self.owner,
@@ -1251,9 +1251,8 @@ class Owner(models.Model):
                 details__structureID=refinery.id
             )
             if not refinery.moon and notifications_for_refinery.exists():
-                """Update the refinery's moon from notification in case
-                it was not found by nearest_celestial.
-                """
+                # Update the refinery's moon from notification in case
+                # it was not found by nearest_celestial.
                 notif = notifications_for_refinery.first()
                 refinery.update_moon_from_eve_id(notif.details["moonID"])
             for notif in notifications_for_refinery.order_by("timestamp"):

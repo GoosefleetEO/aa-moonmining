@@ -153,7 +153,7 @@ def extractions_data(request, category):
     stale_cutoff = now() - dt.timedelta(
         hours=MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE
     )
-    extractions = (
+    extractions_qs = (
         Extraction.objects.annotate_volume()
         .selected_related_defaults()
         .select_related(
@@ -163,17 +163,17 @@ def extractions_data(request, category):
         )
     )
     if category == ExtractionsCategory.UPCOMING:
-        extractions = extractions.filter(auto_fracture_at__gte=stale_cutoff).exclude(
-            status=Extraction.Status.CANCELED
-        )
+        extractions_qs = extractions_qs.filter(
+            auto_fracture_at__gte=stale_cutoff
+        ).exclude(status=Extraction.Status.CANCELED)
     elif category == ExtractionsCategory.PAST:
-        extractions = extractions.filter(
+        extractions_qs = extractions_qs.filter(
             auto_fracture_at__lt=stale_cutoff
-        ) | extractions.filter(status=Extraction.Status.CANCELED)
+        ) | extractions_qs.filter(status=Extraction.Status.CANCELED)
     else:
-        extractions = Extraction.objects.none()
+        extractions_qs = Extraction.objects.none()
     can_see_ledger = request.user.has_perm("moonmining.view_moon_ledgers")
-    for extraction in extractions:
+    for extraction in extractions_qs:
         corporation_name = extraction.refinery.owner.name
         alliance_name = extraction.refinery.owner.alliance_name
         moon = extraction.refinery.moon
