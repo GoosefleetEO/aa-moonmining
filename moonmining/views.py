@@ -1,6 +1,6 @@
 import datetime as dt
-from collections import defaultdict
 from enum import Enum
+from typing import Union
 
 from django_datatables_view.base_datatable_view import BaseDatatableView
 
@@ -531,7 +531,7 @@ class MoonListJson(PermissionRequiredMixin, LoginRequiredMixin, BaseDatatableVie
             return qs.filter(**kwargs)
         return qs
 
-    def render_column(self, row, column) -> str:
+    def render_column(self, row, column) -> Union[str, dict]:
         if column == "id":
             return row.pk
         if column == "moon_name":
@@ -595,7 +595,7 @@ class MoonListJson(PermissionRequiredMixin, LoginRequiredMixin, BaseDatatableVie
             return details_html
         return ""
 
-    def _render_refinery(self, row, column):
+    def _render_refinery(self, row, column) -> Union[str, dict]:
         if row.has_refinery:
             refinery = row.refinery
             refinery_html = refinery.name_html()
@@ -612,7 +612,7 @@ class MoonListJson(PermissionRequiredMixin, LoginRequiredMixin, BaseDatatableVie
             return alliance_name
         if column == "refinery":
             return {"display": refinery_html, "sort": refinery_name}
-        return None
+        return ""
 
 
 @login_required
@@ -689,7 +689,7 @@ def moon_details(request, moon_pk: int):
 
 
 @permission_required(["moonmining.add_refinery_owner", "moonmining.basic_access"])
-@token_required(scopes=Owner.esi_scopes())
+@token_required(scopes=Owner.esi_scopes())  # type: ignore
 @login_required
 def add_owner(request, token):
     try:
@@ -806,9 +806,11 @@ def report_owned_value_data(request):
         "refinery__owner__corporation",
         "refinery__owner__corporation__alliance",
     ).filter(refinery__isnull=False)
-    corporation_moons = defaultdict(lambda: {"moons": list(), "total": 0})
+    corporation_moons = {}
     for moon in moon_query.order_by("eve_moon__name"):
         corporation_name = moon.refinery.owner.name
+        if corporation_name not in corporation_moons:
+            corporation_moons[corporation_name] = {"moons": list(), "total": 0}
         corporation_moons[corporation_name]["moons"].append(moon)
         corporation_moons[corporation_name]["total"] += default_if_none(moon.value, 0)
 

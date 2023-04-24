@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import Tuple
+from typing import List, Optional, Tuple
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
@@ -44,7 +44,7 @@ class EveOreTypeManger(EveTypeManager):
             .filter(eve_group__eve_category_id=EveCategoryId.ASTEROID)
         )
 
-    def update_current_prices(self, use_process_pricing: bool = None):
+    def update_current_prices(self, use_process_pricing: Optional[bool] = None):
         """Update current prices for all ores."""
         from .models import EveOreTypeExtras
 
@@ -104,7 +104,7 @@ class MoonQuerySet(models.QuerySet):
 
 
 class MoonManagerBase(models.Manager):
-    def update_moons_from_survey(self, scans: str, user: User = None) -> bool:
+    def update_moons_from_survey(self, scans: str, user: Optional[User] = None) -> bool:
         """Update moons from survey input.
 
         Args:
@@ -170,7 +170,9 @@ class MoonManagerBase(models.Manager):
             error_name = ""
         return surveys, error_name
 
-    def _process_surveys(self, surveys: list, user: User) -> Tuple[list, bool]:
+    def _process_surveys(
+        self, surveys: list, user: Optional[User]
+    ) -> Tuple[List[SurveyProcessResult], bool]:
         from .models import EveOreType, MoonProduct
 
         overall_success = True
@@ -219,7 +221,10 @@ class MoonManagerBase(models.Manager):
 
     @staticmethod
     def _send_survey_process_report_to_user(
-        process_results: list, error_name: str, user: User, success: bool
+        process_results: Optional[List[SurveyProcessResult]],
+        error_name: str,
+        user: User,
+        success: bool,
     ) -> bool:
         message = "We have completed processing your moon survey input:\n\n"
         if process_results:
