@@ -10,9 +10,9 @@ from eveuniverse.models import EveMarketPrice, EveMoon, EveType
 from app_utils.testdata_factories import UserFactory
 from app_utils.testing import NoSocketsTestCase
 
-from ..constants import EveTypeId
-from ..core import CalculatedExtraction, CalculatedExtractionProduct
-from ..models import (
+from moonmining.constants import EveTypeId
+from moonmining.core import CalculatedExtraction, CalculatedExtractionProduct
+from moonmining.models import (
     EveOreType,
     Extraction,
     NotificationType,
@@ -20,6 +20,7 @@ from ..models import (
     OreRarityClass,
     Refinery,
 )
+
 from . import helpers
 from .testdata.esi_client_stub import esi_client_stub
 from .testdata.factories import (
@@ -470,6 +471,14 @@ class TestMoonOverwriteProducts(NoSocketsTestCase):
         moon.update_products_from_latest_extraction()
         # then
         self.assertGreater(moon.products.count(), 0)
+
+
+class TestNotificationType(NoSocketsTestCase):
+    def test_str(self):
+        # given
+        obj = NotificationType.MOONMINING_EXTRACTION_CANCELLED
+        # when/then
+        self.assertIsInstance(str(obj), str)
 
 
 class TestNotification(NoSocketsTestCase):

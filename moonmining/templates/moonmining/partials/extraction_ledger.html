@@ -1,8 +1,14 @@
+{% load i18n %}
+
 {% include 'moonmining/partials/extraction_ledger_head.html' %}
 <!-- Nav tabs -->
 <ul class="nav nav-tabs" role="tablist">
-    <li role="presentation" class="active"><a href="#ledger" aria-controls="ledger" role="tab" data-toggle="tab">Ledger</a></li>
-    <li role="presentation"><a href="#characters" aria-controls="characters" role="tab" data-toggle="tab">Totals by character</a></li>
+    <li role="presentation" class="active"><a href="#ledger" aria-controls="ledger" role="tab" data-toggle="tab">
+        {% translate 'Ledger' %}
+    </a></li>
+    <li role="presentation"><a href="#characters" aria-controls="characters" role="tab" data-toggle="tab">
+        {% translate 'Totals by character' %}
+    </a></li>
 </ul>
 <!-- Tab panes -->
 <div class="panel panel-default panel-tabs">

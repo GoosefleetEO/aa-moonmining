@@ -17,7 +17,10 @@
                 {% include "moonmining/partials/extractions_tab.html" with category=ExtractionsCategory.PAST %}
             </div>
             {% include 'moonmining/partials/value_estimate_legend.html' %}
-            <p class="text-muted">All times displayed are EVE/UTC • Extractions will be shown on the upcoming tab until {{ stale_hours }} hours after their ready time.</p>
+            <p class="text-muted">
+                {% blocktranslate %}All times displayed are EVE/UTC{% endblocktranslate %} •
+                {% blocktranslate %}Extractions will be shown on the upcoming tab until {{ stale_hours }} hours after their ready time.{% endblocktranslate %}
+            </p>
         </div>
     </div>
 
@@ -85,31 +88,31 @@
                     columns: [
                         {
                             idx: 9,
-                            title: "Alliance"
+                            title: "{% translate 'Alliance' %}"
                         },
                         {
                             idx: 8,
-                            title: "Corporation"
+                            title: "{% translate 'Corporation' %}"
                         },
                         {
                             idx: 12,
-                            title: "Region"
+                            title: "{% translate 'Region' %}"
                         },
                         {
                             idx: 13,
-                            title: "Constellation"
+                            title: "{% translate 'Constellation' %}"
                         },
                         {
                             idx: 14,
-                            title: "Rarity"
+                            title: "{% translate 'Rarity' %}"
                         },
                         {
                             idx: 11,
-                            title: "Moon"
+                            title: "{% translate 'Moon' %}"
                         },
                         {
                             idx: 10,
-                            title: "Status"
+                            title: "{% translate 'Status' %}"
                         }
                     ],
                     bootstrap: true,

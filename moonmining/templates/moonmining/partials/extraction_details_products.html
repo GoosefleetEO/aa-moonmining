@@ -8,11 +8,11 @@
             <thead>
                 <tr>
                     <th></th>
-                    <th>Ore Type</th>
-                    <th>Rarity</th>
-                    <th>Est. Unit Price</th>
-                    <th>Volume</th>
-                    <th>Est. Total Price. *</th>
+                    <th>{% translate 'Ore Type' %}</th>
+                    <th>{% translate 'Rarity' %}</th>
+                    <th>{% translate 'Est. Unit Price' %}</th>
+                    <th>{% translate 'Volume' %}</th>
+                    <th>{% translate 'Est. Total Price' %}</th>
                 </tr>
             </thead>
             <tbody>
@@ -34,7 +34,7 @@
             <tfoot>
                 <tr>
                     <th></th>
-                    <th>TOTAL</th>
+                    <th>{% translate 'Total' %}</th>
                     <th></th>
                     <th></th>
                     <th>{{ extraction.volume|floatformat:"0"|intcomma }}</th>
@@ -43,6 +43,6 @@
             </tfoot>
         </table>
     {% else %}
-        <p class="text-muted">No data.</p>
+        <p class="text-muted">{% translate 'No data.' %}</p>
     {% endif %}
 </div>

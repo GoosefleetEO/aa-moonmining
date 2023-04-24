@@ -1,0 +1,879 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-04-24 17:42+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: admin.py:79
+msgid "Update calculated properties for selected extractions."
+msgstr ""
+
+#: admin.py:88
+#, python-format
+msgid "Started updating calculated properties for %d extractions."
+msgstr ""
+
+#: admin.py:142
+msgid "Yes"
+msgstr ""
+
+#: admin.py:143
+msgid "No"
+msgstr ""
+
+#: admin.py:257
+msgid "Update calculated properties for selected moons."
+msgstr ""
+
+#: admin.py:264
+#, python-format
+msgid "Started updating calculated properties for %d moons."
+msgstr ""
+
+#: admin.py:268
+msgid "Update products from latest extraction for selected moons."
+msgstr ""
+
+#: admin.py:277
+#, python-format
+msgid "Started updating products from latest extractions for %d moons."
+msgstr ""
+
+#: admin.py:324
+msgid "Update selected owners from ESI"
+msgstr ""
+
+#: admin.py:328
+#, python-format
+msgid "Started updating owner %s."
+msgstr ""
+
+#: admin.py:376
+msgid "Update mining ledger for selected refineries from ESI"
+msgstr ""
+
+#: admin.py:381
+#, python-format
+msgid "Started updating mining ledger %s."
+msgstr ""
+
+#: managers.py:244
+#, python-format
+msgid "Moon survey input processing results: %s"
+msgstr ""
+
+#: models.py:93
+msgid "R 4"
+msgstr ""
+
+#: models.py:94
+msgid "R 8"
+msgstr ""
+
+#: models.py:95
+msgid "R16"
+msgstr ""
+
+#: models.py:96
+msgid "R32"
+msgstr ""
+
+#: models.py:97
+msgid "R64"
+msgstr ""
+
+#: models.py:139 models.py:281
+msgid "undefined"
+msgstr ""
+
+#: models.py:140
+msgid "regular"
+msgstr ""
+
+#: models.py:141
+msgid "improved"
+msgstr ""
+
+#: models.py:142
+msgid "excellent"
+msgstr ""
+
+#: models.py:185
+msgid "ore type"
+msgstr ""
+
+#: models.py:186
+msgid "ore types"
+msgstr ""
+
+#: models.py:249
+msgid "Undefined"
+msgstr ""
+
+#: models.py:250
+msgid "Eve client"
+msgstr ""
+
+#: models.py:251
+msgid "Reprocessed materials"
+msgstr ""
+
+#: models.py:259
+msgid "Price used by all price calculations with this type"
+msgstr ""
+
+#: models.py:266
+msgid "ore type extra"
+msgstr ""
+
+#: models.py:267
+msgid "ore type extras"
+msgstr ""
+
+#: models.py:277
+msgid "started"
+msgstr ""
+
+#: models.py:278
+msgid "canceled"
+msgstr ""
+
+#: models.py:279
+msgid "ready"
+msgstr ""
+
+#: models.py:280
+msgid "completed"
+msgstr ""
+
+#: models.py:337
+msgid "When this extraction was started"
+msgstr ""
+
+#: models.py:341
+msgid "When this extraction will be automatically fractured"
+msgstr ""
+
+#: models.py:344
+msgid "When this extraction was canceled"
+msgstr ""
+
+#: models.py:352
+msgid "Eve character who canceled this extraction"
+msgstr ""
+
+#: models.py:355
+msgid "When this extraction is ready to be fractured"
+msgstr ""
+
+#: models.py:358
+msgid "When this extraction was fractured"
+msgstr ""
+
+#: models.py:366
+msgid "Eve character who fractured this extraction (if any)"
+msgstr ""
+
+#: models.py:371
+msgid "Whether this is a jackpot extraction (calculated)"
+msgstr ""
+
+#: models.py:379
+msgid "Eve character who started this extraction"
+msgstr ""
+
+#: models.py:388
+msgid "Estimated value of this extraction (calculated)"
+msgstr ""
+
+#: models.py:399
+msgid "extraction"
+msgstr ""
+
+#: models.py:400
+msgid "extractions"
+msgstr ""
+
+#: models.py:550
+msgid "extraction product"
+msgstr ""
+
+#: models.py:551
+msgid "extractions products"
+msgstr ""
+
+#: models.py:561
+msgid "dark blue"
+msgstr ""
+
+#: models.py:562
+msgid "green"
+msgstr ""
+
+#: models.py:563
+msgid "grey"
+msgstr ""
+
+#: models.py:564
+msgid "light blue"
+msgstr ""
+
+#: models.py:565
+msgid "orange"
+msgstr ""
+
+#: models.py:566
+msgid "red"
+msgstr ""
+
+#: models.py:587
+msgid "label"
+msgstr ""
+
+#: models.py:588
+msgid "labels"
+msgstr ""
+
+#: models.py:623
+msgid "Refinery this mining activity was observed at"
+msgstr ""
+
+#: models.py:625
+msgid "last_updated in ESI"
+msgstr ""
+
+#: models.py:630
+msgid "character that did the mining"
+msgstr ""
+
+#: models.py:640
+msgid "corporation of the character at time data was recorded"
+msgstr ""
+
+#: models.py:660
+msgid "ledger record"
+msgstr ""
+
+#: models.py:661
+msgid "ledger records"
+msgstr ""
+
+#: models.py:679
+msgid "Time the last moon survey was uploaded"
+msgstr ""
+
+#: models.py:686
+msgid "User who uploaded the last moon survey"
+msgstr ""
+
+#: models.py:696
+msgid "Calculated value estimate"
+msgstr ""
+
+#: models.py:702
+msgid "moon"
+msgstr ""
+
+#: models.py:703
+msgid "moons"
+msgstr ""
+
+#: models.py:855
+msgid "moon product"
+msgstr ""
+
+#: models.py:856
+msgid "moons products"
+msgstr ""
+
+#: models.py:872
+msgid "Corporation that received this notification"
+msgstr ""
+
+#: models.py:879
+msgid "Date when this notification was first received from ESI"
+msgstr ""
+
+#: models.py:887
+msgid "type of this notification as reported by ESI"
+msgstr ""
+
+#: models.py:892
+msgid "True when this notification has read in the eve client"
+msgstr ""
+
+#: models.py:895
+msgid "Date when this notification has last been updated from ESI"
+msgstr ""
+
+#: models.py:908
+msgid "notification"
+msgstr ""
+
+#: models.py:909
+msgid "notifications"
+msgstr ""
+
+#: models.py:989
+msgid "Character used to sync this corporation from ESI"
+msgstr ""
+
+#: models.py:994
+msgid "Disabled corporations are excluded from the update process"
+msgstr ""
+
+#: models.py:997
+msgid "Time of last successful update"
+msgstr ""
+
+#: models.py:1000
+msgid "True if the last update was successful"
+msgstr ""
+
+#: models.py:1004
+msgid "owner"
+msgstr ""
+
+#: models.py:1005
+msgid "owners"
+msgstr ""
+
+#: models.py:1384
+msgid "The moon this refinery is anchored at (if any)"
+msgstr ""
+
+#: models.py:1391
+msgid "Corporation that owns this refinery"
+msgstr ""
+
+#: models.py:1394
+msgid "last successful update of mining ledger"
+msgstr ""
+
+#: models.py:1399
+msgid "True if the last update of the mining ledger was successful"
+msgstr ""
+
+#: models.py:1405
+msgid "refinery"
+msgstr ""
+
+#: models.py:1406
+msgid "refineries"
+msgstr ""
+
+#: templates/moonmining/base.html:5 templates/moonmining/partials/menu.html:15
+msgid "Moon Mining"
+msgstr ""
+
+#: templates/moonmining/extractions.html:21
+msgid "All times displayed are EVE/UTC"
+msgstr ""
+
+#: templates/moonmining/extractions.html:22
+#, python-format
+msgid ""
+"Extractions will be shown on the upcoming tab until %(stale_hours)s hours "
+"after their ready time."
+msgstr ""
+
+#: templates/moonmining/extractions.html:91 templates/moonmining/moons.html:107
+msgid "Alliance"
+msgstr ""
+
+#: templates/moonmining/extractions.html:95 templates/moonmining/moons.html:112
+#: templates/moonmining/partials/extraction_ledger_characters.html:13
+#: templates/moonmining/partials/extraction_ledger_ledger.html:14
+#: templates/moonmining/partials/moons_tab.html:21
+#: templates/moonmining/partials/reports_user_mining_tab.html:13
+#: templates/moonmining/partials/reports_user_uploaded_tab.html:11
+#: templates/moonmining/reports.html:150 templates/moonmining/reports.html:197
+msgid "Corporation"
+msgstr ""
+
+#: templates/moonmining/extractions.html:99 templates/moonmining/moons.html:117
+#: templates/moonmining/partials/moons_tab.html:20
+#: templates/moonmining/partials/reports_owned_value_tab.html:12
+msgid "Region"
+msgstr ""
+
+#: templates/moonmining/extractions.html:103
+#: templates/moonmining/moons.html:122
+#: templates/moonmining/partials/moons_tab.html:20
+msgid "Constellation"
+msgstr ""
+
+#: templates/moonmining/extractions.html:107
+#: templates/moonmining/moons.html:132
+#: templates/moonmining/partials/extraction_details_products.html:12
+#: templates/moonmining/partials/reports_ore_prices_tab.html:13
+#: templates/moonmining/partials/reports_owned_value_tab.html:13
+#: templates/moonmining/reports.html:250
+msgid "Rarity"
+msgstr ""
+
+#: templates/moonmining/extractions.html:111
+#: templates/moonmining/partials/moons_tab.html:18 views.py:685
+msgid "Moon"
+msgstr ""
+
+#: templates/moonmining/extractions.html:115
+msgid "Status"
+msgstr ""
+
+#: templates/moonmining/modals/content_base.html:23
+msgid "Open in new tab"
+msgstr ""
+
+#: templates/moonmining/modals/content_base.html:28
+msgid "Close"
+msgstr ""
+
+#: templates/moonmining/moons.html:9 views.py:731
+msgid "Upload Moon Surveys"
+msgstr ""
+
+#: templates/moonmining/moons.html:18
+msgid "Owned Moons"
+msgstr ""
+
+#: templates/moonmining/moons.html:23
+msgid "All Moons"
+msgstr ""
+
+#: templates/moonmining/moons.html:28
+msgid "My Uploaded Moons"
+msgstr ""
+
+#: templates/moonmining/moons.html:127
+#: templates/moonmining/partials/moons_tab.html:19
+msgid "System"
+msgstr ""
+
+#: templates/moonmining/moons.html:137
+msgid "Label"
+msgstr ""
+
+#: templates/moonmining/moons.html:142
+msgid "Refinery?"
+msgstr ""
+
+#: templates/moonmining/moons.html:147
+msgid "Extraction?"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_head.html:12
+msgid "Status:"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_head.html:15
+msgid "Started:"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_head.html:24
+msgid "Canceled:"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_head.html:32
+msgid "Chunk arrival:"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_head.html:41
+msgid "Auto Fracture:"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_head.html:50
+msgid "Duration:"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_head.html:52
+#, python-format
+msgid "%(duration_days)s days"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_head_base.html:6
+#: templates/moonmining/partials/moon_details_moon.html:33
+msgid "Refinery:"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_head_base.html:9
+msgid "Company:"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_head_base.html:12
+msgid "Moon:"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_head_base.html:15
+#: templates/moonmining/partials/moon_details_moon.html:15
+msgid "Location:"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_head_base.html:20
+#: templates/moonmining/partials/moon_details_moon.html:24
+msgid "Labels:"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_products.html:11
+msgid "Ore Type"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_products.html:13
+msgid "Est. Unit Price"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_products.html:14
+#: templates/moonmining/partials/extraction_ledger_characters.html:14
+#: templates/moonmining/partials/reports_user_mining_tab.html:15
+#: templates/moonmining/partials/reports_user_mining_tab.html:17
+#: templates/moonmining/partials/reports_user_mining_tab.html:19
+#: templates/moonmining/partials/reports_user_mining_tab.html:21
+msgid "Volume"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_products.html:15
+msgid "Est. Total Price"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_products.html:37
+#: templates/moonmining/partials/extraction_ledger_characters.html:39
+#: templates/moonmining/partials/extraction_ledger_ledger.html:47
+#: templates/moonmining/partials/extractions_tab.html:19
+#: templates/moonmining/partials/reports_owned_value_tab.html:17 views.py:854
+msgid "Total"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_details_products.html:46
+#: templates/moonmining/partials/extraction_ledger_characters.html:50
+#: templates/moonmining/partials/extraction_ledger_ledger.html:60
+msgid "No data."
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger.html:7
+msgid "Ledger"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger.html:10
+msgid "Totals by character"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger_characters.html:11
+#: templates/moonmining/partials/extraction_ledger_ledger.html:13
+msgid "Character"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger_characters.html:12
+#: templates/moonmining/partials/extraction_ledger_ledger.html:12
+msgid "Main"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger_characters.html:15
+msgid "Price"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger_characters.html:16
+#, python-format
+msgid "%% Total Volume"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger_characters.html:17
+#, python-format
+msgid "%% Total Price"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger_head.html:22
+msgid "Total mined volume:"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger_head.html:24
+#, python-format
+msgid "%(volume)s m3"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger_head.html:27
+msgid "Total mined value:"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger_head.html:29
+#, python-format
+msgid "%(value)s ISK"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger_ledger.html:11
+msgid "Day"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger_ledger.html:15
+msgid "Ore"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger_ledger.html:16
+msgid "Total Volume"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger_ledger.html:17
+msgid "Unit Price"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger_ledger.html:18
+msgid "Quantity"
+msgstr ""
+
+#: templates/moonmining/partials/extraction_ledger_ledger.html:19
+msgid "Total Price"
+msgstr ""
+
+#: templates/moonmining/partials/extractions_tab.html:9
+msgid "Chunk arrival"
+msgstr ""
+
+#: templates/moonmining/partials/extractions_tab.html:10
+#: templates/moonmining/partials/moons_tab.html:21
+msgid "Refinery"
+msgstr ""
+
+#: templates/moonmining/partials/extractions_tab.html:11
+msgid "Location"
+msgstr ""
+
+#: templates/moonmining/partials/extractions_tab.html:12
+#: templates/moonmining/partials/moons_tab.html:22
+msgid "Labels"
+msgstr ""
+
+#: templates/moonmining/partials/extractions_tab.html:13
+msgid "Volume (m3)"
+msgstr ""
+
+#: templates/moonmining/partials/extractions_tab.html:14
+#: templates/moonmining/partials/moons_tab.html:23
+#: templates/moonmining/partials/reports_owned_value_tab.html:14
+#: templates/moonmining/partials/reports_user_mining_tab.html:16
+#: templates/moonmining/partials/reports_user_mining_tab.html:18
+#: templates/moonmining/partials/reports_user_mining_tab.html:20
+#: templates/moonmining/partials/reports_user_mining_tab.html:22
+msgid "Est. Value"
+msgstr ""
+
+#: templates/moonmining/partials/extractions_tab.html:15
+msgid "Est. Mined"
+msgstr ""
+
+#: templates/moonmining/partials/menu.html:10
+msgid "Toggle navigation"
+msgstr ""
+
+#: templates/moonmining/partials/menu.html:23 views.py:138
+msgid "Extractions"
+msgstr ""
+
+#: templates/moonmining/partials/menu.html:29
+msgid "Extraction Details"
+msgstr ""
+
+#: templates/moonmining/partials/menu.html:33 views.py:357
+msgid "Moons"
+msgstr ""
+
+#: templates/moonmining/partials/menu.html:37
+msgid "Moon Details"
+msgstr ""
+
+#: templates/moonmining/partials/menu.html:42 views.py:784
+msgid "Reports"
+msgstr ""
+
+#: templates/moonmining/partials/menu.html:51
+msgid "Add Corporation"
+msgstr ""
+
+#: templates/moonmining/partials/moon_details_moon.html:6
+msgid "Name:"
+msgstr ""
+
+#: templates/moonmining/partials/moon_details_moon.html:46
+msgid "Corporation:"
+msgstr ""
+
+#: templates/moonmining/partials/moon_details_moon.html:55
+msgid "Est. Value:"
+msgstr ""
+
+#: templates/moonmining/partials/moon_details_products.html:7
+msgid "There is no survey for this moon in the database."
+msgstr ""
+
+#: templates/moonmining/partials/moon_details_products.html:22
+msgid "ISK per unit"
+msgstr ""
+
+#: templates/moonmining/partials/moon_details_products.html:54
+msgid "Last updated at"
+msgstr ""
+
+#: templates/moonmining/partials/moon_details_products.html:55
+msgid "App"
+msgstr ""
+
+#: templates/moonmining/partials/moon_details_products.html:56
+#, python-format
+msgid "%(updated_at)s by %(updated_by)s"
+msgstr ""
+
+#: templates/moonmining/partials/moon_details_products.html:58
+msgid "Not yet updated"
+msgstr ""
+
+#: templates/moonmining/partials/reports_ore_prices_tab.html:5
+msgid "Current ore prices"
+msgstr ""
+
+#: templates/moonmining/partials/reports_ore_prices_tab.html:10
+#: templates/moonmining/partials/reports_user_mining_tab.html:12
+#: templates/moonmining/partials/reports_user_uploaded_tab.html:10
+msgid "Name"
+msgstr ""
+
+#: templates/moonmining/partials/reports_ore_prices_tab.html:11
+msgid "Price (ISK)"
+msgstr ""
+
+#: templates/moonmining/partials/reports_ore_prices_tab.html:12
+msgid "Group"
+msgstr ""
+
+#: templates/moonmining/partials/reports_ore_prices_tab.html:14
+msgid "Description"
+msgstr ""
+
+#: templates/moonmining/partials/reports_ore_prices_tab.html:20
+msgid ""
+"Ore prices shown on this report are used for all calculations in this app."
+msgstr ""
+
+#: templates/moonmining/partials/reports_ore_prices_tab.html:24
+#, python-format
+msgid ""
+"Ore prices are calculated as sum of it's reprocessed materials with a yield "
+"of %(reprocessing_yield)s%%."
+msgstr ""
+
+#: templates/moonmining/partials/reports_ore_prices_tab.html:28
+msgid "The Eve client prices (average prices) are used for ore prices."
+msgstr ""
+
+#: templates/moonmining/partials/reports_owned_value_tab.html:5
+msgid "Potential monthly income from owned moons by corporation"
+msgstr ""
+
+#: templates/moonmining/partials/reports_owned_value_tab.html:11
+msgid "Corporation / Moon"
+msgstr ""
+
+#: templates/moonmining/partials/reports_owned_value_tab.html:15
+#, python-format
+msgid "%% of Grand Total"
+msgstr ""
+
+#: templates/moonmining/partials/reports_owned_value_tab.html:16
+msgid "Rank of Grand Total"
+msgstr ""
+
+#: templates/moonmining/partials/reports_owned_value_tab.html:21
+msgid "Grand total"
+msgstr ""
+
+#: templates/moonmining/partials/reports_user_mining_tab.html:6
+msgid "Total mining of corporation moons by known mains per month"
+msgstr ""
+
+#: templates/moonmining/partials/reports_user_mining_tab.html:14
+#: templates/moonmining/partials/reports_user_uploaded_tab.html:12
+#: templates/moonmining/reports.html:154 templates/moonmining/reports.html:201
+msgid "State"
+msgstr ""
+
+#: templates/moonmining/partials/reports_user_mining_tab.html:26
+#: templates/moonmining/partials/reports_user_uploaded_tab.html:17
+msgid "Grand Total"
+msgstr ""
+
+#: templates/moonmining/partials/reports_user_mining_tab.html:41
+#, python-format
+msgid "Last update of mining ledgers at %(last_updated_at)s"
+msgstr ""
+
+#: templates/moonmining/partials/reports_user_uploaded_tab.html:5
+msgid "Uploaded moons per main"
+msgstr ""
+
+#: templates/moonmining/partials/reports_user_uploaded_tab.html:13
+msgid "Count"
+msgstr ""
+
+#: templates/moonmining/partials/upload_survey.html:3
+msgid ""
+"Paste your moon scan results into the form below and click the submit button."
+msgstr ""
+
+#: templates/moonmining/partials/upload_survey.html:12
+msgid "Submit Moon Scans"
+msgstr ""
+
+#: templates/moonmining/partials/value_estimate_legend.html:4
+#, python-format
+msgid ""
+"A value estimate represents an estimated monthly income calculated with "
+"average market prices and an assumed monthly ore volume of "
+"%(volume_per_month)s million m3. All values are in billion ISK. "
+msgstr ""
+
+#: views.py:79
+msgid "Show details for this moon."
+msgstr ""
+
+#: views.py:99
+msgid "Moon details"
+msgstr ""
+
+#: views.py:108
+msgid "Extraction details"
+msgstr ""
+
+#: views.py:275
+msgid "Extraction"
+msgstr ""
+
+#: views.py:347
+msgid "Extraction Ledger"
+msgstr ""
+
+#: views.py:720
+#, python-format
+msgid "%(corporation)s was added as new owner by %(user)s."
+msgstr ""
+
+#: views.py:740
+msgid ""
+"Your scan has been submitted for processing. You will receive a notification "
+"once processing is complete."
+msgstr ""
+
+#: views.py:748
+msgid ""
+"Oh No! Something went wrong with your moon scan submission. Please try again."
+msgstr ""

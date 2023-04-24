@@ -19,11 +19,15 @@
                 {% if extraction.status == extraction.Status.CANCELED %}</s>{% endif %}
             </dd>
 
-            <dt>Total mined volume:</dt>
-            <dd>{{ total_volume|intword }} m3</dd>
+            <dt>{% translate 'Total mined volume:' %}</dt>
+            <dd>
+                {% blocktranslate with volume=total_volume|intword %}{{ volume }} m3{% endblocktranslate %}
+            </dd>
 
-            <dt>Total mined value:</dt>
-            <dd>{{ total_value|intword }} ISK</dd>
+            <dt>{% translate 'Total mined value:' %}</dt>
+            <dd>
+                {% blocktranslate with value=total_value|intword %}{{ value }} ISK{% endblocktranslate %}
+            </dd>
         </dl>
     </div>
 

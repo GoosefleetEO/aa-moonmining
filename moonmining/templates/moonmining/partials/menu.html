@@ -19,32 +19,36 @@
             <ul class="nav navbar-nav">
                 {% if perms.moonmining.extractions_access %}
                     <li class="{% navactive request 'moonmining:extractions' %}">
-                        <a href="{% url 'moonmining:extractions' %}">Extractions</a>
+                        <a href="{% url 'moonmining:extractions' %}">
+                            {% translate 'Extractions' %}
+                        </a>
                     </li>
                 {% endif %}
                 {% if "/moonmining/extraction/" in request.path %}
                     <li class="{% renavactive request '/moonmining/extraction/' %}">
-                        <a href="#">Extraction Details</a>
+                        <a href="#">{% translate 'Extraction Details' %}</a>
                     </li>
                 {% endif %}
                 <li class="{% navactive request 'moonmining:moons' %}">
-                    <a href="{% url 'moonmining:moons' %}">Moons</a>
+                    <a href="{% url 'moonmining:moons' %}">{% translate 'Moons' %}</a>
                 </li>
                 {% if "/moonmining/moon/" in request.path %}
                     <li class="{% renavactive request '/moonmining/moon/' %}">
-                        <a href="#">Moon Details</a>
+                        <a href="#">{% translate 'Moon Details' %}</a>
                     </li>
                 {% endif %}
                  {% if perms.moonmining.reports_access %}
                     <li class="{% navactive request 'moonmining:reports' %}">
-                        <a href="{% url 'moonmining:reports' %}">Reports</a>
+                        <a href="{% url 'moonmining:reports' %}">{% translate 'Reports' %}</a>
                     </li>
                 {% endif %}
             </ul>
 
             {% if perms.moonmining.add_refinery_owner %}
-                <a class="btn btn-default navbar-btn" style="float: right" href="{% url 'moonmining:add_owner' %}">
-                    Add Corporation
+                <a  class="btn btn-default navbar-btn"
+                    style="float: right"
+                    href="{% url 'moonmining:add_owner' %}">
+                    {% translate 'Add Corporation' %}
                 </a>
             {% endif %}
         </div>

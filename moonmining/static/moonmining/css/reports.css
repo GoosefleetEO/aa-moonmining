@@ -1,21 +1,5 @@
 /* Owned value */
 
-#table_owned_value thead th:nth-child(4) {
-	text-align: right;
-}
-
-#table_owned_value thead th:nth-child(5) {
-	text-align: right;
-}
-
-#table_owned_value thead th:nth-child(6) {
-	text-align: right;
-}
-
-#table_owned_value thead th:nth-child(7) {
-	text-align: right;
-}
-
 #table_owned_value tbody td:nth-child(4) {
 	text-align: right;
 }
@@ -32,59 +16,16 @@
 	text-align: right;
 }
 
-#table_owned_value tfoot th:nth-child(4) {
-	text-align: right;
-}
-
-#table_owned_value tfoot th:nth-child(5) {
-	text-align: right;
-}
-
-#table_owned_value tfoot th:nth-child(6) {
-	text-align: right;
-}
-
-#table_owned_value tfoot th:nth-child(7) {
-	text-align: right;
-}
-
 .report-title {
 	font-size: x-large;
 }
 
 /* user mining */
 
-#table_user_mining thead th:nth-child(4) {
-	text-align: right;
+#table_user_mining thead th {
+	vertical-align: top !important;
 }
 
-#table_user_mining thead th:nth-child(5) {
-	text-align: right;
-}
-
-#table_user_mining thead th:nth-child(6) {
-	text-align: right;
-}
-
-#table_user_mining thead th:nth-child(7) {
-	text-align: right;
-}
-
-#table_user_mining thead th:nth-child(8) {
-	text-align: right;
-}
-
-#table_user_mining thead th:nth-child(9) {
-	text-align: right;
-}
-
-#table_user_mining thead th:nth-child(10) {
-	text-align: right;
-}
-
-#table_user_mining thead th:nth-child(11) {
-	text-align: right;
-}
 
 #table_user_mining tbody td:nth-child(4) {
 	text-align: right;
@@ -118,56 +59,15 @@
 	text-align: right;
 }
 
-#table_user_mining tfoot th:nth-child(4) {
-	text-align: right;
-}
 
-#table_user_mining tfoot th:nth-child(5) {
-	text-align: right;
-}
-
-#table_user_mining tfoot th:nth-child(6) {
-	text-align: right;
-}
-
-#table_user_mining tfoot th:nth-child(7) {
-	text-align: right;
-}
-
-#table_user_mining tfoot th:nth-child(8) {
-	text-align: right;
-}
-
-#table_user_mining tfoot th:nth-child(9) {
-	text-align: right;
-}
-
-#table_user_mining tfoot th:nth-child(10) {
-	text-align: right;
-}
-
-#table_user_mining tfoot th:nth-child(11) {
-	text-align: right;
-}
-
-#table_user_uploaded thead th:nth-child(4) {
-	text-align: right;
-}
+/* User uploaded */
 
 #table_user_uploaded tbody td:nth-child(4) {
 	text-align: right;
 }
 
-#table_user_uploaded tfoot th:nth-child(4) {
-	text-align: right;
-}
-
 
 /* ore prices */
-
-#table_ore_prices thead th:nth-child(2) {
-	text-align: right;
-}
 
 #table_ore_prices tbody td:nth-child(2) {
 	text-align: right;

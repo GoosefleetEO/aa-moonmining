@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+### Added
+
+- Added support for AA 3 / Django 4
+- Complete localization of templates, models and views
+
+### Changed
+
+- Removed support for AA 2 / Django 3
+- Migrated build process to PEP 621
+- Improve type hints
+
+### Fixed
+
+- Admin page with ore prices breaks when some prices are missing
+- Various typos
+
 ## [1.8.2] - 2023-03-12
 
 ### Fixed

@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import Tuple
+from typing import List, Optional, Tuple
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
@@ -7,6 +7,7 @@ from django.db import models, transaction
 from django.db.models import ExpressionWrapper, F, FloatField, IntegerField, Sum
 from django.db.models.functions import Coalesce
 from django.utils.timezone import now
+from django.utils.translation import gettext_lazy as _
 from eveuniverse.managers import EveTypeManager
 from eveuniverse.models import EveMoon
 
@@ -21,7 +22,7 @@ from .app_settings import (
 )
 from .constants import EveCategoryId
 from .core import CalculatedExtraction
-from .helpers import eveentity_get_or_create_esi_safe
+from .helpers import eve_entity_get_or_create_esi_safe
 
 MAX_THREAD_WORKERS = 20
 BULK_BATCH_SIZE = 500
@@ -43,7 +44,7 @@ class EveOreTypeManger(EveTypeManager):
             .filter(eve_group__eve_category_id=EveCategoryId.ASTEROID)
         )
 
-    def update_current_prices(self, use_process_pricing: bool = None):
+    def update_current_prices(self, use_process_pricing: Optional[bool] = None):
         """Update current prices for all ores."""
         from .models import EveOreTypeExtras
 
@@ -103,7 +104,7 @@ class MoonQuerySet(models.QuerySet):
 
 
 class MoonManagerBase(models.Manager):
-    def update_moons_from_survey(self, scans: str, user: User = None) -> bool:
+    def update_moons_from_survey(self, scans: str, user: Optional[User] = None) -> bool:
         """Update moons from survey input.
 
         Args:
@@ -137,29 +138,29 @@ class MoonManagerBase(models.Manager):
             # Find all groups of scans.
             if len(lines[0]) == 0 or lines[0][0] == "Moon":
                 lines = lines[1:]
-            sublists = []
+            sub_lists = []
             for line in lines:
                 # Find the lines that start a scan
                 if line[0] == "":
                     pass
                 else:
-                    sublists.append(lines.index(line))
+                    sub_lists.append(lines.index(line))
 
             # Separate out individual surveys
-            for i in range(len(sublists)):
+            for i in range(len(sub_lists)):
                 # The First List
                 if i == 0:
-                    if i + 2 > len(sublists):
-                        surveys.append(lines[sublists[i] :])
+                    if i + 2 > len(sub_lists):
+                        surveys.append(lines[sub_lists[i] :])
                     else:
-                        surveys.append(lines[sublists[i] : sublists[i + 1]])
+                        surveys.append(lines[sub_lists[i] : sub_lists[i + 1]])
                 else:
-                    if i + 2 > len(sublists):
-                        surveys.append(lines[sublists[i] :])
+                    if i + 2 > len(sub_lists):
+                        surveys.append(lines[sub_lists[i] :])
                     else:
-                        surveys.append(lines[sublists[i] : sublists[i + 1]])
+                        surveys.append(lines[sub_lists[i] : sub_lists[i + 1]])
 
-        except Exception as ex:
+        except (TypeError, ValueError, KeyError, AttributeError, IndexError) as ex:
             logger.warning(
                 "An issue occurred while trying to parse the surveys", exc_info=True
             )
@@ -169,7 +170,9 @@ class MoonManagerBase(models.Manager):
             error_name = ""
         return surveys, error_name
 
-    def _process_surveys(self, surveys: list, user: User) -> Tuple[list, bool]:
+    def _process_surveys(
+        self, surveys: list, user: Optional[User]
+    ) -> Tuple[List[SurveyProcessResult], bool]:
         from .models import EveOreType, MoonProduct
 
         overall_success = True
@@ -179,16 +182,16 @@ class MoonManagerBase(models.Manager):
             try:
                 moon_name = survey[0][0]
                 moon_id = survey[1][6]
-                eve_moon, _ = EveMoon.objects.get_or_create_esi(id=moon_id)
-                moon, _ = self.get_or_create(eve_moon=eve_moon)
+                eve_moon = EveMoon.objects.get_or_create_esi(id=moon_id)[0]
+                moon = self.get_or_create(eve_moon=eve_moon)[0]
                 moon_products = list()
                 survey = survey[1:]
                 for product_data in survey:
                     # Trim off the empty index at the front
                     product_data = product_data[1:]
-                    ore_type, _ = EveOreType.objects.get_or_create_esi(
-                        id=product_data[2]
-                    )
+                    ore_type = EveOreType.objects.get_or_create_esi(id=product_data[2])[
+                        0
+                    ]
                     moon_products.append(
                         MoonProduct(
                             moon=moon, amount=product_data[1], ore_type=ore_type
@@ -218,7 +221,10 @@ class MoonManagerBase(models.Manager):
 
     @staticmethod
     def _send_survey_process_report_to_user(
-        process_results: list, error_name: str, user: User, success: bool
+        process_results: Optional[List[SurveyProcessResult]],
+        error_name: str,
+        user: User,
+        success: bool,
     ) -> bool:
         message = "We have completed processing your moon survey input:\n\n"
         if process_results:
@@ -239,8 +245,9 @@ class MoonManagerBase(models.Manager):
 
         notify(
             user=user,
-            title="Moon survey input processing results: {}".format(
-                "OK" if success else "FAILED"
+            title=_(
+                "Moon survey input processing results: %s"
+                % ("OK" if success else "FAILED")
             ),
             message=message,
             level="success" if success else "danger",
@@ -320,17 +327,17 @@ class ExtractionManagerBase(models.Manager):
             extraction.canceled_at = calculated.canceled_at
             needs_update = True
         if calculated.canceled_by and not extraction.canceled_by:
-            extraction.canceled_by = eveentity_get_or_create_esi_safe(
+            extraction.canceled_by = eve_entity_get_or_create_esi_safe(
                 calculated.canceled_by
             )
             needs_update = True
         if calculated.canceled_by and not extraction.canceled_by:
-            extraction.canceled_by = eveentity_get_or_create_esi_safe(
+            extraction.canceled_by = eve_entity_get_or_create_esi_safe(
                 calculated.canceled_by
             )
             needs_update = True
         if calculated.fractured_by and not extraction.fractured_by:
-            extraction.fractured_by = eveentity_get_or_create_esi_safe(
+            extraction.fractured_by = eve_entity_get_or_create_esi_safe(
                 calculated.fractured_by
             )
             needs_update = True
@@ -344,7 +351,7 @@ class ExtractionManagerBase(models.Manager):
         else:
             status_changed = False
         if calculated.started_by and not extraction.started_by:
-            extraction.started_by = eveentity_get_or_create_esi_safe(
+            extraction.started_by = eve_entity_get_or_create_esi_safe(
                 calculated.started_by
             )
             needs_update = True

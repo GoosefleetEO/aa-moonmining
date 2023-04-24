@@ -20,7 +20,7 @@ class HttpResponseUnauthorized(HttpResponse):
     status_code = 401
 
 
-def eveentity_get_or_create_esi_safe(id):
+def eve_entity_get_or_create_esi_safe(id):
     """Get or Create EveEntity with given ID safely and return it. Else return None."""
     if id:
         try:
