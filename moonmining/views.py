@@ -148,7 +148,7 @@ def extractions(request):
 @permission_required(["moonmining.extractions_access", "moonmining.basic_access"])
 def extractions_data(request, category):
     data = list()
-    cutover_dt = now() - dt.timedelta(
+    stale_cutoff = now() - dt.timedelta(
         hours=MOONMINING_COMPLETED_EXTRACTIONS_HOURS_UNTIL_STALE
     )
     extractions = (
@@ -161,12 +161,12 @@ def extractions_data(request, category):
         )
     )
     if category == ExtractionsCategory.UPCOMING:
-        extractions = extractions.filter(auto_fracture_at__gte=cutover_dt).exclude(
+        extractions = extractions.filter(auto_fracture_at__gte=stale_cutoff).exclude(
             status=Extraction.Status.CANCELED
         )
     elif category == ExtractionsCategory.PAST:
         extractions = extractions.filter(
-            auto_fracture_at__lt=cutover_dt
+            auto_fracture_at__lt=stale_cutoff
         ) | extractions.filter(status=Extraction.Status.CANCELED)
     else:
         extractions = Extraction.objects.none()
@@ -711,7 +711,7 @@ def add_owner(request, token):
         defaults={"character_ownership": character_ownership},
     )
     tasks.update_owner.delay(owner.pk)
-    messages_plus.success(request, f"Update of refineres started for {owner}.")
+    messages_plus.success(request, f"Update of refineries started for {owner}.")
     if MOONMINING_ADMIN_NOTIFICATIONS_ENABLED:
         notify_admins(
             message=("%(corporation)s was added as new owner by %(user)s.")

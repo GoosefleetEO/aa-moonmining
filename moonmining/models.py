@@ -818,7 +818,7 @@ class Moon(models.Model):
 
 
 class MoonProduct(models.Model):
-    """A product of a moon, i.e. a specifc ore."""
+    """A product of a moon, i.e. a specific ore."""
 
     moon = models.ForeignKey(Moon, on_delete=models.CASCADE, related_name="products")
     ore_type = models.ForeignKey(EveOreType, on_delete=models.CASCADE, related_name="+")
@@ -1099,7 +1099,7 @@ class Owner(models.Model):
         return True
 
     def fetch_notifications_from_esi(self) -> bool:
-        """fetches notification for the current owners and proceses them"""
+        """fetches notification for the current owners and process them"""
         notifications = self._fetch_moon_notifications_from_esi()
         self._store_notifications(notifications)
 

@@ -21,7 +21,7 @@ from .app_settings import (
 )
 from .constants import EveCategoryId
 from .core import CalculatedExtraction
-from .helpers import eveentity_get_or_create_esi_safe
+from .helpers import eve_entity_get_or_create_esi_safe
 
 MAX_THREAD_WORKERS = 20
 BULK_BATCH_SIZE = 500
@@ -137,27 +137,27 @@ class MoonManagerBase(models.Manager):
             # Find all groups of scans.
             if len(lines[0]) == 0 or lines[0][0] == "Moon":
                 lines = lines[1:]
-            sublists = []
+            sub_lists = []
             for line in lines:
                 # Find the lines that start a scan
                 if line[0] == "":
                     pass
                 else:
-                    sublists.append(lines.index(line))
+                    sub_lists.append(lines.index(line))
 
             # Separate out individual surveys
-            for i in range(len(sublists)):
+            for i in range(len(sub_lists)):
                 # The First List
                 if i == 0:
-                    if i + 2 > len(sublists):
-                        surveys.append(lines[sublists[i] :])
+                    if i + 2 > len(sub_lists):
+                        surveys.append(lines[sub_lists[i] :])
                     else:
-                        surveys.append(lines[sublists[i] : sublists[i + 1]])
+                        surveys.append(lines[sub_lists[i] : sub_lists[i + 1]])
                 else:
-                    if i + 2 > len(sublists):
-                        surveys.append(lines[sublists[i] :])
+                    if i + 2 > len(sub_lists):
+                        surveys.append(lines[sub_lists[i] :])
                     else:
-                        surveys.append(lines[sublists[i] : sublists[i + 1]])
+                        surveys.append(lines[sub_lists[i] : sub_lists[i + 1]])
 
         except Exception as ex:
             logger.warning(
@@ -320,17 +320,17 @@ class ExtractionManagerBase(models.Manager):
             extraction.canceled_at = calculated.canceled_at
             needs_update = True
         if calculated.canceled_by and not extraction.canceled_by:
-            extraction.canceled_by = eveentity_get_or_create_esi_safe(
+            extraction.canceled_by = eve_entity_get_or_create_esi_safe(
                 calculated.canceled_by
             )
             needs_update = True
         if calculated.canceled_by and not extraction.canceled_by:
-            extraction.canceled_by = eveentity_get_or_create_esi_safe(
+            extraction.canceled_by = eve_entity_get_or_create_esi_safe(
                 calculated.canceled_by
             )
             needs_update = True
         if calculated.fractured_by and not extraction.fractured_by:
-            extraction.fractured_by = eveentity_get_or_create_esi_safe(
+            extraction.fractured_by = eve_entity_get_or_create_esi_safe(
                 calculated.fractured_by
             )
             needs_update = True
@@ -344,7 +344,7 @@ class ExtractionManagerBase(models.Manager):
         else:
             status_changed = False
         if calculated.started_by and not extraction.started_by:
-            extraction.started_by = eveentity_get_or_create_esi_safe(
+            extraction.started_by = eve_entity_get_or_create_esi_safe(
                 calculated.started_by
             )
             needs_update = True
