@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 - Removed support for AA 2 / Django 3
+- Migrated build process to PEP 621
 
 ### Fixed
 

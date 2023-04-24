@@ -49,10 +49,10 @@ deploy-pypi:
   image: python:3.10-bullseye
 
   before_script:
-    - pip install twine
+    - pip install build twine
 
   script:
-    - python setup.py sdist bdist_wheel
+    - python -m build
     - twine upload dist/*
 
   only:
