@@ -52,7 +52,7 @@
 <p class="text-muted">
     {% if moon.products_updated_at %}
         {% translate 'Last updated at' %}
-        {% translate "Moonminning App" as estimated_by %}
+        {% translate "App" as estimated_by %}
         {% blocktranslate with updated_at=moon.products_updated_at|datetime|default:"?" updated_by=moon.products_updated_by.profile.main_character|default:estimated_by %}{{ updated_at }} by {{ updated_by }}{% endblocktranslate %}
     {% else %}
         {% translate 'Not yet updated' %}

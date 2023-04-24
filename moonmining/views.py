@@ -737,8 +737,8 @@ def upload_survey(request):
             messages_plus.success(
                 request,
                 _(
-                    "Your scan has been submitted for processing. You will"
-                    "receive a notification once processing is complete."
+                    "Your scan has been submitted for processing. "
+                    "You will receive a notification once processing is complete."
                 ),
             )
         else:

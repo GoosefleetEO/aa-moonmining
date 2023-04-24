@@ -1,0 +1,9 @@
+[main]
+host = https://www.transifex.com
+
+[o:kalkoken-apps:p:aa-moonmining:r:django-po]
+file_filter  = moonmining/locale/<lang>/LC_MESSAGES/django.po
+source_file  = moonmining/locale/en/LC_MESSAGES/django.po
+source_lang  = en_US
+type         = PO
+minimum_perc = 0
