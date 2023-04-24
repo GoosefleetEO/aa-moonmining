@@ -23,21 +23,21 @@ pre-commit-check:
     - python -V
     - pip install tox
 
-test-py38-dj32:
+test-py38-dj40:
   extends: .test
   image: python:3.8-bullseye
   script:
     - tox -e py38-django40
     - bash <(curl -s https://codecov.io/bash)
 
-test-py39-dj32:
+test-py39-dj40:
   extends: .test
   image: python:3.9-bullseye
   script:
     - tox -e py39-django40
     - bash <(curl -s https://codecov.io/bash)
 
-test-py310-dj32:
+test-py310-dj40:
   extends: .test
   image: python:3.10-bullseye
   script:
