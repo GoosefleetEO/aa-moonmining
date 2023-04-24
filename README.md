@@ -143,7 +143,7 @@ Please wait until the loading is complete before continuing.
 In order to get the current prices from ESI initially, please run the following command (assuming the name of your Auth installation is `myauth`):
 
 ```bash
-celery -A myauth call moonmining.tasks.run_calculated_properties_update
+python manage.py moonmining_calculate_all
 ```
 
 Please wait until the loading is complete before continuing.
@@ -168,21 +168,27 @@ Congratulations! You are now ready to use Moon Mining!
 
 ### Pricing
 
-The app uses average market prices as basis for all price calculations. Average market prices are same prices that you also see in the Eve client e.g. for the mining ledger or fitting costs. These can be slightly different from Jita prices, since they are represent an average accross all of New Eden, not just Jita / The Forge.
+The app uses average market prices as basis for all price calculations. Average market prices are same prices that you also see in the Eve client e.g. for the mining ledger or fitting costs. These can be slightly different from Jita prices, since they are represent an average across all of New Eden, not just Jita / The Forge.
 
 The calculation of ore prices can be done in two different ways.
 
 ### Default ore pricing
 
-The default ore pricing uses the average market prices directly to calculate ore prices. This is the same approach that the Eve client uses in the minning ledger or when scheduling an extraction. So the main benefit of this approach that you will see the same prices in-game and in the app.
+The default ore pricing uses the average market prices directly to calculate ore prices. This is the same approach that the Eve client uses in the mining ledger or when scheduling an extraction. So the main benefit of this approach that you will see the same prices in-game and in the app.
 
 ### Reprocess ore pricing
 
 The disadvantage of this approach is that average market prices for ores are not always accurate. Ores are rarely sold directly on the market, instead most people of refining their ores and selling the refined materials instead. This is because they have they are much smaller in volume making them easier to transport. The total value of the refined materials is also often higher then the value of the ore.
 
-Therefore you can also chose to use refined ore pricing. This will give you more occurate prices, but the values will be very different from what you may be used to see in the Eve client. For this approach the app calculates the price for a unit of ore as the sum total of it's refined materials. For the materials again the average market price is used.
+Therefore you can also chose to use refined ore pricing. This will give you more accurate prices, but the values will be very different from what you may be used to see in the Eve client. For this approach the app calculates the price for a unit of ore as the sum total of it's refined materials. For the materials again the average market price is used.
 
 Please see the settings `MOONMINING_USE_REPROCESS_PRICING` and `MOONMINING_REPROCESSING_YIELD` for configuring the ore pricing approach.
+
+After you changed the settings for price calculation, you please restart your AA services so that the changes to your settings become effective. Next please run the following command to recalculate all prices:
+
+```bash
+python manage.py moonmining_calculate_all
+```
 
 >**Note**<br>You can see the current prices used for all ores in the app in the ore prices report.
 

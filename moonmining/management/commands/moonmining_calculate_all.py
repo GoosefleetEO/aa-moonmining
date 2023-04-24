@@ -22,7 +22,7 @@ class Command(BaseCommand):
             f"Updating calculated properties for {moon_count} moons "
             f"and {extractions_count} extractions. This can take a while."
         )
-        self.stdout.write()
+        self.stdout.write("")
         user_input = get_input("Are you sure you want to proceed? (Y/n)?")
 
         if user_input.lower() != "n":
