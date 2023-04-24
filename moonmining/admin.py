@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils.translation import gettext_lazy as _
 
 from . import tasks
 from .models import (
@@ -74,14 +75,17 @@ class ExtractionAdmin(admin.ModelAdmin):
     inlines = [ExtractionProductAdmin]
     actions = ["update_calculated_properties"]
 
-    @admin.display(description="Update calculated properties for selected extractions.")
+    @admin.display(
+        description=_("Update calculated properties for selected extractions.")
+    )
     def update_calculated_properties(self, request, queryset):
         num = 0
         for obj in queryset:
             tasks.update_extraction_calculated_properties.delay(extraction_pk=obj.pk)
             num += 1
         self.message_user(
-            request, f"Started updating calculated properties for {num} extractions."
+            request,
+            _("Started updating calculated properties for %d extractions." % num),
         )
 
     def _owner(self, obj):
@@ -135,8 +139,8 @@ class MoonHasRefineryFilter(admin.SimpleListFilter):
 
     def lookups(self, request, model_admin):
         return (
-            ("yes", "Yes"),
-            ("no", "No"),
+            ("yes", _("Yes")),
+            ("no", _("No")),
         )
 
     def queryset(self, request, queryset):
@@ -250,18 +254,18 @@ class MoonAdmin(admin.ModelAdmin):
     def _owner(self, obj) -> str:
         return obj.refinery.owner.name
 
-    @admin.display(description="Update calculated properties for selected moons.")
+    @admin.display(description=_("Update calculated properties for selected moons."))
     def update_calculated_properties(self, request, queryset):
         num = 0
         for obj in queryset:
             tasks.update_moon_calculated_properties.delay(moon_pk=obj.pk)
             num += 1
         self.message_user(
-            request, f"Started updating calculated properties for {num} moons."
+            request, _("Started updating calculated properties for %d moons." % num)
         )
 
     @admin.display(
-        description=("Update products from latest extraction for selected moons.")
+        description=_("Update products from latest extraction for selected moons.")
     )
     def update_products_from_latest_extraction(self, request, queryset):
         num = 0
@@ -270,7 +274,7 @@ class MoonAdmin(admin.ModelAdmin):
             num += 1
         self.message_user(
             request,
-            f"Started updating products from latest extractions for {num} moons.",
+            _("Started updating products from latest extractions for %d moons." % num),
         )
 
 
@@ -317,11 +321,11 @@ class OwnerAdmin(admin.ModelAdmin):
     def _alliance(self, obj):
         return obj.corporation.alliance
 
-    @admin.display(description="Update selected owners from ESI")
+    @admin.display(description=_("Update selected owners from ESI"))
     def update_owner(self, request, queryset):
         for obj in queryset:
             tasks.update_owner.delay(obj.pk)
-            text = f"Started updating owner: {obj}. "
+            text = _("Started updating owner %s." % obj)
             self.message_user(request, text)
 
     def has_add_permission(self, request):
@@ -368,9 +372,11 @@ class RefineryAdmin(admin.ModelAdmin):
 
     actions = ["update_mining_ledger"]
 
-    @admin.display(description="Update mining ledger for selected refineries from ESI")
+    @admin.display(
+        description=_("Update mining ledger for selected refineries from ESI")
+    )
     def update_mining_ledger(self, request, queryset):
         for obj in queryset:
             tasks.update_mining_ledger_for_refinery.delay(obj.id)
-            text = f"Started updating mining ledger: {obj}. "
+            text = _("Started updating mining ledger %s." % obj)
             self.message_user(request, text)

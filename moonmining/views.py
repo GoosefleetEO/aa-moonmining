@@ -73,9 +73,10 @@ def moon_link_html(moon: Moon) -> str:
     return format_html(
         '<a href="#" data-toggle="modal" '
         'data-target="#modalMoonDetails" '
-        'title="Show details for this moon." '
+        'title="{}" '
         "data-ajax_url={}>"
         "{}</a>",
+        _("Show details for this moon."),
         reverse("moonmining:moon_details", args=[moon.pk]),
         moon.name,
     )
@@ -95,7 +96,7 @@ def moon_details_button_html(moon: Moon) -> str:
         modal_id="modalMoonDetails",
         fa_code="fas fa-moon",
         ajax_url=reverse("moonmining:moon_details", args=[moon.pk]),
-        tooltip="Moon details",
+        tooltip=_("Moon details"),
     )
 
 
@@ -104,7 +105,7 @@ def extraction_details_button_html(extraction_pk: int) -> str:
         modal_id="modalExtractionDetails",
         fa_code="fas fa-hammer",
         ajax_url=reverse("moonmining:extraction_details", args=[extraction_pk]),
-        tooltip="Extraction details",
+        tooltip=_("Extraction details"),
     )
 
 
@@ -134,7 +135,7 @@ def index(request):
 @permission_required(["moonmining.extractions_access", "moonmining.basic_access"])
 def extractions(request):
     context = {
-        "page_title": "Extractions",
+        "page_title": _("Extractions"),
         "ExtractionsCategory": ExtractionsCategory.to_dict(),
         "ExtractionsStatus": Extraction.Status,
         "use_reprocess_pricing": MOONMINING_USE_REPROCESS_PRICING,
@@ -271,7 +272,7 @@ def extraction_details(request, extraction_pk: int):
         "extraction": extraction,
     }
     if request.GET.get("new_page"):
-        context["title"] = "Extraction"
+        context["title"] = _("Extraction")
         context["content_file"] = "moonmining/partials/extraction_details.html"
         return render(request, "moonmining/_generic_modal_page.html", context)
     else:
@@ -343,7 +344,7 @@ def extraction_ledger(request, extraction_pk: int):
         "character_totals": character_totals,
     }
     if request.GET.get("new_page"):
-        context["title"] = "Extraction Ledger"
+        context["title"] = _("Extraction Ledger")
         context["content_file"] = "moonmining/partials/extraction_ledger.html"
         return render(request, "moonmining/_generic_modal_page.html", context)
     return render(request, "moonmining/modals/extraction_ledger.html", context)
@@ -353,7 +354,7 @@ def extraction_ledger(request, extraction_pk: int):
 @permission_required("moonmining.basic_access")
 def moons(request):
     context = {
-        "page_title": "Moons",
+        "page_title": _("Moons"),
         "MoonsCategory": MoonsCategory.to_dict(),
         "use_reprocess_pricing": MOONMINING_USE_REPROCESS_PRICING,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
@@ -504,21 +505,21 @@ class MoonListJson(PermissionRequiredMixin, LoginRequiredMixin, BaseDatatableVie
             )
         return qs
 
-        qs = self._apply_search_filter(qs, 4, "user__profile__state__name")
-        qs = self._apply_search_filter(qs, 6, "character__alliance_name")
-        qs = self._apply_search_filter(qs, 7, "character__corporation_name")
-        qs = self._apply_search_filter(
-            qs, 8, "user__profile__main_character__alliance_name"
-        )
-        qs = self._apply_search_filter(
-            qs, 9, "user__profile__main_character__corporation_name"
-        )
-        qs = self._apply_search_filter(
-            qs, 10, "user__profile__main_character__character_name"
-        )
-        qs = self._apply_search_filter(qs, 11, "unregistered")
+        # qs = self._apply_search_filter(qs, 4, "user__profile__state__name")
+        # qs = self._apply_search_filter(qs, 6, "character__alliance_name")
+        # qs = self._apply_search_filter(qs, 7, "character__corporation_name")
+        # qs = self._apply_search_filter(
+        #     qs, 8, "user__profile__main_character__alliance_name"
+        # )
+        # qs = self._apply_search_filter(
+        #     qs, 9, "user__profile__main_character__corporation_name"
+        # )
+        # qs = self._apply_search_filter(
+        #     qs, 10, "user__profile__main_character__character_name"
+        # )
+        # qs = self._apply_search_filter(qs, 11, "unregistered")
 
-        return qs
+        # return qs
 
     def _apply_search_filter(self, qs, column_num, field) -> models.QuerySet:
         my_filter = self.request.GET.get(f"columns[{column_num}][search][value]", None)
@@ -681,7 +682,7 @@ def moon_details(request, moon_pk: int):
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
     }
     if request.GET.get("new_page"):
-        context["title"] = "Moon"
+        context["title"] = _("Moon")
         context["content_file"] = "moonmining/partials/moon_details.html"
         return render(request, "moonmining/_generic_modal_page.html", context)
     return render(request, "moonmining/modals/moon_details.html", context)
@@ -715,8 +716,10 @@ def add_owner(request, token):
     messages_plus.success(request, f"Update of refineries started for {owner}.")
     if MOONMINING_ADMIN_NOTIFICATIONS_ENABLED:
         notify_admins(
-            message=("%(corporation)s was added as new owner by %(user)s.")
-            % {"corporation": owner, "user": request.user},
+            message=_(
+                "%(corporation)s was added as new owner by %(user)s."
+                % {"corporation": owner, "user": request.user}
+            ),
             title=f"{__title__}: Owner added: {owner}",
         )
     return redirect("moonmining:index")
@@ -725,7 +728,7 @@ def add_owner(request, token):
 @permission_required(["moonmining.basic_access", "moonmining.upload_moon_scan"])
 @login_required()
 def upload_survey(request):
-    context = {"page_title": "Upload Moon Surveys"}
+    context = {"page_title": _("Upload Moon Surveys")}
     if request.method == "POST":
         form = MoonScanForm(request.POST)
         if form.is_valid():
@@ -733,7 +736,7 @@ def upload_survey(request):
             tasks.process_survey_input.delay(scans, request.user.pk)
             messages_plus.success(
                 request,
-                (
+                _(
                     "Your scan has been submitted for processing. You will"
                     "receive a notification once processing is complete."
                 ),
@@ -741,7 +744,7 @@ def upload_survey(request):
         else:
             messages_plus.error(
                 request,
-                (
+                _(
                     "Oh No! Something went wrong with your moon scan submission. "
                     "Please try again."
                 ),
@@ -778,7 +781,7 @@ def reports(request):
         except KeyError:
             ledger_last_updated = None
     context = {
-        "page_title": "Reports",
+        "page_title": _("Reports"),
         "use_reprocess_pricing": MOONMINING_USE_REPROCESS_PRICING,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
