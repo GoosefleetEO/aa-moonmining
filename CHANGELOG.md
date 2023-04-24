@@ -10,12 +10,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - Added support for AA 3 / Django 4
-- Localization to templates, models and views
+- Complete localization of templates, models and views
 
 ### Changed
 
 - Removed support for AA 2 / Django 3
 - Migrated build process to PEP 621
+- Improve type hints
 
 ### Fixed
 

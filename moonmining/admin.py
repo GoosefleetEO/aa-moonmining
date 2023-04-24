@@ -333,7 +333,7 @@ class OwnerAdmin(admin.ModelAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         if obj:  # editing an existing object
-            return self.readonly_fields + (
+            return tuple(self.readonly_fields) + (
                 "corporation",
                 "character_ownership",
                 "last_update_at",

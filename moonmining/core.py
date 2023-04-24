@@ -1,7 +1,7 @@
 import datetime as dt
 from dataclasses import dataclass
 from enum import IntEnum, auto
-from typing import List
+from typing import List, Optional
 
 from . import helpers
 
@@ -19,15 +19,15 @@ class CalculatedExtraction:
 
     refinery_id: int
     status: Status
-    auto_fracture_at: dt.datetime = None
-    canceled_at: dt.datetime = None
-    canceled_by: int = None
-    chunk_arrival_at: dt.datetime = None
-    fractured_at: dt.datetime = None
-    fractured_by: int = None
-    products: List["CalculatedExtractionProduct"] = None
-    started_at: dt.datetime = None
-    started_by: int = None
+    auto_fracture_at: Optional[dt.datetime] = None
+    canceled_at: Optional[dt.datetime] = None
+    canceled_by: Optional[int] = None
+    chunk_arrival_at: Optional[dt.datetime] = None
+    fractured_at: Optional[dt.datetime] = None
+    fractured_by: Optional[int] = None
+    products: Optional[List["CalculatedExtractionProduct"]] = None
+    started_at: Optional[dt.datetime] = None
+    started_by: Optional[int] = None
 
     def __post_init__(self):
         self.refinery_id = int(self.refinery_id)
@@ -62,6 +62,8 @@ class CalculatedExtraction:
             raise ValueError("Can not estimate products without duration.")
         max_volume = duration_in_days * volume_per_day
         correction_factor = max(1, self.total_volume() / max_volume)
+        if not self.products:
+            return []
         products = [
             CalculatedMoonProduct(
                 ore_type_id=product.ore_type_id,
