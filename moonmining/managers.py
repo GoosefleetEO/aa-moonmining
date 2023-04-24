@@ -7,6 +7,7 @@ from django.db import models, transaction
 from django.db.models import ExpressionWrapper, F, FloatField, IntegerField, Sum
 from django.db.models.functions import Coalesce
 from django.utils.timezone import now
+from django.utils.translation import gettext_lazy as _
 from eveuniverse.managers import EveTypeManager
 from eveuniverse.models import EveMoon
 
@@ -179,16 +180,16 @@ class MoonManagerBase(models.Manager):
             try:
                 moon_name = survey[0][0]
                 moon_id = survey[1][6]
-                eve_moon, _ = EveMoon.objects.get_or_create_esi(id=moon_id)
-                moon, _ = self.get_or_create(eve_moon=eve_moon)
+                eve_moon = EveMoon.objects.get_or_create_esi(id=moon_id)[0]
+                moon = self.get_or_create(eve_moon=eve_moon)[0]
                 moon_products = list()
                 survey = survey[1:]
                 for product_data in survey:
                     # Trim off the empty index at the front
                     product_data = product_data[1:]
-                    ore_type, _ = EveOreType.objects.get_or_create_esi(
-                        id=product_data[2]
-                    )
+                    ore_type = EveOreType.objects.get_or_create_esi(id=product_data[2])[
+                        0
+                    ]
                     moon_products.append(
                         MoonProduct(
                             moon=moon, amount=product_data[1], ore_type=ore_type
@@ -239,8 +240,9 @@ class MoonManagerBase(models.Manager):
 
         notify(
             user=user,
-            title="Moon survey input processing results: {}".format(
-                "OK" if success else "FAILED"
+            title=_(
+                "Moon survey input processing results: %s"
+                % ("OK" if success else "FAILED")
             ),
             message=message,
             level="success" if success else "danger",

@@ -14,6 +14,7 @@ from django.db.models.functions import Coalesce
 from django.utils.functional import cached_property, classproperty
 from django.utils.html import format_html
 from django.utils.timezone import now
+from django.utils.translation import gettext_lazy as _
 from esi.models import Token
 from eveuniverse.models import EveEntity, EveMoon, EveSolarSystem, EveType
 
@@ -89,11 +90,11 @@ class OreRarityClass(models.IntegerChoices):
     """Rarity class of an ore"""
 
     NONE = 0, ""
-    R4 = 4, "R 4"
-    R8 = 8, "R 8"
-    R16 = 16, "R16"
-    R32 = 32, "R32"
-    R64 = 64, "R64"
+    R4 = 4, _("R 4")
+    R8 = 8, _("R 8")
+    R16 = 16, _("R16")
+    R32 = 32, _("R32")
+    R64 = 64, _("R64")
 
     @property
     def bootstrap_tag_html(self) -> str:
@@ -135,10 +136,10 @@ class OreRarityClass(models.IntegerChoices):
 class OreQualityClass(models.TextChoices):
     """Quality class of an ore"""
 
-    UNDEFINED = "UN", "(undefined)"
-    REGULAR = "RE", "regular"
-    IMPROVED = "IM", "improved"
-    EXCELLENT = "EX", "excellent"
+    UNDEFINED = "UN", _("undefined")
+    REGULAR = "RE", _("regular")
+    IMPROVED = "IM", _("improved")
+    EXCELLENT = "EX", _("excellent")
 
     @property
     def bootstrap_tag_html(self) -> str:
@@ -179,16 +180,12 @@ class EveOreType(EveType):
     Ensures TYPE_MATERIALS and DOGMAS is always enabled and allows adding methods to types.
     """
 
-    URL_PROFILE_TYPE = "https://www.kalkoken.org/apps/eveitems/"
-
     class Meta:
         proxy = True
+        verbose_name = _("ore type")
+        verbose_name_plural = _("ore types")
 
     objects = EveOreTypeManger()
-
-    @property
-    def profile_url(self) -> str:
-        return f"{self.URL_PROFILE_TYPE}?typeId={self.id}"
 
     @property
     def icon_url_32(self) -> str:
@@ -249,9 +246,9 @@ class EveOreTypeExtras(models.Model):
     """Extra fields for an EveOreType, e.g. for pricing calculations."""
 
     class PricingMethod(models.TextChoices):
-        UNKNOWN = "UN", "Unknown"
-        EVE_CLIENT = "EC", "Eve client"
-        REPROCESSED_MATERIALS = "RP", "Reprocessed materials"
+        UNKNOWN = "UN", _("Undefined")
+        EVE_CLIENT = "EC", _("Eve client")
+        REPROCESSED_MATERIALS = "RP", _("Reprocessed materials")
 
     ore_type = models.OneToOneField(
         EveOreType, on_delete=models.CASCADE, related_name="extras"
@@ -259,11 +256,15 @@ class EveOreTypeExtras(models.Model):
     current_price = models.FloatField(
         default=None,
         null=True,
-        help_text="price used all price calculations with this type",
+        help_text=_("Price used by all price calculations with this type"),
     )
     pricing_method = models.CharField(
         max_length=2, choices=PricingMethod.choices, default=PricingMethod.UNKNOWN
     )
+
+    class Meta:
+        verbose_name = _("ore type extra")
+        verbose_name_plural = _("ore type extras")
 
     def __str__(self) -> str:
         return str(self.ore_type)
@@ -273,11 +274,11 @@ class Extraction(models.Model):
     """A mining extraction."""
 
     class Status(models.TextChoices):
-        STARTED = "ST", "started"  # has been started
-        CANCELED = "CN", "canceled"  # has been canceled
-        READY = "RD", "ready"  # has finished extraction and is ready to be fractured
-        COMPLETED = "CP", "completed"  # has been fractured
-        UNDEFINED = "UN", "undefined"  # unclear status
+        STARTED = "ST", _("started")  # has been started
+        CANCELED = "CN", _("canceled")  # has been canceled
+        READY = "RD", _("ready")  # has finished extraction and is ready to be fractured
+        COMPLETED = "CP", _("completed")  # has been fractured
+        UNDEFINED = "UN", _("undefined")  # unclear status
 
         @property
         def bootstrap_tag_html(self) -> str:
@@ -332,14 +333,15 @@ class Extraction(models.Model):
     refinery = models.ForeignKey(
         "Refinery", on_delete=models.CASCADE, related_name="extractions"
     )
-    started_at = models.DateTimeField(help_text="when this extraction was started")
-    # TODO: Add db_index
+    started_at = models.DateTimeField(
+        db_index=True, help_text=_("When this extraction was started")
+    )
     # normal properties
     auto_fracture_at = models.DateTimeField(
-        help_text="when this extraction will be automatically fractured",
+        help_text=_("When this extraction will be automatically fractured"),
     )
     canceled_at = models.DateTimeField(
-        null=True, default=None, help_text="when this extraction was canceled"
+        null=True, default=None, help_text=_("When this extraction was canceled")
     )
     canceled_by = models.ForeignKey(
         EveEntity,
@@ -347,13 +349,13 @@ class Extraction(models.Model):
         null=True,
         default=None,
         related_name="+",
-        help_text="Eve character who canceled this extraction",
+        help_text=_("Eve character who canceled this extraction"),
     )
     chunk_arrival_at = models.DateTimeField(
-        db_index=True, help_text="when this extraction is ready to be fractured"
+        db_index=True, help_text=_("When this extraction is ready to be fractured")
     )
     fractured_at = models.DateTimeField(
-        null=True, default=None, help_text="when this extraction was fractured"
+        null=True, default=None, help_text=_("When this extraction was fractured")
     )
     fractured_by = models.ForeignKey(
         EveEntity,
@@ -361,12 +363,12 @@ class Extraction(models.Model):
         null=True,
         default=None,
         related_name="+",
-        help_text="Eve character who fractured this extraction (if any)",
+        help_text=_("Eve character who fractured this extraction (if any)"),
     )
     is_jackpot = models.BooleanField(
         default=None,
         null=True,
-        help_text="Whether this is a jackpot extraction (calculated)",
+        help_text=_("Whether this is a jackpot extraction (calculated)"),
     )
     started_by = models.ForeignKey(
         EveEntity,
@@ -374,7 +376,7 @@ class Extraction(models.Model):
         null=True,
         default=None,
         related_name="+",
-        help_text="Eve character who started this extraction",
+        help_text=_("Eve character who started this extraction"),
     )
     status = models.CharField(
         max_length=2, choices=Status.choices, default=Status.UNDEFINED, db_index=True
@@ -383,7 +385,7 @@ class Extraction(models.Model):
         null=True,
         default=None,
         validators=[MinValueValidator(0.0)],
-        help_text="Estimated value of this extraction (calculated)",
+        help_text=_("Estimated value of this extraction (calculated)"),
     )
 
     objects = ExtractionManager()
@@ -394,6 +396,8 @@ class Extraction(models.Model):
                 fields=["refinery", "started_at"], name="functional_pk_extraction"
             )
         ]
+        verbose_name = _("extraction")
+        verbose_name_plural = _("extractions")
 
     def __str__(self) -> str:
         return f"{self.refinery} - {self.started_at} - {self.status}"
@@ -455,7 +459,8 @@ class Extraction(models.Model):
 
     def calc_is_jackpot(self) -> Optional[bool]:
         """Calculate if extraction is jackpot and return result.
-        Return None if extraction has no products"""
+        Return None if extraction has no products.
+        """
         try:
             products_qualities = [
                 product.ore_type.quality_class == OreQualityClass.EXCELLENT
@@ -542,6 +547,8 @@ class ExtractionProduct(models.Model):
                 name="functional_pk_extractionproduct",
             )
         ]
+        verbose_name = _("extraction product")
+        verbose_name_plural = _("extractions products")
 
     def __str__(self) -> str:
         return f"{self.extraction} - {self.ore_type}"
@@ -551,12 +558,12 @@ class Label(models.Model):
     """A custom label for structuring moons."""
 
     class Style(models.TextChoices):
-        DARK_BLUE = "primary", "dark blue"
-        GREEN = "success", "green"
-        GREY = "default", "grey"
-        LIGHT_BLUE = "info", "light blue"
-        ORANGE = "warning", "orange"
-        RED = "danger", "red"
+        DARK_BLUE = "primary", _("dark blue")
+        GREEN = "success", _("green")
+        GREY = "default", _("grey")
+        LIGHT_BLUE = "info", _("light blue")
+        ORANGE = "warning", _("orange")
+        RED = "danger", _("red")
 
         @property
         def bootstrap_style(self) -> str:
@@ -575,6 +582,10 @@ class Label(models.Model):
     description = models.TextField(default="", blank=True)
     name = models.CharField(max_length=100, unique=True)
     style = models.CharField(max_length=16, choices=Style.choices, default=Style.GREY)
+
+    class Meta:
+        verbose_name = _("label")
+        verbose_name_plural = _("labels")
 
     def __str__(self) -> str:
         return self.name
@@ -609,14 +620,14 @@ class MiningLedgerRecord(models.Model):
         "Refinery",
         on_delete=models.CASCADE,
         related_name="mining_ledger",
-        help_text="Refinery this mining activity was observed at",
+        help_text=_("Refinery this mining activity was observed at"),
     )
-    day = models.DateField(help_text="last_updated in ESI", db_index=True)
+    day = models.DateField(db_index=True, help_text=_("last_updated in ESI"))
     character = models.ForeignKey(
         EveEntity,
         on_delete=models.CASCADE,
         related_name="+",
-        help_text="character that did the mining",
+        help_text=_("character that did the mining"),
     )
     ore_type = models.ForeignKey(
         EveOreType, on_delete=models.CASCADE, related_name="mining_ledger"
@@ -626,7 +637,7 @@ class MiningLedgerRecord(models.Model):
         EveEntity,
         on_delete=models.CASCADE,
         related_name="+",
-        help_text="corporation of the character at time data was recorded",
+        help_text=_("corporation of the character at time data was recorded"),
     )
     quantity = models.PositiveBigIntegerField()
     user = models.ForeignKey(
@@ -646,32 +657,33 @@ class MiningLedgerRecord(models.Model):
                 name="functional_pk_mining_activity",
             )
         ]
+        verbose_name = _("ledger record")
+        verbose_name_plural = _("ledger records")
 
 
 class Moon(models.Model):
     """Known moon through either survey data or anchored refinery.
 
-    "Head" model for many of the other models
+    "Head" model for many of the other models.
     """
 
     # pk
     eve_moon = models.OneToOneField(
-        EveMoon, on_delete=models.CASCADE, primary_key=True, related_name="known_moon"
+        EveMoon, on_delete=models.CASCADE, primary_key=True, related_name="+"
     )
-    # TODO: Remove "related_name"
     # regular
     label = models.ForeignKey(
         Label, on_delete=models.SET_DEFAULT, default=None, null=True
     )
     products_updated_at = models.DateTimeField(
-        null=True, default=None, help_text="Time the last moon survey was uploaded"
+        null=True, default=None, help_text=_("Time the last moon survey was uploaded")
     )
     products_updated_by = models.ForeignKey(
         User,
         on_delete=models.SET_DEFAULT,
         null=True,
         default=None,
-        help_text="User who uploaded the last moon survey",
+        help_text=_("User who uploaded the last moon survey"),
     )
     rarity_class = models.PositiveIntegerField(
         choices=OreRarityClass.choices, default=OreRarityClass.NONE
@@ -681,10 +693,14 @@ class Moon(models.Model):
         default=None,
         validators=[MinValueValidator(0.0)],
         db_index=True,
-        help_text="Calculated value estimate",
+        help_text=_("Calculated value estimate"),
     )
 
     objects = MoonManager()
+
+    class Meta:
+        verbose_name = _("moon")
+        verbose_name_plural = _("moons")
 
     def __str__(self):
         return self.name
@@ -836,6 +852,8 @@ class MoonProduct(models.Model):
                 fields=["moon", "ore_type"], name="functional_pk_moonproduct"
             )
         ]
+        verbose_name = _("moon product")
+        verbose_name_plural = _("moons products")
 
     @property
     def amount_percent(self) -> float:
@@ -851,14 +869,14 @@ class Notification(models.Model):
         "Owner",
         on_delete=models.CASCADE,
         related_name="notifications",
-        help_text="Corporation that received this notification",
+        help_text=_("Corporation that received this notification"),
     )
     notification_id = models.PositiveBigIntegerField(verbose_name="id")
     # regular
     created = models.DateTimeField(
         null=True,
         default=None,
-        help_text="Date when this notification was first received from ESI",
+        help_text=_("Date when this notification was first received from ESI"),
     )
     details = models.JSONField(default=dict)
     notif_type = models.CharField(
@@ -866,15 +884,15 @@ class Notification(models.Model):
         default="",
         db_index=True,
         verbose_name="type",
-        help_text="type of this notification as reported by ESI",
+        help_text=_("type of this notification as reported by ESI"),
     )
     is_read = models.BooleanField(
         null=True,
         default=None,
-        help_text="True when this notification has read in the eve client",
+        help_text=_("True when this notification has read in the eve client"),
     )
     last_updated = models.DateTimeField(
-        help_text="Date when this notification has last been updated from ESI"
+        help_text=_("Date when this notification has last been updated from ESI")
     )
     sender = models.ForeignKey(
         EveEntity, on_delete=models.CASCADE, null=True, default=None, related_name="+"
@@ -887,6 +905,8 @@ class Notification(models.Model):
                 fields=["owner", "notification_id"], name="functional_pk_notification"
             )
         ]
+        verbose_name = _("notification")
+        verbose_name_plural = _("notifications")
 
     def __str__(self) -> str:
         return str(self.notification_id)
@@ -957,12 +977,8 @@ class Owner(models.Model):
 
     # pk
     corporation = models.OneToOneField(
-        EveCorporationInfo,
-        on_delete=models.CASCADE,
-        primary_key=True,
-        related_name="mining_corporation",
+        EveCorporationInfo, on_delete=models.CASCADE, primary_key=True, related_name="+"
     )
-    # TODO: remove "mining_corporation"
     # regular
     character_ownership = models.ForeignKey(
         CharacterOwnership,
@@ -970,19 +986,23 @@ class Owner(models.Model):
         default=None,
         null=True,
         related_name="+",
-        help_text="character used to sync this corporation from ESI",
+        help_text=_("Character used to sync this corporation from ESI"),
     )
     is_enabled = models.BooleanField(
         default=True,
         db_index=True,
-        help_text="disabled corporations are excluded from the update process",
+        help_text=_("Disabled corporations are excluded from the update process"),
     )
     last_update_at = models.DateTimeField(
-        null=True, default=None, help_text="time of last successful update"
+        null=True, default=None, help_text=_("Time of last successful update")
     )
     last_update_ok = models.BooleanField(
-        null=True, default=None, help_text="True if the last update was successful"
+        null=True, default=None, help_text=_("True if the last update was successful")
     )
+
+    class Meta:
+        verbose_name = _("owner")
+        verbose_name_plural = _("owners")
 
     def __str__(self):
         return self.name
@@ -1030,7 +1050,7 @@ class Owner(models.Model):
         """Update all refineries from ESI."""
         logger.info("%s: Updating refineries...", self)
         refineries = self._fetch_refineries_from_esi()
-        for structure_id, _ in refineries.items():
+        for structure_id in refineries.keys():
             try:
                 self._update_or_create_refinery_from_esi(structure_id)
             except OSError as exc:
@@ -1361,25 +1381,29 @@ class Refinery(models.Model):
         default=None,
         null=True,
         related_name="refinery",
-        help_text="The moon this refinery is anchored at (if any)",
+        help_text=_("The moon this refinery is anchored at (if any)"),
     )
     name = models.CharField(max_length=150, db_index=True)
     owner = models.ForeignKey(
         Owner,
         on_delete=models.CASCADE,
         related_name="refineries",
-        help_text="Corporation that owns this refinery",
+        help_text=_("Corporation that owns this refinery"),
     )
     ledger_last_update_at = models.DateTimeField(
-        null=True, default=None, help_text="last successful update of mining ledger"
+        null=True, default=None, help_text=_("last successful update of mining ledger")
     )
     ledger_last_update_ok = models.BooleanField(
         null=True,
         default=None,
-        help_text="True if the last update of the mining ledger was successful",
+        help_text=_("True if the last update of the mining ledger was successful"),
     )
 
     objects = RefineryManager()
+
+    class Meta:
+        verbose_name = _("refinery")
+        verbose_name_plural = _("refineries")
 
     def __str__(self):
         return self.name

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+### Added
+
+- Localization to templates, models and views
+
 ### Fixed
 
 - Admin page with ore prices breaks when some prices are missing
