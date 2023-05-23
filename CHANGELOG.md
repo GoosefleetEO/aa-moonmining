@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [1.9.1] - 2023-05-23
 
+### Update notes
+
+This patch changes how permissions work, i.e. potentially increases the scope of the "all moons" permission. Please make sure to review your permissions before applying this change to make sure you do not give users more access then intended.
+
 ### Fixed
 
 - "all moons" permission not works as intended and will show a user all moons on the moons page incl. owned moons
