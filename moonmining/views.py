@@ -51,6 +51,7 @@ from .app_settings import (
 )
 from .constants import DATE_FORMAT, DATETIME_FORMAT, EveGroupId
 from .forms import MoonScanForm
+from .helpers import user_perms_lookup
 from .models import EveOreType, Extraction, Moon, Owner, Refinery
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
@@ -343,12 +344,16 @@ def extraction_ledger(request, extraction_pk: int):
 @login_required()
 @permission_required("moonmining.basic_access")
 def moons(request):
+    user_perms = user_perms_lookup(
+        request.user, ["moonmining.extractions_access", "moonmining.view_all_moons"]
+    )
     context = {
         "page_title": _("Moons"),
         "MoonsCategory": MoonsCategory.to_dict(),
         "use_reprocess_pricing": MOONMINING_USE_REPROCESS_PRICING,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
+        "user_perms": user_perms,
     }
     return render(request, "moonmining/moons.html", context)
 
@@ -643,7 +648,10 @@ def moons_fdd_data(request, category) -> JsonResponse:
             elif column == "has_refinery_str":
                 options = qs.values_list("has_refinery_str", flat=True)
             elif column == "has_extraction_str":
-                options = qs.values_list("has_extraction_str", flat=True)
+                if request.user.has_perm("moonmining.extractions_access"):
+                    options = qs.values_list("has_extraction_str", flat=True)
+                else:
+                    options = []
             else:
                 options = [f"** ERROR: Invalid column name '{column}' **"]
             result[column] = sorted(list(set(options)), key=str.casefold)

@@ -251,7 +251,7 @@ class TestMoonsData(TestCase):
         self.assertListEqual(data["rarity_class_str"], ["R64"])
         self.assertListEqual(data["label_name"], ["Dummy"])
         self.assertListEqual(data["has_refinery_str"], ["no", "yes"])
-        self.assertListEqual(data["has_extraction_str"], ["no"])
+        self.assertListEqual(data["has_extraction_str"], [])
         self.assertIn("ERROR", data["invalid_column"][0])
 
 
