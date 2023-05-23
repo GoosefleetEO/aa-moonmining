@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 import pytz
 
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.http import Http404
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils.timezone import now
@@ -112,9 +113,8 @@ class TestOwner(TestCase):
         middleware.process_request(request)
         orig_view = views.add_owner.__wrapped__.__wrapped__.__wrapped__
         # when
-        response = orig_view(request, token)
-        # then
-        self.assertEqual(response.status_code, 404)
+        with self.assertRaises(Http404):
+            orig_view(request, token)
 
 
 class TestMoonsData(TestCase):

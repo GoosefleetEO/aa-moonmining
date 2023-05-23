@@ -51,7 +51,6 @@ from .app_settings import (
 )
 from .constants import DATE_FORMAT, DATETIME_FORMAT, EveGroupId
 from .forms import MoonScanForm
-from .helpers import HttpResponseUnauthorized
 from .models import EveOreType, Extraction, Moon, Owner, Refinery
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
@@ -653,8 +652,6 @@ def moons_fdd_data(request, category) -> JsonResponse:
 @permission_required("moonmining.basic_access")
 def moon_details(request, moon_pk: int):
     moon = get_object_or_404(Moon.objects.selected_related_defaults(), pk=moon_pk)
-    if not request.user.has_perm("moonmining.extractions_access"):
-        return HttpResponseUnauthorized()
     context = {
         "page_title": moon.name,
         "moon": moon,
