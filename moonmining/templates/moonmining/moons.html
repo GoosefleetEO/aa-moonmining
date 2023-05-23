@@ -41,8 +41,10 @@
         </div>
     </div>
 
-    {% if perms.moonmining.extractions_access or perms.moonmining.view_all_moons %}
+    {% if perms.moonmining.extractions_access %}
         <script>var defaultTab = "tab_{{MoonsCategory.OURS}}";</script>
+    {% elif perms.moonmining.view_all_moons %}
+        <script>var defaultTab = "tab_{{MoonsCategory.ALL}}";</script>
     {% elif perms.moonmining.upload_moon_scan %}
         <script>var defaultTab = "tab_{{MoonsCategory.UPLOADS}}";</script>
     {% endif %}
@@ -186,11 +188,11 @@
                 $("#wrapper_{{ MoonsCategory.UPLOADS }}").show();
             } );
 
-            $('#myTabs a[href="#' + defaultTab + '"]').tab('show')
+            $('#myTabs a[href="#' + defaultTab + '"]').tab('show');
 
-            handle_modal_events("modalUploadSurvey", "modalUploadSurveyContent")
-            handle_modal_events("modalMoonDetails", "modalMoonDetailsContent")
-            handle_modal_events("modalExtractionDetails", "modalExtractionDetailsContent")
+            handle_modal_events("modalUploadSurvey", "modalUploadSurveyContent");
+            handle_modal_events("modalMoonDetails", "modalMoonDetailsContent");
+            handle_modal_events("modalExtractionDetails", "modalExtractionDetailsContent");
 
         });
     </script>

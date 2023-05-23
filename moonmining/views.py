@@ -454,11 +454,7 @@ class MoonListJson(PermissionRequiredMixin, LoginRequiredMixin, BaseDatatableVie
                 )
             )
         )
-        if (
-            category == MoonsCategory.ALL
-            and user.has_perm("moonmining.extractions_access")
-            and user.has_perm("moonmining.view_all_moons")
-        ):
+        if category == MoonsCategory.ALL and user.has_perm("moonmining.view_all_moons"):
             pass
         elif category == MoonsCategory.OURS and user.has_perm(
             "moonmining.extractions_access"
@@ -582,18 +578,15 @@ class MoonListJson(PermissionRequiredMixin, LoginRequiredMixin, BaseDatatableVie
         return None
 
     def _render_details(self, row):
-        has_details_access = self.request.user.has_perm(
-            "moonmining.extractions_access"
-        ) or self.request.user.has_perm("moonmining.view_all_moons")
-        if has_details_access:
+        details_html = ""
+        if self.request.user.has_perm("moonmining.extractions_access"):
             details_html = (
                 extraction_details_button_html(row.extraction_pk) + " "
                 if row.extraction_pk
                 else ""
             )
-            details_html += moon_details_button_html(row)
-            return details_html
-        return ""
+        details_html += moon_details_button_html(row)
+        return details_html
 
     def _render_refinery(self, row, column) -> Union[str, dict]:
         if row.has_refinery:

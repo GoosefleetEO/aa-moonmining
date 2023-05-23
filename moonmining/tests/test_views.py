@@ -141,7 +141,6 @@ class TestMoonsData(TestCase):
             1001,
             permissions=[
                 "moonmining.basic_access",
-                "moonmining.extractions_access",
                 "moonmining.view_all_moons",
             ],
             scopes=Owner.esi_scopes(),
