@@ -7,15 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
-## [1.10.0] - TBD
+## [1.9.1] - 2023-05-23
 
-### Changed
+### Fixed
 
-- The "all moons" permission now also shows the owned moons tab. So users with the "all moons" permission can which moons are owned and by which corporation.
-
-### Fixes
-
-- "all moons" permission alone does not show any moons
+- "all moons" permission not works as intended and will show a user all moons on the moons page incl. owned moons
 
 ## [1.9.0] - 2023-04-24
 

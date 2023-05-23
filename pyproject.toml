@@ -27,7 +27,7 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
 ]
 dependencies = [
-    "allianceauth-app-utils>=1.14.2",
+    "allianceauth-app-utils>=1.18",
     "allianceauth>=3",
     "django-bootstrap-form",
     "django-datatables-view>=1.20",
