@@ -4,6 +4,7 @@ from typing import Union
 
 from django_datatables_view.base_datatable_view import BaseDatatableView
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.models import User
@@ -38,7 +39,6 @@ from allianceauth.eveonline.models import EveCorporationInfo
 from allianceauth.services.hooks import get_extension_logger
 from app_utils.allianceauth import notify_admins
 from app_utils.logging import LoggerAddTag
-from app_utils.messages import messages_plus
 from app_utils.views import fontawesome_modal_button_html, link_html, yesno_str
 
 from . import __title__, helpers, tasks
@@ -689,7 +689,7 @@ def add_owner(request, token):
         defaults={"character_ownership": character_ownership},
     )[0]
     tasks.update_owner.delay(owner.pk)
-    messages_plus.success(request, f"Update of refineries started for {owner}.")
+    messages.success(request, f"Update of refineries started for {owner}.")
     if MOONMINING_ADMIN_NOTIFICATIONS_ENABLED:
         notify_admins(
             message=_(
@@ -710,7 +710,7 @@ def upload_survey(request):
         if form.is_valid():
             scans = request.POST["scan"]
             tasks.process_survey_input.delay(scans, request.user.pk)
-            messages_plus.success(
+            messages.success(
                 request,
                 _(
                     "Your scan has been submitted for processing. "
@@ -718,7 +718,7 @@ def upload_survey(request):
                 ),
             )
         else:
-            messages_plus.error(
+            messages.error(
                 request,
                 _(
                     "Oh No! Something went wrong with your moon scan submission. "

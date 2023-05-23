@@ -48,7 +48,7 @@ class TestOwner(TestCase):
 
     @patch(MODULE_PATH + ".notify_admins")
     @patch(MODULE_PATH + ".tasks.update_owner")
-    @patch(MODULE_PATH + ".messages_plus")
+    @patch(MODULE_PATH + ".messages")
     def test_should_add_new_owner(
         self, mock_messages, mock_update_owner, mock_notify_admins
     ):
@@ -73,7 +73,7 @@ class TestOwner(TestCase):
         self.assertEqual(obj.character_ownership, self.character_ownership)
 
     @patch(MODULE_PATH + ".tasks.update_owner")
-    @patch(MODULE_PATH + ".messages_plus")
+    @patch(MODULE_PATH + ".messages")
     def test_should_update_existing_owner(self, mock_messages, mock_update_owner):
         # given
         Owner.objects.create(
@@ -99,7 +99,7 @@ class TestOwner(TestCase):
         self.assertEqual(obj.character_ownership, self.character_ownership)
 
     @patch(MODULE_PATH + ".tasks.update_owner")
-    @patch(MODULE_PATH + ".messages_plus")
+    @patch(MODULE_PATH + ".messages")
     def test_should_raise_404_if_character_ownership_not_found(
         self, mock_messages, mock_update_owner
     ):
