@@ -4,6 +4,7 @@ from typing import Union
 
 from django_datatables_view.base_datatable_view import BaseDatatableView
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.models import User
@@ -24,8 +25,8 @@ from django.db.models import (
     When,
 )
 from django.db.models.functions import Coalesce, Concat
-from django.http import HttpResponseNotFound, JsonResponse
-from django.shortcuts import redirect, render
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.html import format_html, strip_tags
 from django.utils.timezone import now
@@ -33,13 +34,11 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import cache_page
 from esi.decorators import token_required
 
-from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.evelinks import dotlan
 from allianceauth.eveonline.models import EveCorporationInfo
 from allianceauth.services.hooks import get_extension_logger
 from app_utils.allianceauth import notify_admins
 from app_utils.logging import LoggerAddTag
-from app_utils.messages import messages_plus
 from app_utils.views import fontawesome_modal_button_html, link_html, yesno_str
 
 from . import __title__, helpers, tasks
@@ -52,7 +51,7 @@ from .app_settings import (
 )
 from .constants import DATE_FORMAT, DATETIME_FORMAT, EveGroupId
 from .forms import MoonScanForm
-from .helpers import HttpResponseUnauthorized
+from .helpers import user_perms_lookup
 from .models import EveOreType, Extraction, Moon, Owner, Refinery
 
 logger = LoggerAddTag(get_extension_logger(__name__), __title__)
@@ -247,23 +246,19 @@ def extractions_data(request, category):
 @login_required
 @permission_required(["moonmining.extractions_access", "moonmining.basic_access"])
 def extraction_details(request, extraction_pk: int):
-    try:
-        extraction = (
-            Extraction.objects.annotate_volume()
-            .select_related(
-                "refinery",
-                "refinery__moon",
-                "refinery__moon__eve_moon",
-                "refinery__moon__eve_moon__eve_planet__eve_solar_system",
-                "refinery__moon__eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
-                "canceled_by",
-                "fractured_by",
-                "started_by",
-            )
-            .get(pk=extraction_pk)
-        )
-    except Extraction.DoesNotExist:
-        return HttpResponseNotFound()
+    extraction = get_object_or_404(
+        Extraction.objects.annotate_volume().select_related(
+            "refinery",
+            "refinery__moon",
+            "refinery__moon__eve_moon",
+            "refinery__moon__eve_moon__eve_planet__eve_solar_system",
+            "refinery__moon__eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
+            "canceled_by",
+            "fractured_by",
+            "started_by",
+        ),
+        pk=extraction_pk,
+    )
     context = {
         "page_title": (
             f"{extraction.refinery.moon} "
@@ -288,19 +283,15 @@ def extraction_details(request, extraction_pk: int):
     ]
 )
 def extraction_ledger(request, extraction_pk: int):
-    try:
-        extraction = (
-            Extraction.objects.all()
-            .select_related(
-                "refinery",
-                "refinery__moon",
-                "refinery__moon__eve_moon__eve_planet__eve_solar_system",
-                "refinery__moon__eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
-            )
-            .get(pk=extraction_pk)
-        )
-    except Extraction.DoesNotExist:
-        return HttpResponseNotFound()
+    extraction = get_object_or_404(
+        Extraction.objects.all().select_related(
+            "refinery",
+            "refinery__moon",
+            "refinery__moon__eve_moon__eve_planet__eve_solar_system",
+            "refinery__moon__eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
+        ),
+        pk=extraction_pk,
+    )
     ledger = extraction.ledger.select_related(
         "character", "corporation", "user__profile__main_character", "ore_type"
     )
@@ -353,12 +344,16 @@ def extraction_ledger(request, extraction_pk: int):
 @login_required()
 @permission_required("moonmining.basic_access")
 def moons(request):
+    user_perms = user_perms_lookup(
+        request.user, ["moonmining.extractions_access", "moonmining.view_all_moons"]
+    )
     context = {
         "page_title": _("Moons"),
         "MoonsCategory": MoonsCategory.to_dict(),
         "use_reprocess_pricing": MOONMINING_USE_REPROCESS_PRICING,
         "reprocessing_yield": MOONMINING_REPROCESSING_YIELD * 100,
         "total_volume_per_month": MOONMINING_VOLUME_PER_MONTH / 1000000,
+        "user_perms": user_perms,
     }
     return render(request, "moonmining/moons.html", context)
 
@@ -454,14 +449,12 @@ class MoonListJson(PermissionRequiredMixin, LoginRequiredMixin, BaseDatatableVie
                 )
             )
         )
-        if (
-            category == MoonsCategory.ALL
-            and user.has_perm("moonmining.extractions_access")
-            and user.has_perm("moonmining.view_all_moons")
-        ):
+        if category == MoonsCategory.ALL and user.has_perm("moonmining.view_all_moons"):
             pass
-        elif category == MoonsCategory.OURS and user.has_perm(
-            "moonmining.extractions_access"
+        elif (
+            category == MoonsCategory.OURS
+            and user.has_perm("moonmining.extractions_access")
+            or user.has_perm("moonmining.view_all_moons")
         ):
             moon_query = moon_query.filter(refinery__isnull=False)
         elif category == MoonsCategory.UPLOADS and user.has_perm(
@@ -582,18 +575,15 @@ class MoonListJson(PermissionRequiredMixin, LoginRequiredMixin, BaseDatatableVie
         return None
 
     def _render_details(self, row):
-        has_details_access = self.request.user.has_perm(
-            "moonmining.extractions_access"
-        ) or self.request.user.has_perm("moonmining.view_all_moons")
-        if has_details_access:
+        details_html = ""
+        if self.request.user.has_perm("moonmining.extractions_access"):
             details_html = (
                 extraction_details_button_html(row.extraction_pk) + " "
                 if row.extraction_pk
                 else ""
             )
-            details_html += moon_details_button_html(row)
-            return details_html
-        return ""
+        details_html += moon_details_button_html(row)
+        return details_html
 
     def _render_refinery(self, row, column) -> Union[str, dict]:
         if row.has_refinery:
@@ -658,7 +648,10 @@ def moons_fdd_data(request, category) -> JsonResponse:
             elif column == "has_refinery_str":
                 options = qs.values_list("has_refinery_str", flat=True)
             elif column == "has_extraction_str":
-                options = qs.values_list("has_extraction_str", flat=True)
+                if request.user.has_perm("moonmining.extractions_access"):
+                    options = qs.values_list("has_extraction_str", flat=True)
+                else:
+                    options = []
             else:
                 options = [f"** ERROR: Invalid column name '{column}' **"]
             result[column] = sorted(list(set(options)), key=str.casefold)
@@ -668,12 +661,7 @@ def moons_fdd_data(request, category) -> JsonResponse:
 @login_required
 @permission_required("moonmining.basic_access")
 def moon_details(request, moon_pk: int):
-    try:
-        moon = Moon.objects.selected_related_defaults().get(pk=moon_pk)
-    except Moon.DoesNotExist:
-        return HttpResponseNotFound()
-    if not request.user.has_perm("moonmining.extractions_access"):
-        return HttpResponseUnauthorized()
+    moon = get_object_or_404(Moon.objects.selected_related_defaults(), pk=moon_pk)
     context = {
         "page_title": moon.name,
         "moon": moon,
@@ -692,12 +680,10 @@ def moon_details(request, moon_pk: int):
 @token_required(scopes=Owner.esi_scopes())  # type: ignore
 @login_required
 def add_owner(request, token):
-    try:
-        character_ownership = request.user.character_ownerships.select_related(
-            "character"
-        ).get(character__character_id=token.character_id)
-    except CharacterOwnership.DoesNotExist:
-        return HttpResponseNotFound()
+    character_ownership = get_object_or_404(
+        request.user.character_ownerships.select_related("character"),
+        character__character_id=token.character_id,
+    )
     try:
         corporation = EveCorporationInfo.objects.get(
             corporation_id=character_ownership.character.corporation_id
@@ -713,7 +699,7 @@ def add_owner(request, token):
         defaults={"character_ownership": character_ownership},
     )[0]
     tasks.update_owner.delay(owner.pk)
-    messages_plus.success(request, f"Update of refineries started for {owner}.")
+    messages.success(request, f"Update of refineries started for {owner}.")
     if MOONMINING_ADMIN_NOTIFICATIONS_ENABLED:
         notify_admins(
             message=_(
@@ -734,7 +720,7 @@ def upload_survey(request):
         if form.is_valid():
             scans = request.POST["scan"]
             tasks.process_survey_input.delay(scans, request.user.pk)
-            messages_plus.success(
+            messages.success(
                 request,
                 _(
                     "Your scan has been submitted for processing. "
@@ -742,7 +728,7 @@ def upload_survey(request):
                 ),
             )
         else:
-            messages_plus.error(
+            messages.error(
                 request,
                 _(
                     "Oh No! Something went wrong with your moon scan submission. "

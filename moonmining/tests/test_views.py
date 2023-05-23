@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 import pytz
 
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.http import Http404
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils.timezone import now
@@ -47,7 +48,7 @@ class TestOwner(TestCase):
 
     @patch(MODULE_PATH + ".notify_admins")
     @patch(MODULE_PATH + ".tasks.update_owner")
-    @patch(MODULE_PATH + ".messages_plus")
+    @patch(MODULE_PATH + ".messages")
     def test_should_add_new_owner(
         self, mock_messages, mock_update_owner, mock_notify_admins
     ):
@@ -72,7 +73,7 @@ class TestOwner(TestCase):
         self.assertEqual(obj.character_ownership, self.character_ownership)
 
     @patch(MODULE_PATH + ".tasks.update_owner")
-    @patch(MODULE_PATH + ".messages_plus")
+    @patch(MODULE_PATH + ".messages")
     def test_should_update_existing_owner(self, mock_messages, mock_update_owner):
         # given
         Owner.objects.create(
@@ -98,7 +99,7 @@ class TestOwner(TestCase):
         self.assertEqual(obj.character_ownership, self.character_ownership)
 
     @patch(MODULE_PATH + ".tasks.update_owner")
-    @patch(MODULE_PATH + ".messages_plus")
+    @patch(MODULE_PATH + ".messages")
     def test_should_raise_404_if_character_ownership_not_found(
         self, mock_messages, mock_update_owner
     ):
@@ -112,9 +113,8 @@ class TestOwner(TestCase):
         middleware.process_request(request)
         orig_view = views.add_owner.__wrapped__.__wrapped__.__wrapped__
         # when
-        response = orig_view(request, token)
-        # then
-        self.assertEqual(response.status_code, 404)
+        with self.assertRaises(Http404):
+            orig_view(request, token)
 
 
 class TestMoonsData(TestCase):
@@ -139,11 +139,7 @@ class TestMoonsData(TestCase):
         # given
         user, _ = create_user_from_evecharacter(
             1001,
-            permissions=[
-                "moonmining.basic_access",
-                "moonmining.extractions_access",
-                "moonmining.view_all_moons",
-            ],
+            permissions=["moonmining.basic_access", "moonmining.view_all_moons"],
             scopes=Owner.esi_scopes(),
         )
         self.client.force_login(user)
@@ -157,6 +153,23 @@ class TestMoonsData(TestCase):
         self.assertEqual(obj[1], "Auga V - 1")
 
     def test_should_return_our_moons_only(self):
+        # given
+        moon = Moon.objects.get(pk=40131695)
+        RefineryFactory(moon=moon)
+        user, _ = create_user_from_evecharacter(
+            1002,
+            permissions=["moonmining.basic_access", "moonmining.extractions_access"],
+            scopes=Owner.esi_scopes(),
+        )
+        self.client.force_login(user)
+        # when
+        response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.OURS}")
+        # then
+        self.assertEqual(response.status_code, 200)
+        data = self._response_to_dict(response)
+        self.assertSetEqual(set(data.keys()), {40131695})
+
+    def test_should_return_our_moons_when_all_moons_perm(self):
         # given
         moon = Moon.objects.get(pk=40131695)
         RefineryFactory(moon=moon)
@@ -191,36 +204,6 @@ class TestMoonsData(TestCase):
         data = self._response_to_dict(response)
         self.assertSetEqual(set(data.keys()), {40131695})
 
-    def test_should_return_empty_list_for_all_moons(self):
-        # given
-        user, _ = create_user_from_evecharacter(
-            1001,
-            permissions=["moonmining.basic_access", "moonmining.extractions_access"],
-            scopes=Owner.esi_scopes(),
-        )
-        self.client.force_login(user)
-        # when
-        response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.ALL}")
-        # then
-        self.assertEqual(response.status_code, 200)
-        data = self._response_to_dict(response)
-        self.assertEqual(len(data), 0)
-
-    def test_should_return_empty_list_for_our_moons(self):
-        # given
-        user, _ = create_user_from_evecharacter(
-            1001,
-            permissions=["moonmining.basic_access"],
-            scopes=Owner.esi_scopes(),
-        )
-        self.client.force_login(user)
-        # when
-        response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.OURS}")
-        # then
-        self.assertEqual(response.status_code, 200)
-        data = self._response_to_dict(response)
-        self.assertEqual(len(data), 0)
-
     def test_should_return_uploaded_moons_only(self):
         # given
         user, _ = create_user_from_evecharacter(
@@ -244,11 +227,7 @@ class TestMoonsData(TestCase):
         # given
         user, _ = create_user_from_evecharacter(
             1002,
-            permissions=[
-                "moonmining.basic_access",
-                "moonmining.extractions_access",
-                "moonmining.view_all_moons",
-            ],
+            permissions=["moonmining.basic_access", "moonmining.view_all_moons"],
             scopes=Owner.esi_scopes(),
         )
         moon = Moon.objects.get(pk=40131695)
@@ -272,7 +251,7 @@ class TestMoonsData(TestCase):
         self.assertListEqual(data["rarity_class_str"], ["R64"])
         self.assertListEqual(data["label_name"], ["Dummy"])
         self.assertListEqual(data["has_refinery_str"], ["no", "yes"])
-        self.assertListEqual(data["has_extraction_str"], ["no"])
+        self.assertListEqual(data["has_extraction_str"], [])
         self.assertIn("ERROR", data["invalid_column"][0])
 
 

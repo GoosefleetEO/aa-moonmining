@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.9.1] - 2023-05-23
+
+### Fixed
+
+- "all moons" permission not works as intended and will show a user all moons on the moons page incl. owned moons
+
+## [1.9.0] - 2023-04-24
+
 ### Added
 
 - Added support for AA 3 / Django 4

@@ -13,7 +13,7 @@
 
     <!-- Nav tabs -->
     <ul id="myTabs" class="nav nav-tabs" role="tablist">
-        {% if perms.moonmining.extractions_access %}
+        {% if perms.moonmining.extractions_access or perms.moonmining.view_all_moons %}
             <li role="presentation">
                 <a href="#tab_{{ MoonsCategory.OURS }}" aria-controls="tab_{{ MoonsCategory.OURS }}" role="tab" data-toggle="tab">{% translate "Owned Moons" %}</a>
             </li>
@@ -47,6 +47,8 @@
         <script>var defaultTab = "tab_{{MoonsCategory.UPLOADS}}";</script>
     {% endif %}
 
+    {{ user_perms|json_script:"user-perms" }}
+
     <!-- Modals -->
     {% include "moonmining/modals/base.html" with modal_id="modalUploadSurvey" modal_content_id="modalUploadSurveyContent" %}
     {% include "moonmining/modals/base.html" with modal_id="modalMoonDetails" modal_content_id="modalMoonDetailsContent" %}
@@ -56,7 +58,58 @@
 {% block extra_javascript %}
     {{ block.super }}
     <script type="text/javascript">
+        "use_strict";
+        const perms = JSON.parse(document.getElementById('user-perms').textContent);
         $(function(){
+            let dropDownColumns = [
+                {
+                    idx: 10,
+                    title: "{% translate 'Alliance' %}",
+                    maxWidth: "10em"
+                },
+                {
+                    idx: 9,
+                    title: "{% translate 'Corporation' %}",
+                    maxWidth: "10em"
+                },
+                {
+                    idx: 15,
+                    title: "{% translate 'Region' %}",
+                    maxWidth: "10em"
+                },
+                {
+                    idx: 13,
+                    title: "{% translate 'Constellation' %}",
+                    maxWidth: "10em"
+                },
+                {
+                    idx: 7,
+                    title: "{% translate 'System' %}",
+                    maxWidth: "10em"
+                },
+                {
+                    idx: 11,
+                    title: "{% translate 'Rarity' %}",
+                    maxWidth: "10em"
+                },
+                {
+                    idx: 14,
+                    title: "{% translate 'Label' %}",
+                    maxWidth: "10em"
+                },
+                {
+                    idx: 8,
+                    title: "{% translate 'Owned?' %}",
+                    maxWidth: "10em"
+                }
+            ];
+            if (perms.moonmining.extractions_access) {
+                dropDownColumns.push({
+                    idx: 12,
+                    title: "{% translate 'Extraction?' %}",
+                    maxWidth: "10em"
+                });
+            }
             const def = {
                 ajax: {
                     url: '',
@@ -101,53 +154,7 @@
                     { "visible": false, "targets": [ 7, 8, 9, 10, 11, 12, 13, 14, 15 ] },
                 ],
                 filterDropDown: {
-                    columns: [
-                        {
-                            idx: 10,
-                            title: "{% translate 'Alliance' %}",
-                            maxWidth: "10em"
-                        },
-                        {
-                            idx: 9,
-                            title: "{% translate 'Corporation' %}",
-                            maxWidth: "10em"
-                        },
-                        {
-                            idx: 15,
-                            title: "{% translate 'Region' %}",
-                            maxWidth: "10em"
-                        },
-                        {
-                            idx: 13,
-                            title: "{% translate 'Constellation' %}",
-                            maxWidth: "10em"
-                        },
-                        {
-                            idx: 7,
-                            title: "{% translate 'System' %}",
-                            maxWidth: "10em"
-                        },
-                        {
-                            idx: 11,
-                            title: "{% translate 'Rarity' %}",
-                            maxWidth: "10em"
-                        },
-                        {
-                            idx: 14,
-                            title: "{% translate 'Label' %}",
-                            maxWidth: "10em"
-                        },
-                        {
-                            idx: 8,
-                            title: "{% translate 'Refinery?' %}",
-                            maxWidth: "10em"
-                        },
-                        {
-                            idx: 12,
-                            title: "{% translate 'Extraction?' %}",
-                            maxWidth: "10em"
-                        }
-                    ],
+                    columns: dropDownColumns,
                     bootstrap: true,
                     autoSize: false
                 }
@@ -186,11 +193,11 @@
                 $("#wrapper_{{ MoonsCategory.UPLOADS }}").show();
             } );
 
-            $('#myTabs a[href="#' + defaultTab + '"]').tab('show')
+            $('#myTabs a[href="#' + defaultTab + '"]').tab('show');
 
-            handle_modal_events("modalUploadSurvey", "modalUploadSurveyContent")
-            handle_modal_events("modalMoonDetails", "modalMoonDetailsContent")
-            handle_modal_events("modalExtractionDetails", "modalExtractionDetailsContent")
+            handle_modal_events("modalUploadSurvey", "modalUploadSurveyContent");
+            handle_modal_events("modalMoonDetails", "modalMoonDetailsContent");
+            handle_modal_events("modalExtractionDetails", "modalExtractionDetailsContent");
 
         });
     </script>
