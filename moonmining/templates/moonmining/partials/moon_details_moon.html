@@ -34,9 +34,9 @@
     </div>
     <div class="col-md-10">
     {% if moon.refinery %}
-        <p>{{ moon.refinery|default:"-" }}  / {{ moon.refinery.eve_type|default:"-" }}</p>
+        <p>{{ moon.refinery|default:"?" }}  / {{ moon.refinery.eve_type|default:"?" }}</p>
     {% else %}
-        -
+        ?
     {% endif %}
     </div>
 </div>
@@ -46,7 +46,7 @@
         <p><strong>{% translate 'Corporation:' %}</strong></p>
     </div>
     <div class="col-md-10">
-    <p>{{ moon.refinery.owner|default:"-" }}</p>
+    <p>{{ moon.refinery.owner|default:"?" }}</p>
     </div>
 </div>
 

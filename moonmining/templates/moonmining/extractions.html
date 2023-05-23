@@ -33,8 +33,9 @@
 {% block extra_javascript %}
     {{ block.super }}
     <script type="text/javascript">
+        "use_strict";
         $(function() {
-            var def = {
+            let def = {
                 ajax: {
                     url: '',
                     dataSrc: '',
@@ -119,7 +120,7 @@
                     autoSize: false
                 },
                 footerCallback: function (row, data, start, end, display) {
-                    var api = this.api(), data;
+                    let api = this.api();
 
                     dataTableFooterSumColumn(api, 4);
                     dataTableFooterSumColumn(api, 5, 'isk');
@@ -130,12 +131,12 @@
             /* upcoming extractions*/
             def.ajax.url = '{% url "moonmining:extractions_data" ExtractionsCategory.UPCOMING %}'
             def.order = [ [0, "asc"] ]
-            var table = $('#table_{{ ExtractionsCategory.UPCOMING }}').DataTable(def);
+            $('#table_{{ ExtractionsCategory.UPCOMING }}').DataTable(def);
 
             /* past extractions */
             def.ajax.url = '{% url "moonmining:extractions_data" ExtractionsCategory.PAST %}'
             def.order = [ [0, "desc"] ]
-            var table = $('#table_{{ ExtractionsCategory.PAST }}').DataTable(def);
+            $('#table_{{ ExtractionsCategory.PAST }}').DataTable(def);
 
             $('#myTabs a[href="#tab_{{ ExtractionsCategory.UPCOMING }}"]').tab('show')
 

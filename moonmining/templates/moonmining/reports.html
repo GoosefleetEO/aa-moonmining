@@ -38,9 +38,9 @@
     {{ block.super }}
     <script type="application/javascript" src="{% static 'moonmining/vendor/datatables/plugins/dataTables.rowGroup.min.js' %}"></script>
     <script type="text/javascript">
+        "use_strict";
         $(function() {
-            $('#table_owned_value').DataTable(
-                {
+            $('#table_owned_value').DataTable({
                 ajax: {
                     url: '{% url "moonmining:report_owned_value_data" %}',
                     dataSrc: '',
@@ -95,8 +95,7 @@
                 }
             });
 
-            $('#table_user_mining').DataTable(
-                {
+            $('#table_user_mining').DataTable({
                 ajax: {
                     url: '{% url "moonmining:report_user_mining_data" %}',
                     dataSrc: '',
@@ -171,8 +170,7 @@
                 }
             });
 
-            $('#table_user_uploaded').DataTable(
-                {
+            $('#table_user_uploaded').DataTable({
                 ajax: {
                     url: '{% url "moonmining:report_user_uploaded_data" %}',
                     dataSrc: '',
@@ -209,8 +207,7 @@
                 }
             });
 
-            $('#table_ore_prices').DataTable(
-                {
+            $('#table_ore_prices').DataTable({
                 ajax: {
                     url: '{% url "moonmining:report_ore_prices_data" %}',
                     dataSrc: '',
