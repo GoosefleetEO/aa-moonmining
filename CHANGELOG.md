@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.10.0] - TBD
+
+### Changed
+
+- The "all moons" permission now also shows the owned moons tab. So users with the "all moons" permission can which moons are owned and by which corporation.
+
+### Fixes
+
+- "all moons" permission alone does not show any moons
+
+## [1.9.0] - 2023-04-24
+
 ### Added
 
 - Added support for AA 3 / Django 4
