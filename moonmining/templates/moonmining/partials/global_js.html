@@ -74,7 +74,15 @@
             $(this).find('.modal-body').load("{% url 'moonmining:modal_loader_body' %}?is_night_mode={{NIGHT_MODE}}")
             let button = $(event.relatedTarget);
             let ajax_url = button.data('ajax_url');
-            $('#' + modalContentId).load(ajax_url);
+            $('#' + modalContentId).load(ajax_url, function( response, status, xhr ) {
+                if ( status == "error" ) {
+                    let msg = `
+                        <p class="text-danger">
+                            Sorry but there was an error: ${xhr.status} ${xhr.statusText}
+                        </p>`;
+                    $(this).find('.modal-body').html(msg);
+                }
+            });
         });
     }
 </script>
