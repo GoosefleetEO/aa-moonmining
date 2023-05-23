@@ -24,8 +24,8 @@ from django.db.models import (
     When,
 )
 from django.db.models.functions import Coalesce, Concat
-from django.http import HttpResponseNotFound, JsonResponse
-from django.shortcuts import redirect, render
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.html import format_html, strip_tags
 from django.utils.timezone import now
@@ -33,7 +33,6 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import cache_page
 from esi.decorators import token_required
 
-from allianceauth.authentication.models import CharacterOwnership
 from allianceauth.eveonline.evelinks import dotlan
 from allianceauth.eveonline.models import EveCorporationInfo
 from allianceauth.services.hooks import get_extension_logger
@@ -247,23 +246,19 @@ def extractions_data(request, category):
 @login_required
 @permission_required(["moonmining.extractions_access", "moonmining.basic_access"])
 def extraction_details(request, extraction_pk: int):
-    try:
-        extraction = (
-            Extraction.objects.annotate_volume()
-            .select_related(
-                "refinery",
-                "refinery__moon",
-                "refinery__moon__eve_moon",
-                "refinery__moon__eve_moon__eve_planet__eve_solar_system",
-                "refinery__moon__eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
-                "canceled_by",
-                "fractured_by",
-                "started_by",
-            )
-            .get(pk=extraction_pk)
-        )
-    except Extraction.DoesNotExist:
-        return HttpResponseNotFound()
+    extraction = get_object_or_404(
+        Extraction.objects.annotate_volume().select_related(
+            "refinery",
+            "refinery__moon",
+            "refinery__moon__eve_moon",
+            "refinery__moon__eve_moon__eve_planet__eve_solar_system",
+            "refinery__moon__eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
+            "canceled_by",
+            "fractured_by",
+            "started_by",
+        ),
+        pk=extraction_pk,
+    )
     context = {
         "page_title": (
             f"{extraction.refinery.moon} "
@@ -288,19 +283,15 @@ def extraction_details(request, extraction_pk: int):
     ]
 )
 def extraction_ledger(request, extraction_pk: int):
-    try:
-        extraction = (
-            Extraction.objects.all()
-            .select_related(
-                "refinery",
-                "refinery__moon",
-                "refinery__moon__eve_moon__eve_planet__eve_solar_system",
-                "refinery__moon__eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
-            )
-            .get(pk=extraction_pk)
-        )
-    except Extraction.DoesNotExist:
-        return HttpResponseNotFound()
+    extraction = get_object_or_404(
+        Extraction.objects.all().select_related(
+            "refinery",
+            "refinery__moon",
+            "refinery__moon__eve_moon__eve_planet__eve_solar_system",
+            "refinery__moon__eve_moon__eve_planet__eve_solar_system__eve_constellation__eve_region",
+        ),
+        pk=extraction_pk,
+    )
     ledger = extraction.ledger.select_related(
         "character", "corporation", "user__profile__main_character", "ore_type"
     )
@@ -661,10 +652,7 @@ def moons_fdd_data(request, category) -> JsonResponse:
 @login_required
 @permission_required("moonmining.basic_access")
 def moon_details(request, moon_pk: int):
-    try:
-        moon = Moon.objects.selected_related_defaults().get(pk=moon_pk)
-    except Moon.DoesNotExist:
-        return HttpResponseNotFound()
+    moon = get_object_or_404(Moon.objects.selected_related_defaults(), pk=moon_pk)
     if not request.user.has_perm("moonmining.extractions_access"):
         return HttpResponseUnauthorized()
     context = {
@@ -685,12 +673,10 @@ def moon_details(request, moon_pk: int):
 @token_required(scopes=Owner.esi_scopes())  # type: ignore
 @login_required
 def add_owner(request, token):
-    try:
-        character_ownership = request.user.character_ownerships.select_related(
-            "character"
-        ).get(character__character_id=token.character_id)
-    except CharacterOwnership.DoesNotExist:
-        return HttpResponseNotFound()
+    character_ownership = get_object_or_404(
+        request.user.character_ownerships.select_related("character"),
+        character__character_id=token.character_id,
+    )
     try:
         corporation = EveCorporationInfo.objects.get(
             corporation_id=character_ownership.character.corporation_id
