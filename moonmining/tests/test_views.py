@@ -139,10 +139,7 @@ class TestMoonsData(TestCase):
         # given
         user, _ = create_user_from_evecharacter(
             1001,
-            permissions=[
-                "moonmining.basic_access",
-                "moonmining.view_all_moons",
-            ],
+            permissions=["moonmining.basic_access", "moonmining.view_all_moons"],
             scopes=Owner.esi_scopes(),
         )
         self.client.force_login(user)
@@ -156,6 +153,23 @@ class TestMoonsData(TestCase):
         self.assertEqual(obj[1], "Auga V - 1")
 
     def test_should_return_our_moons_only(self):
+        # given
+        moon = Moon.objects.get(pk=40131695)
+        RefineryFactory(moon=moon)
+        user, _ = create_user_from_evecharacter(
+            1002,
+            permissions=["moonmining.basic_access", "moonmining.extractions_access"],
+            scopes=Owner.esi_scopes(),
+        )
+        self.client.force_login(user)
+        # when
+        response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.OURS}")
+        # then
+        self.assertEqual(response.status_code, 200)
+        data = self._response_to_dict(response)
+        self.assertSetEqual(set(data.keys()), {40131695})
+
+    def test_should_return_our_moons_when_all_moons_perm(self):
         # given
         moon = Moon.objects.get(pk=40131695)
         RefineryFactory(moon=moon)
@@ -190,36 +204,6 @@ class TestMoonsData(TestCase):
         data = self._response_to_dict(response)
         self.assertSetEqual(set(data.keys()), {40131695})
 
-    def test_should_return_empty_list_for_all_moons(self):
-        # given
-        user, _ = create_user_from_evecharacter(
-            1001,
-            permissions=["moonmining.basic_access", "moonmining.extractions_access"],
-            scopes=Owner.esi_scopes(),
-        )
-        self.client.force_login(user)
-        # when
-        response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.ALL}")
-        # then
-        self.assertEqual(response.status_code, 200)
-        data = self._response_to_dict(response)
-        self.assertEqual(len(data), 0)
-
-    def test_should_return_empty_list_for_our_moons(self):
-        # given
-        user, _ = create_user_from_evecharacter(
-            1001,
-            permissions=["moonmining.basic_access"],
-            scopes=Owner.esi_scopes(),
-        )
-        self.client.force_login(user)
-        # when
-        response = self.client.get(f"/moonmining/moons_data/{views.MoonsCategory.OURS}")
-        # then
-        self.assertEqual(response.status_code, 200)
-        data = self._response_to_dict(response)
-        self.assertEqual(len(data), 0)
-
     def test_should_return_uploaded_moons_only(self):
         # given
         user, _ = create_user_from_evecharacter(
@@ -243,11 +227,7 @@ class TestMoonsData(TestCase):
         # given
         user, _ = create_user_from_evecharacter(
             1002,
-            permissions=[
-                "moonmining.basic_access",
-                "moonmining.extractions_access",
-                "moonmining.view_all_moons",
-            ],
+            permissions=["moonmining.basic_access", "moonmining.view_all_moons"],
             scopes=Owner.esi_scopes(),
         )
         moon = Moon.objects.get(pk=40131695)

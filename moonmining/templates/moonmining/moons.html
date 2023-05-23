@@ -13,7 +13,7 @@
 
     <!-- Nav tabs -->
     <ul id="myTabs" class="nav nav-tabs" role="tablist">
-        {% if perms.moonmining.extractions_access %}
+        {% if perms.moonmining.extractions_access or perms.moonmining.view_all_moons %}
             <li role="presentation">
                 <a href="#tab_{{ MoonsCategory.OURS }}" aria-controls="tab_{{ MoonsCategory.OURS }}" role="tab" data-toggle="tab">{% translate "Owned Moons" %}</a>
             </li>
@@ -41,10 +41,8 @@
         </div>
     </div>
 
-    {% if perms.moonmining.extractions_access %}
+    {% if perms.moonmining.extractions_access or perms.moonmining.view_all_moons %}
         <script>var defaultTab = "tab_{{MoonsCategory.OURS}}";</script>
-    {% elif perms.moonmining.view_all_moons %}
-        <script>var defaultTab = "tab_{{MoonsCategory.ALL}}";</script>
     {% elif perms.moonmining.upload_moon_scan %}
         <script>var defaultTab = "tab_{{MoonsCategory.UPLOADS}}";</script>
     {% endif %}

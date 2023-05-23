@@ -30,10 +30,9 @@ from eveuniverse.core.esitools import is_esi_online
 from eveuniverse.models import EveMoon
 
 from moonmining.models import EveOreType, Moon, MoonProduct
+from moonmining.tests.testdata.factories import random_percentages
 
-from .factories import random_percentages
-
-MAX_MOONS = 1000
+MAX_MOONS = 100
 
 ORE_TYPES = {
     45490: "Zeolites",

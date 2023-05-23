@@ -446,8 +446,10 @@ class MoonListJson(PermissionRequiredMixin, LoginRequiredMixin, BaseDatatableVie
         )
         if category == MoonsCategory.ALL and user.has_perm("moonmining.view_all_moons"):
             pass
-        elif category == MoonsCategory.OURS and user.has_perm(
-            "moonmining.extractions_access"
+        elif (
+            category == MoonsCategory.OURS
+            and user.has_perm("moonmining.extractions_access")
+            or user.has_perm("moonmining.view_all_moons")
         ):
             moon_query = moon_query.filter(refinery__isnull=False)
         elif category == MoonsCategory.UPLOADS and user.has_perm(
