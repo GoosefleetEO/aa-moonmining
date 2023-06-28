@@ -31,7 +31,7 @@ dependencies = [
     "allianceauth>=3",
     "django-bootstrap-form",
     "django-datatables-view>=1.20",
-    "django-eveuniverse>=0.18",
+    "django-eveuniverse>=1.0",
     "django-navhelper",
     "PyYAML",
 ]
