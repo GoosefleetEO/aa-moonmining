@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [1.9.2] - 2023-06-28
+
+### Changed
+
+- Remove local swagger spec file
+
 ## [1.9.1] - 2023-05-23
 
 ### Update notes
